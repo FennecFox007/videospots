@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -142,6 +142,58 @@ export function Timeline({
     y: number;
     shift: boolean;
   } | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // Collapsible country groups: per-user UI preference, stored in localStorage
+  // (not URL — collapse is layout, not data filter; saved views shouldn't carry
+  // it). Server always renders everything expanded; on mount we read storage
+  // and re-render with whatever the user last had collapsed. Brief flash on
+  // first load is acceptable for a UI toggle.
+  // ---------------------------------------------------------------------------
+  const COLLAPSE_STORAGE_KEY = "videospots:timeline:collapsed";
+  const [collapsedCountries, setCollapsedCountries] = useState<Set<string>>(
+    new Set()
+  );
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setCollapsedCountries(
+          new Set(parsed.filter((x): x is string => typeof x === "string"))
+        );
+      }
+    } catch {
+      // Bad JSON or no localStorage — ignore.
+    }
+  }, []);
+
+  function persistCollapsed(next: Set<string>) {
+    setCollapsedCountries(next);
+    try {
+      localStorage.setItem(
+        COLLAPSE_STORAGE_KEY,
+        JSON.stringify(Array.from(next))
+      );
+    } catch {
+      // Quota or privacy mode — silently skip persistence.
+    }
+  }
+
+  function toggleCountryCollapsed(code: string) {
+    const next = new Set(collapsedCountries);
+    if (next.has(code)) next.delete(code);
+    else next.add(code);
+    persistCollapsed(next);
+  }
+
+  function collapseAllExcept(code: string) {
+    persistCollapsed(
+      new Set(groups.filter((g) => g.code !== code).map((g) => g.code))
+    );
+  }
 
   function onHeaderPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return;
@@ -371,7 +423,19 @@ export function Timeline({
   function buildCountryHeaderMenu(
     country: TimelineCountryGroup
   ): ContextMenuItem[] {
+    const isCollapsed = collapsedCountries.has(country.code);
     return [
+      {
+        kind: "action",
+        label: isCollapsed ? "Rozbalit" : "Sbalit",
+        onClick: () => toggleCountryCollapsed(country.code),
+      },
+      {
+        kind: "action",
+        label: "Sbalit ostatní (zaměřit na tuto)",
+        onClick: () => collapseAllExcept(country.code),
+      },
+      { kind: "separator" },
       {
         kind: "link",
         label: `+ Kampaň pro celé ${country.name}`,
@@ -583,7 +647,19 @@ export function Timeline({
         </div>
 
         {/* BODY ------------------------------------------------------------ */}
-        {groups.map((g, gi) => (
+        {groups.map((g, gi) => {
+          const isCollapsed = collapsedCountries.has(g.code);
+          // Distinct campaign IDs across this country's channels in the
+          // visible range — shown as "X kampaní" when the group is collapsed
+          // so the user knows there's content under the fold.
+          const aggCampaignIds = new Set<number>();
+          for (const ch of g.channels) {
+            const list = byChannel.get(ch.id) ?? [];
+            for (const b of list) aggCampaignIds.add(b.campaignId);
+          }
+          const aggCount = aggCampaignIds.size;
+
+          return (
           <div
             key={g.id}
             className={
@@ -593,7 +669,11 @@ export function Timeline({
             }
           >
             <div
-              className={`flex border-b border-zinc-100 dark:border-zinc-800 ${GROUP_HEADER_BG}`}
+              role="button"
+              aria-expanded={!isCollapsed}
+              aria-label={`${g.name} — klik pro ${isCollapsed ? "rozbalení" : "sbalení"}`}
+              className={`flex border-b border-zinc-100 dark:border-zinc-800 ${GROUP_HEADER_BG} cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors`}
+              onClick={() => toggleCountryCollapsed(g.code)}
               onContextMenu={(e) => {
                 e.preventDefault();
                 setMenu({
@@ -606,13 +686,38 @@ export function Timeline({
               <div
                 className={`w-32 sm:w-48 shrink-0 px-4 py-2.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 sticky left-0 z-10 ${GROUP_HEADER_BG} flex items-center gap-2`}
               >
+                <span
+                  aria-hidden
+                  className={
+                    "text-zinc-400 dark:text-zinc-500 text-xs w-3 inline-block transition-transform " +
+                    (isCollapsed ? "" : "rotate-90")
+                  }
+                >
+                  ▸
+                </span>
                 <span className="text-base leading-none">{g.flag}</span>
                 <span>{g.name}</span>
               </div>
-              <div className="flex-1" />
+              <div className="flex-1 flex items-center px-3">
+                {isCollapsed && aggCount > 0 && (
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+                    {aggCount}{" "}
+                    {pluralCs(aggCount, "kampaň", "kampaně", "kampaní")}
+                    {" · "}
+                    {g.channels.length}{" "}
+                    {pluralCs(
+                      g.channels.length,
+                      "kanál",
+                      "kanály",
+                      "kanálů"
+                    )}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {g.channels.map((ch) => {
+            {!isCollapsed &&
+              g.channels.map((ch) => {
               const bars = byChannel.get(ch.id) ?? [];
               const info =
                 laneInfoByChannel.get(ch.id) ??
@@ -775,7 +880,8 @@ export function Timeline({
               );
             })}
           </div>
-        ))}
+          );
+        })}
 
         {isEmpty && (
           <div className="px-4 py-12 text-center text-sm text-zinc-500">
