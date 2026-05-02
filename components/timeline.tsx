@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   moveCampaign,
@@ -116,6 +116,81 @@ export function Timeline({
     y: number;
     items: ContextMenuItem[];
   } | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // Header drag-pan: grab the days strip and drag left/right to scrub through
+  // dates. Visually we just translateX the right-side track during the drag;
+  // on release we round to whole days and navigate to a new ?from=&to=.
+  // ---------------------------------------------------------------------------
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [panPx, setPanPx] = useState(0);
+  const [panDrag, setPanDrag] = useState<{
+    startX: number;
+    msPerPx: number;
+  } | null>(null);
+
+  function onHeaderPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const totalMs = rangeEnd.getTime() - rangeStart.getTime();
+    setPanDrag({
+      startX: e.clientX,
+      msPerPx: totalMs / Math.max(1, rect.width),
+    });
+  }
+
+  function onHeaderPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!panDrag) return;
+    setPanPx(e.clientX - panDrag.startX);
+  }
+
+  function onHeaderPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!panDrag) return;
+    const target = e.currentTarget;
+    if (target.hasPointerCapture(e.pointerId)) {
+      target.releasePointerCapture(e.pointerId);
+    }
+    const deltaPx = e.clientX - panDrag.startX;
+    const msPerPx = panDrag.msPerPx;
+    setPanDrag(null);
+    setPanPx(0);
+
+    // Below threshold = treat as a click on the header, no nav.
+    if (Math.abs(deltaPx) < 5) return;
+
+    // Drag right (positive deltaPx) = pull the past into view = shift range
+    // backward in time (rangeStart and rangeEnd both decrease).
+    const deltaMs = -deltaPx * msPerPx;
+    const deltaDays = Math.round(deltaMs / ONE_DAY_MS);
+    if (deltaDays === 0) return;
+
+    const newStart = addDays(rangeStart, deltaDays);
+    const newEnd = addDays(rangeEnd, deltaDays);
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("from", toDateInputValue(newStart));
+    sp.set("to", toDateInputValue(newEnd));
+    router.push(`${pathname}?${sp.toString()}`);
+  }
+
+  function onHeaderPointerCancel(e: React.PointerEvent<HTMLDivElement>) {
+    if (!panDrag) return;
+    const target = e.currentTarget;
+    if (target.hasPointerCapture(e.pointerId)) {
+      target.releasePointerCapture(e.pointerId);
+    }
+    setPanDrag(null);
+    setPanPx(0);
+  }
+
+  // Inline style applied to all right-side tracks during pan so they translate
+  // together. Left "Kanál" column is sticky and stays put. Style is undefined
+  // when at rest to avoid creating a stacking context unnecessarily.
+  const panStyle: React.CSSProperties | undefined =
+    panPx !== 0 ? { transform: `translateX(${panPx}px)` } : undefined;
 
   /**
    * Convert a click X coordinate inside the timeline track to a snapped Date.
@@ -362,7 +437,19 @@ export function Timeline({
           >
             Kanál
           </div>
-          <div className="flex-1 relative">
+          <div
+            className="flex-1 relative select-none"
+            style={{
+              ...panStyle,
+              cursor: panDrag ? "grabbing" : "grab",
+              touchAction: "none",
+            }}
+            title="Táhni vlevo/vpravo pro posun v čase"
+            onPointerDown={onHeaderPointerDown}
+            onPointerMove={onHeaderPointerMove}
+            onPointerUp={onHeaderPointerUp}
+            onPointerCancel={onHeaderPointerCancel}
+          >
             {/* Top sub-row: months */}
             <div className="h-6 relative border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50">
               {monthBands.map((m, i) => (
@@ -510,7 +597,7 @@ export function Timeline({
                   </div>
                   <div
                     className="flex-1 relative cursor-copy"
-                    style={{ height: rowHeight }}
+                    style={{ height: rowHeight, ...panStyle }}
                     data-channel-id={ch.id}
                     title="Klikni pro vytvoření kampaně na tomto kanálu/datu"
                     onClick={(e) => {

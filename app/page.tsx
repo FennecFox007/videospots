@@ -460,7 +460,8 @@ export default async function Dashboard({
       />
 
       <p className="text-xs text-zinc-500">
-        Tip: táhni za střed = posun, za okraj = délka. Klik = otevřít detail.
+        Tip: táhni za střed = posun, za okraj = délka, klik = otevřít detail.
+        Hlavičku s dny můžeš chytit a posunout v čase doleva/doprava.
       </p>
 
       <Timeline
