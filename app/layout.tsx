@@ -22,7 +22,18 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+  modal,
+}: Readonly<{
+  children: React.ReactNode;
+  /**
+   * Parallel-route slot for intercepted modals. Pages like
+   * `app/@modal/(.)campaigns/new/page.tsx` render here when the user
+   * navigates to /campaigns/new from / or /campaigns via client-side
+   * routing; on direct URL hits the slot defaults to null (see
+   * app/@modal/default.tsx).
+   */
+  modal: React.ReactNode;
+}>) {
   // Hide the nav on the sign-in page (no session, looks weird).
   const path = (await headers()).get("x-current-path") ?? "";
   const hideNav = path.startsWith("/sign-in");
@@ -48,6 +59,7 @@ export default async function RootLayout({
         {!hideNav && <Nav />}
         <main className="flex-1">{children}</main>
         {!hideNav && <CommandPalette />}
+        {modal}
       </body>
     </html>
   );

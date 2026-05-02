@@ -1,138 +1,22 @@
-import { eq } from "drizzle-orm";
+// Standalone /campaigns/new page. Direct URL hits (refresh, deep link)
+// land here as a full page. When navigated to from / or /campaigns via
+// client-side <Link>, the @modal/(.)campaigns/new intercepting route
+// renders the same form inside a modal instead — see app/@modal.
+
 import { CampaignFormBody } from "@/components/campaign-form-body";
-import { getChannelGroups } from "@/lib/db/queries";
-import { db, campaignTemplates } from "@/lib/db/client";
-import { addDays } from "@/lib/utils";
 import { createCampaign } from "./actions";
-import type { TemplatePayload } from "@/app/admin/templates/actions";
-
-type SearchParams = {
-  template?: string;
-  /** Comma-separated channel IDs to pre-select. Used by timeline right-click. */
-  channels?: string;
-  /** ISO YYYY-MM-DD pre-fill for the date inputs. */
-  from?: string;
-  to?: string;
-  /** Pre-fill product name (used by /releases "Launch kampaň" buttons). */
-  productName?: string;
-  /** Pre-fill communication type (e.g. "launch", "preorder"). */
-  communicationType?: string;
-};
-
-function parseDateParam(s: string | undefined): Date | null {
-  if (!s) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
-  return Number.isFinite(d.getTime()) ? d : null;
-}
+import {
+  loadNewCampaignContext,
+  type NewCampaignSearchParams,
+} from "./_context";
 
 export default async function NewCampaignPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+  searchParams: Promise<NewCampaignSearchParams>;
 }) {
   const params = await searchParams;
-  const groups = await getChannelGroups();
-
-  // Layered defaults: template (broad) → URL channel/date overrides (narrow).
-
-  // 1) Template
-  let defaults: Parameters<typeof CampaignFormBody>[0]["defaults"] = undefined;
-  let templateName: string | null = null;
-  const templateId = Number(params.template);
-  if (Number.isFinite(templateId) && templateId > 0) {
-    const [t] = await db
-      .select()
-      .from(campaignTemplates)
-      .where(eq(campaignTemplates.id, templateId))
-      .limit(1);
-    if (t) {
-      templateName = t.name;
-      const p = t.payload as TemplatePayload;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      defaults = {
-        name: t.name,
-        client: p.client,
-        videoUrl: p.videoUrl,
-        color: p.color,
-        tags: p.tags,
-        startsAt: today,
-        endsAt: addDays(today, Math.max(1, p.durationDays - 1)),
-        notes: p.notes,
-        product: p.product
-          ? {
-              name: p.product.name,
-              kind: p.product.kind,
-              releaseDate: p.product.releaseDate
-                ? new Date(p.product.releaseDate)
-                : null,
-              coverUrl: p.product.coverUrl,
-              summary: p.product.summary,
-            }
-          : null,
-        channelIds: new Set(p.channelIds),
-      };
-    }
-  }
-
-  // 2) URL overrides (?channels=, ?from=, ?to=) — used by timeline right-click
-  // "create campaign here". Layered on top so they win over template values.
-  const explicitChannels = (params.channels ?? "")
-    .split(",")
-    .map(Number)
-    .filter((n) => Number.isFinite(n) && n > 0);
-  const explicitFrom = parseDateParam(params.from);
-  const explicitTo = parseDateParam(params.to);
-
-  // Optional pre-fill from /releases page: product name + communication type.
-  // We may also need to seed releaseDate from the product table so the lifecycle
-  // badge / star marker show correctly in the form context.
-  const productNameParam = (params.productName ?? "").trim();
-  const commTypeParam = (params.communicationType ?? "").trim();
-
-  if (
-    explicitChannels.length > 0 ||
-    explicitFrom !== null ||
-    explicitTo !== null ||
-    productNameParam ||
-    commTypeParam
-  ) {
-    defaults = {
-      ...(defaults ?? {}),
-      ...(explicitChannels.length > 0
-        ? { channelIds: new Set(explicitChannels) }
-        : {}),
-      ...(explicitFrom ? { startsAt: explicitFrom } : {}),
-      ...(explicitTo ? { endsAt: explicitTo } : {}),
-      ...(commTypeParam ? { communicationType: commTypeParam } : {}),
-      ...(productNameParam
-        ? { product: { ...(defaults?.product ?? {}), name: productNameParam } }
-        : {}),
-    };
-  }
-
-  // Hint text that makes it clear what got pre-filled.
-  let hint: React.ReactNode =
-    "Naplánuj video spot na vybrané kanály v zadaném období.";
-  if (templateName) {
-    hint = (
-      <>
-        Předvyplněno ze šablony{" "}
-        <span className="font-medium">„{templateName}"</span>.
-      </>
-    );
-  } else if (productNameParam) {
-    hint = (
-      <>
-        Předvyplněno z release kalendáře pro produkt{" "}
-        <span className="font-medium">„{productNameParam}"</span>.
-      </>
-    );
-  } else if (explicitChannels.length > 0 || explicitFrom) {
-    hint = "Předvyplněno z timeline (kanály a/nebo datumy).";
-  }
+  const { groups, defaults, hint } = await loadNewCampaignContext(params);
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
