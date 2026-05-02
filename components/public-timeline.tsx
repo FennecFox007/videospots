@@ -10,11 +10,7 @@ import {
   formatMonthName,
   pluralCs,
 } from "@/lib/utils";
-import {
-  communicationTypeLabel,
-  computeLifecyclePhase,
-  lifecycleLabel,
-} from "@/lib/communication";
+import { communicationTypeLabel } from "@/lib/communication";
 
 export type PublicChannel = {
   id: number;
@@ -35,7 +31,6 @@ export type PublicCampaign = {
   status: string;
   communicationType: string | null;
   coverUrl: string | null;
-  productReleaseDate: Date | null;
   startsAt: Date;
   endsAt: Date;
   channelId: number;
@@ -337,28 +332,9 @@ export function PublicTimeline({
                             )
                           : 0;
                       const dur = daysBetween(b.startsAt, b.endsAt);
-                      const phase = computeLifecyclePhase(
-                        b.startsAt,
-                        b.endsAt,
-                        b.productReleaseDate ?? null
-                      );
-                      const phaseLabel =
-                        phase === "no-release" ? "" : lifecycleLabel(phase);
                       const commLabel = b.communicationType
                         ? communicationTypeLabel(b.communicationType)
                         : "";
-                      const tooltipExtras = [commLabel, phaseLabel]
-                        .filter(Boolean)
-                        .join(" · ");
-                      let releaseMarkerPct: number | null = null;
-                      if (b.productReleaseDate) {
-                        const r = b.productReleaseDate.getTime();
-                        const s = b.startsAt.getTime();
-                        const e = b.endsAt.getTime() + ONE_DAY_MS;
-                        if (r >= s && r <= e && e > s) {
-                          releaseMarkerPct = ((r - s) / (e - s)) * 100;
-                        }
-                      }
                       return (
                         <div
                           key={`${b.campaignId}-${b.channelId}`}
@@ -378,7 +354,7 @@ export function PublicTimeline({
                               : undefined,
                             opacity: isCancelled ? 0.45 : 1,
                           }}
-                          title={`${b.name}\n${formatDate(b.startsAt)} – ${formatDate(b.endsAt)} (${dur} ${pluralCs(dur, "den", "dny", "dní")})${tooltipExtras ? `\n${tooltipExtras}` : ""}${b.productReleaseDate ? `\nVydání: ${formatDate(b.productReleaseDate)}` : ""}`}
+                          title={`${b.name}\n${formatDate(b.startsAt)} – ${formatDate(b.endsAt)} (${dur} ${pluralCs(dur, "den", "dny", "dní")})${commLabel ? `\n${commLabel}` : ""}`}
                         >
                           {elapsedRatio > 0 && !isCancelled && (
                             <span
@@ -399,23 +375,6 @@ export function PublicTimeline({
                           <span className="truncate font-medium">
                             {b.name}
                           </span>
-                          {releaseMarkerPct !== null && (
-                            <span
-                              aria-hidden
-                              className="absolute top-0 bottom-0 pointer-events-none flex items-center"
-                              style={{
-                                left: `${releaseMarkerPct}%`,
-                                transform: "translateX(-50%)",
-                              }}
-                            >
-                              <span
-                                className="text-[11px] leading-none drop-shadow"
-                                title="Vydání produktu"
-                              >
-                                ⭐
-                              </span>
-                            </span>
-                          )}
                         </div>
                       );
                     })}

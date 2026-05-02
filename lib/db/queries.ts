@@ -244,7 +244,6 @@ export async function fetchTimelineCampaigns(
       status: campaigns.status,
       communicationType: campaigns.communicationType,
       coverUrl: products.coverUrl,
-      productReleaseDate: products.releaseDate,
       startsAt: campaigns.startsAt,
       endsAt: campaigns.endsAt,
       channelId: campaignChannels.channelId,

@@ -28,10 +28,7 @@ import {
   snapToMondayStart,
 } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
-import {
-  CommunicationBadge,
-  LifecycleBadge,
-} from "@/components/communication-badge";
+import { CommunicationBadge } from "@/components/communication-badge";
 import {
   PublicTimeline,
   type PublicCountryGroup,
@@ -144,11 +141,6 @@ async function CampaignSharePage({
             <h1 className="text-2xl font-semibold tracking-tight">{c.name}</h1>
             <StatusBadge status={c.status} runState={runState} />
             <CommunicationBadge type={c.communicationType} />
-            <LifecycleBadge
-              campaignStart={c.startsAt}
-              campaignEnd={c.endsAt}
-              productReleaseDate={product?.releaseDate ?? null}
-            />
           </div>
           {c.client && (
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">

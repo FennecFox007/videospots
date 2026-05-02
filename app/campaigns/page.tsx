@@ -79,7 +79,6 @@ export default async function CampaignsListPage({
     client: campaign.client,
     productName: product?.name ?? null,
     productKind: product?.kind ?? null,
-    productReleaseDate: product?.releaseDate ?? null,
     color: campaign.color,
     status: campaign.status,
     communicationType: campaign.communicationType,

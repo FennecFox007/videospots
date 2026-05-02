@@ -20,10 +20,7 @@ import {
   computedRunState,
 } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
-import {
-  CommunicationBadge,
-  LifecycleBadge,
-} from "@/components/communication-badge";
+import { CommunicationBadge } from "@/components/communication-badge";
 import { kindEmoji, kindLabel } from "@/lib/products";
 
 export type CampaignsTableRow = {
@@ -32,7 +29,6 @@ export type CampaignsTableRow = {
   client: string | null;
   productName: string | null;
   productKind: string | null;
-  productReleaseDate: Date | null;
   color: string;
   status: string;
   communicationType: string | null;
@@ -186,11 +182,6 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
                     <div className="flex flex-wrap items-center gap-1">
                       <StatusBadge status={r.status} runState={runState} />
                       <CommunicationBadge type={r.communicationType} />
-                      <LifecycleBadge
-                        campaignStart={r.startsAt}
-                        campaignEnd={r.endsAt}
-                        productReleaseDate={r.productReleaseDate}
-                      />
                     </div>
                   </td>
                   <td className="px-3 py-2">

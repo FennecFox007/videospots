@@ -28,8 +28,6 @@ import {
 import {
   communicationTypeClasses,
   communicationTypeLabel,
-  computeLifecyclePhase,
-  lifecycleLabel,
 } from "@/lib/communication";
 
 export type TimelineChannel = {
@@ -53,14 +51,11 @@ export type TimelineCampaign = {
   name: string;
   color: string;
   status: string; // approved | cancelled
-  /** Communication intent (preorder/launch/outnow/...). Shown in tooltip + as
-   *  context for the lifecycle phase. Null when not set. */
+  /** Communication intent (preorder/launch/outnow/...). Shown in tooltip.
+   *  Null when not set. */
   communicationType: string | null;
   /** Product cover image URL (joined from product table). Optional thumbnail. */
   coverUrl: string | null;
-  /** Product release date (joined). When inside the bar, we draw a small star
-   *  marker; either way it feeds lifecycle phase computation in the tooltip. */
-  productReleaseDate: Date | null;
   startsAt: Date;
   endsAt: Date;
   channelId: number;
@@ -855,7 +850,7 @@ function CampaignTooltip({
   anchorRect: DOMRect;
 }) {
   const TOOLTIP_GAP = 8;
-  const TOOLTIP_EST_HEIGHT = 130; // approximate; just used to choose flip direction
+  const TOOLTIP_EST_HEIGHT = 110; // approximate; just used to choose flip direction
   const flipBelow = anchorRect.top < TOOLTIP_EST_HEIGHT + TOOLTIP_GAP;
   const top = flipBelow
     ? anchorRect.bottom + TOOLTIP_GAP
@@ -863,13 +858,6 @@ function CampaignTooltip({
   const transform = flipBelow ? "translateX(-50%)" : "translate(-50%, -100%)";
   const left = anchorRect.left + anchorRect.width / 2;
 
-  const phase = computeLifecyclePhase(
-    bar.startsAt,
-    bar.endsAt,
-    bar.productReleaseDate ?? null
-  );
-  const phaseLabel =
-    phase === "no-release" ? "" : lifecycleLabel(phase);
   const commLabel = bar.communicationType
     ? communicationTypeLabel(bar.communicationType)
     : "";
@@ -902,31 +890,18 @@ function CampaignTooltip({
               ({dur} {pluralCs(dur, "den", "dny", "dní")})
             </span>
           </div>
-          {(commLabel || phaseLabel) && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {commLabel && (
-                <span
-                  className={
-                    "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium " +
-                    (bar.communicationType
-                      ? communicationTypeClasses(bar.communicationType)
-                      : "")
-                  }
-                >
-                  {commLabel}
-                </span>
-              )}
-              {phaseLabel && (
-                <span className="inline-flex items-center rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 px-1.5 py-0.5 text-[10px] font-medium">
-                  {phaseLabel}
-                </span>
-              )}
-            </div>
-          )}
-          {bar.productReleaseDate && (
+          {commLabel && (
             <div className="pt-1">
-              <span className="text-zinc-500">⭐ Vydání:</span>{" "}
-              {formatDate(bar.productReleaseDate)}
+              <span
+                className={
+                  "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium " +
+                  (bar.communicationType
+                    ? communicationTypeClasses(bar.communicationType)
+                    : "")
+                }
+              >
+                {commLabel}
+              </span>
             </div>
           )}
         </div>
@@ -1204,32 +1179,9 @@ function DraggableBar({
 
   const statusTitle = isCancelled ? " · ZRUŠENO" : "";
 
-  // Lifecycle phase (campaign dates × product release) — shown in tooltip and
-  // drives the in-bar release-date star marker below.
-  const lifecyclePhase = computeLifecyclePhase(
-    start,
-    end,
-    bar.productReleaseDate ?? null
-  );
-  const phaseLabel =
-    lifecyclePhase === "no-release" ? "" : lifecycleLabel(lifecyclePhase);
   const commLabel = bar.communicationType
     ? communicationTypeLabel(bar.communicationType)
     : "";
-  const tooltipExtras = [commLabel, phaseLabel].filter(Boolean).join(" · ");
-
-  // Position the release-date marker as a percentage of the bar's own width.
-  // We only show it when the release falls inside [start, end+1day] — outside
-  // that the lifecycle badge in the tooltip is already explanatory.
-  let releaseMarkerPct: number | null = null;
-  if (bar.productReleaseDate) {
-    const r = bar.productReleaseDate.getTime();
-    const s = start.getTime();
-    const e = end.getTime() + ONE_DAY_MS;
-    if (r >= s && r <= e && e > s) {
-      releaseMarkerPct = ((r - s) / (e - s)) * 100;
-    }
-  }
 
   return (
     <div
@@ -1262,7 +1214,7 @@ function DraggableBar({
         textDecoration: isCancelled ? "line-through" : undefined,
         touchAction: "none",
       }}
-      aria-label={`${bar.name}${statusTitle} · ${formatDate(start)} – ${formatDate(end)}${tooltipExtras ? ` · ${tooltipExtras}` : ""}`}
+      aria-label={`${bar.name}${statusTitle} · ${formatDate(start)} – ${formatDate(end)}${commLabel ? ` · ${commLabel}` : ""}`}
     >
       {/* Progress overlay (elapsed portion) — sits behind handles + content */}
       {elapsedRatio > 0 && !isCancelled && (
@@ -1294,20 +1246,6 @@ function DraggableBar({
       <span className="truncate pointer-events-none px-0.5 font-medium">
         {bar.name}
       </span>
-      {releaseMarkerPct !== null && (
-        <span
-          aria-hidden
-          className="absolute top-0 bottom-0 pointer-events-none flex items-center"
-          style={{ left: `${releaseMarkerPct}%`, transform: "translateX(-50%)" }}
-        >
-          <span
-            className="text-[11px] leading-none drop-shadow"
-            title="Vydání produktu"
-          >
-            ⭐
-          </span>
-        </span>
-      )}
     </div>
   );
 }
