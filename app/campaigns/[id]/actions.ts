@@ -152,6 +152,56 @@ export async function createCampaignShareLink(
 }
 
 /**
+ * Create a public read-only link to the WHOLE timeline at the current filter
+ * + date-range state. Used by the dashboard's "Sdílet timeline" button — the
+ * client passes whatever URL params it currently has (?from=&to=&country=&...).
+ *
+ * The payload is a frozen snapshot. Activity inside the date range stays
+ * visible to the client even as new campaigns are added later.
+ */
+export async function createTimelineShareLink(
+  filters: Record<string, string>,
+  expiresInDays: number = DEFAULT_SHARE_EXPIRY_DAYS
+): Promise<string> {
+  const userId = await requireUser();
+
+  // Whitelist params we recognize — drop anything else so a malicious caller
+  // can't stuff arbitrary keys into the JSONB payload.
+  const ALLOWED = [
+    "from",
+    "to",
+    "q",
+    "country",
+    "chain",
+    "client",
+    "status",
+    "runState",
+    "tag",
+  ] as const;
+  const safe: Record<string, string> = {};
+  for (const k of ALLOWED) {
+    const v = filters[k];
+    if (typeof v === "string" && v.trim()) safe[k] = v;
+  }
+
+  const token = crypto.randomBytes(16).toString("hex");
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+  await db.insert(shareLinks).values({
+    token,
+    payload: { type: "timeline", filters: safe },
+    expiresAt,
+    createdById: userId,
+  });
+
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const host = h.get("host") ?? "localhost:3000";
+  return `${proto}://${host}/share/${token}`;
+}
+
+/**
  * Move a campaign's bar from one channel to another (drag-vertically-onto-row).
  *
  * If the campaign is already on the target channel, this collapses to "remove

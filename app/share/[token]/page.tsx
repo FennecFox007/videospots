@@ -1,9 +1,13 @@
-// Public read-only campaign view. Reachable via /share/<token> without login.
-// Token is checked against the share_link table; expired/missing tokens 404.
+// Public read-only views. Two payload types are supported on the same /share/<token>
+// route:
+//   - { type: "campaign", campaignId } — single campaign brief
+//   - { type: "timeline", filters }    — full timeline snapshot at a saved
+//                                         filter/range state
+// No login required; expired tokens 404.
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { eq, and, asc, gt, isNull, or } from "drizzle-orm";
+import { eq, and, asc, gt, isNull, or, inArray } from "drizzle-orm";
 import {
   db,
   shareLinks,
@@ -19,12 +23,32 @@ import {
   daysBetween,
   pluralCs,
   computedRunState,
+  addDays,
+  snapToMondayStart,
 } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
+import {
+  PublicTimeline,
+  type PublicCountryGroup,
+} from "@/components/public-timeline";
+import {
+  findCampaignIds,
+  fetchTimelineCampaigns,
+} from "@/lib/db/queries";
 
 type SharePayload =
   | { type: "campaign"; campaignId: number }
-  | { type: "timeline"; from?: string; to?: string };
+  | { type: "timeline"; filters?: Record<string, string> };
+
+const DEFAULT_RANGE_DAYS = 35;
+
+function parseDateParam(s: string | undefined): Date | null {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
 
 export default async function PublicSharePage({
   params,
@@ -40,22 +64,46 @@ export default async function PublicSharePage({
     .where(
       and(
         eq(shareLinks.token, token),
-        // Expiry is optional; null = forever.
         or(isNull(shareLinks.expiresAt), gt(shareLinks.expiresAt, now))!
       )
     )
     .limit(1);
-
   if (!link) notFound();
 
   const payload = link.payload as SharePayload;
-  if (payload.type !== "campaign") notFound();
 
+  if (payload.type === "campaign") {
+    return <CampaignSharePage campaignId={payload.campaignId} link={link} />;
+  }
+  if (payload.type === "timeline") {
+    return (
+      <TimelineSharePage
+        filters={payload.filters ?? {}}
+        link={link}
+        now={now}
+      />
+    );
+  }
+
+  notFound();
+}
+
+// ---------------------------------------------------------------------------
+// Single campaign view (existing behavior, kept identical)
+// ---------------------------------------------------------------------------
+
+async function CampaignSharePage({
+  campaignId,
+  link,
+}: {
+  campaignId: number;
+  link: { expiresAt: Date | null };
+}) {
   const [row] = await db
     .select({ campaign: campaigns, game: games })
     .from(campaigns)
     .leftJoin(games, eq(campaigns.gameId, games.id))
-    .where(eq(campaigns.id, payload.campaignId))
+    .where(eq(campaigns.id, campaignId))
     .limit(1);
   if (!row) notFound();
 
@@ -69,7 +117,7 @@ export default async function PublicSharePage({
     .innerJoin(channels, eq(campaignChannels.channelId, channels.id))
     .innerJoin(countries, eq(channels.countryId, countries.id))
     .innerJoin(chains, eq(channels.chainId, chains.id))
-    .where(eq(campaignChannels.campaignId, payload.campaignId))
+    .where(eq(campaignChannels.campaignId, campaignId))
     .orderBy(asc(countries.sortOrder), asc(chains.sortOrder));
 
   const c = row.campaign;
@@ -79,14 +127,7 @@ export default async function PublicSharePage({
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-            videospots
-          </span>
-          <span className="text-xs text-zinc-500">Veřejný náhled kampaně</span>
-        </div>
-      </div>
+      <PublicHeader subtitle="Veřejný náhled kampaně" />
 
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <div>
@@ -178,14 +219,165 @@ export default async function PublicSharePage({
           </div>
         </div>
 
-        <p className="text-xs text-zinc-500 text-center pt-4">
-          Tento odkaz je platný do {link.expiresAt ? formatDate(link.expiresAt) : "—"}.{" "}
-          <Link href="/" className="underline">
-            Otevřít aplikaci
-          </Link>
-        </p>
+        <PublicFooter expiresAt={link.expiresAt} />
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Whole-timeline view (new)
+// ---------------------------------------------------------------------------
+
+async function TimelineSharePage({
+  filters,
+  link,
+  now,
+}: {
+  filters: Record<string, string>;
+  link: { expiresAt: Date | null };
+  now: Date;
+}) {
+  const fromParam = parseDateParam(filters.from);
+  const toParam = parseDateParam(filters.to);
+  const rangeStart =
+    fromParam ?? snapToMondayStart(addDays(new Date(), -7));
+  const rangeEnd =
+    toParam && toParam > rangeStart
+      ? toParam
+      : addDays(rangeStart, DEFAULT_RANGE_DAYS);
+
+  // Channels — always all of them (so the public viewer sees the full grid,
+  // including empty rows). Filters are about which campaigns appear.
+  const channelRows = await db
+    .select({
+      channelId: channels.id,
+      countryId: countries.id,
+      countryName: countries.name,
+      countryFlag: countries.flagEmoji,
+      chainName: chains.name,
+    })
+    .from(channels)
+    .innerJoin(countries, eq(channels.countryId, countries.id))
+    .innerJoin(chains, eq(channels.chainId, chains.id))
+    .orderBy(
+      asc(countries.sortOrder),
+      asc(countries.code),
+      asc(chains.sortOrder),
+      asc(chains.name)
+    );
+
+  const groupMap = new Map<number, PublicCountryGroup>();
+  for (const r of channelRows) {
+    if (!groupMap.has(r.countryId)) {
+      groupMap.set(r.countryId, {
+        id: r.countryId,
+        name: r.countryName,
+        flag: r.countryFlag,
+        channels: [],
+      });
+    }
+    groupMap.get(r.countryId)!.channels.push({
+      id: r.channelId,
+      chainName: r.chainName,
+    });
+  }
+  const groups = Array.from(groupMap.values());
+
+  // Campaigns matching the saved filters within the saved range.
+  const ids = await findCampaignIds({
+    q: filters.q,
+    countryCode: filters.country,
+    chainCode: filters.chain,
+    client: filters.client,
+    status: filters.status,
+    runState: filters.runState,
+    tag: filters.tag,
+    rangeStart,
+    rangeEnd,
+  });
+  const campaignRows = await fetchTimelineCampaigns(
+    ids,
+    rangeStart,
+    rangeEnd
+  );
+
+  const distinct = new Set(campaignRows.map((c) => c.campaignId)).size;
+
+  const activeFilters = describeFilters(filters);
+
+  return (
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <PublicHeader subtitle="Veřejný náhled timeline" />
+
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Plán kampaní
+          </h1>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+            {formatDate(rangeStart)} – {formatDate(addDays(rangeEnd, -1))} ·{" "}
+            {distinct}{" "}
+            {pluralCs(distinct, "kampaň", "kampaně", "kampaní")} ·{" "}
+            {channelRows.length} kanálů
+          </p>
+          {activeFilters.length > 0 && (
+            <p className="text-xs text-zinc-500 mt-1">
+              Filtr: {activeFilters.join(" · ")}
+            </p>
+          )}
+        </div>
+
+        <PublicTimeline
+          groups={groups}
+          campaigns={campaignRows}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          now={now}
+        />
+
+        <PublicFooter expiresAt={link.expiresAt} />
+      </div>
+    </div>
+  );
+}
+
+function describeFilters(f: Record<string, string>): string[] {
+  const out: string[] = [];
+  if (f.q) out.push(`hledání: "${f.q}"`);
+  if (f.country) out.push(`stát: ${f.country}`);
+  if (f.chain) out.push(`řetězec: ${f.chain}`);
+  if (f.client) out.push(`klient: ${f.client}`);
+  if (f.runState) out.push(`stav: ${f.runState}`);
+  if (f.tag) out.push(`štítek: ${f.tag}`);
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Shared chrome
+// ---------------------------------------------------------------------------
+
+function PublicHeader({ subtitle }: { subtitle: string }) {
+  return (
+    <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          videospots
+        </span>
+        <span className="text-xs text-zinc-500">{subtitle}</span>
+      </div>
+    </div>
+  );
+}
+
+function PublicFooter({ expiresAt }: { expiresAt: Date | null }) {
+  return (
+    <p className="text-xs text-zinc-500 text-center pt-4">
+      Tento odkaz je platný do {expiresAt ? formatDate(expiresAt) : "—"}.{" "}
+      <Link href="/" className="underline">
+        Otevřít aplikaci
+      </Link>
+    </p>
   );
 }
 

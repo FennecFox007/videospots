@@ -14,6 +14,7 @@ import {
   type TimelineCountryGroup,
 } from "@/components/timeline";
 import { FilterBar } from "@/components/filter-bar";
+import { TimelineShareButton } from "@/components/timeline-share-button";
 import {
   formatDate,
   pluralCs,
@@ -262,7 +263,8 @@ export default async function Dashboard({
             {channelRows.length} kanálů
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <TimelineShareButton />
           <a
             href={`/print/timeline?${queryParamsForward}${queryParamsForward.toString() ? "&" : ""}from=${toDateInputValue(rangeStart)}&to=${toDateInputValue(rangeEnd)}`}
             target="_blank"
