@@ -98,9 +98,7 @@ export type LifecyclePhase =
   | "no-release" // product has no releaseDate, can't classify
   | "pre-launch" // entire campaign runs before release
   | "launch-window" // release date falls inside the campaign
-  | "post-launch" // entire campaign runs after release
-  | "way-too-early" // campaign ends >14 days before release
-  | "way-too-late"; // campaign starts >14 days after release
+  | "post-launch"; // entire campaign runs after release
 
 export function computeLifecyclePhase(
   campaignStart: Date,
@@ -112,16 +110,8 @@ export function computeLifecyclePhase(
   const cs = campaignStart.getTime();
   const ce = campaignEnd.getTime() + ONE_DAY_MS; // inclusive end-of-day
 
-  if (ce < r) {
-    // Campaign ends before release.
-    if (r - ce > 14 * ONE_DAY_MS) return "way-too-early";
-    return "pre-launch";
-  }
-  if (cs > r) {
-    // Campaign starts after release.
-    if (cs - r > 14 * ONE_DAY_MS) return "way-too-late";
-    return "post-launch";
-  }
+  if (ce < r) return "pre-launch";
+  if (cs > r) return "post-launch";
   // Release date falls inside campaign window.
   return "launch-window";
 }
@@ -134,10 +124,6 @@ export function lifecycleLabel(phase: LifecyclePhase): string {
       return "Launch week";
     case "post-launch":
       return "Out now";
-    case "way-too-early":
-      return "Příliš brzy";
-    case "way-too-late":
-      return "Příliš pozdě";
     case "no-release":
       return "";
   }

@@ -37,10 +37,6 @@ const LIFECYCLE_CLASSES: Record<LifecyclePhase, string> = {
     "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-900",
   "post-launch":
     "bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-900",
-  "way-too-early":
-    "bg-zinc-50 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 ring-1 ring-zinc-300 dark:ring-zinc-700",
-  "way-too-late":
-    "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 ring-1 ring-rose-200 dark:ring-rose-900",
 };
 
 export function LifecycleBadge({
