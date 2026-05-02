@@ -37,6 +37,8 @@ import {
   getFilterOptions,
   fetchTimelineCampaigns,
 } from "@/lib/db/queries";
+import { listSavedViews } from "@/app/saved-views/actions";
+import { auth } from "@/auth";
 
 const ONE_DAY_MS = 86_400_000;
 const DEFAULT_OFFSET_DAYS = -7;
@@ -254,6 +256,14 @@ export default async function Dashboard({
   // ---- Filter options + toolbar URLs
   const filterOpts = await getFilterOptions();
 
+  // Saved-views menu in the FilterBar — only fetched if there's an auth'd
+  // user. (The dashboard is auth-gated globally, so this should always
+  // succeed; the auth check is just defensive.)
+  const session = await auth();
+  const savedViewsList = session?.user
+    ? await listSavedViews("timeline")
+    : [];
+
   const todayMondayStart = snapToMondayStart(new Date());
   const queryParamsForward = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -457,6 +467,11 @@ export default async function Dashboard({
         chains={filterOpts.chains}
         clients={filterOpts.clients}
         tags={filterOpts.tags}
+        savedViews={{
+          scope: "timeline",
+          destinationPath: "/",
+          views: savedViewsList,
+        }}
       />
 
       <p className="text-xs text-zinc-500">

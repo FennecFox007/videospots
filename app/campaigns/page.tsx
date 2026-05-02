@@ -11,6 +11,8 @@ import { CampaignsTable } from "@/components/campaigns-table";
 import type { CampaignsTableRow } from "@/components/campaigns-table";
 import { daysBetween, pluralCs } from "@/lib/utils";
 import { findCampaignIds, getFilterOptions } from "@/lib/db/queries";
+import { listSavedViews } from "@/app/saved-views/actions";
+import { auth } from "@/auth";
 
 type SearchParams = {
   q?: string;
@@ -109,6 +111,11 @@ export default async function CampaignsListPage({
 
   const filterOpts = await getFilterOptions();
 
+  const session = await auth();
+  const savedViewsList = session?.user
+    ? await listSavedViews("campaigns")
+    : [];
+
   return (
     <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6 space-y-4 pb-20">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -143,6 +150,11 @@ export default async function CampaignsListPage({
         chains={filterOpts.chains}
         clients={filterOpts.clients}
         tags={filterOpts.tags}
+        savedViews={{
+          scope: "campaigns",
+          destinationPath: "/campaigns",
+          views: savedViewsList,
+        }}
       />
 
       <p className="text-xs text-zinc-500">

@@ -11,6 +11,10 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { COMMUNICATION_TYPES } from "@/lib/communication";
+import {
+  SavedViewsMenu,
+  type SavedView,
+} from "@/components/saved-views-menu";
 
 const RUN_STATES = [
   { value: "running", label: "Právě běží" },
@@ -26,9 +30,21 @@ type Props = {
   chains: Option[]; // value = code (alza/…)
   clients: string[]; // distinct client strings
   tags: string[]; // distinct tag strings
+  /** Saved-views support. When omitted, the "Pohledy" menu is hidden. */
+  savedViews?: {
+    scope: "timeline" | "campaigns";
+    destinationPath: string;
+    views: SavedView[];
+  };
 };
 
-export function FilterBar({ countries, chains, clients, tags }: Props) {
+export function FilterBar({
+  countries,
+  chains,
+  clients,
+  tags,
+  savedViews,
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -153,6 +169,14 @@ export function FilterBar({ countries, chains, clients, tags }: Props) {
         >
           Vyčistit filtry
         </button>
+      )}
+
+      {savedViews && (
+        <SavedViewsMenu
+          scope={savedViews.scope}
+          destinationPath={savedViews.destinationPath}
+          views={savedViews.views}
+        />
       )}
     </div>
   );

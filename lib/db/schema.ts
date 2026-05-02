@@ -240,6 +240,24 @@ export const campaignTemplates = pgTable("campaign_template", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Per-user named filter bookmarks. A "saved view" is just a stored set of
+// URL search-params (q, country, chain, runState, communicationType, …)
+// scoped to a particular page ("timeline" or "campaigns"). Click loads them.
+//
+// Keeping this per-user (not shared) by design — different team members care
+// about different slices, and a global "shared filters" list invites bikeshed.
+export const savedViews = pgTable("saved_view", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  scope: text("scope").notNull(), // "timeline" | "campaigns"
+  // Whitelist of allowed URL params, stored as flat string-string map.
+  payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // =============================================================================
 // Relations (for Drizzle's relational queries API)
 // =============================================================================
