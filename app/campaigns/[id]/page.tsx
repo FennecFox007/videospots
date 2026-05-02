@@ -211,6 +211,15 @@ export default async function CampaignDetailPage({
             campaignId={campaignId}
             defaultName={c.name}
           />
+          <a
+            href={`/print/campaigns/${campaignId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900"
+            title="Otevřít v tiskové podobě (Ctrl+P → uložit jako PDF)"
+          >
+            Tisk / PDF
+          </a>
           <form
             action={async () => {
               "use server";

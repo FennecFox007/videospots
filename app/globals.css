@@ -29,3 +29,28 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/*
+ * Print styles — used for /print/* pages and ad-hoc Ctrl+P. We force a
+ * white background, hide the global nav, and remove sticky positioning so
+ * long content paginates naturally.
+ */
+@media print {
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  nav,
+  .no-print {
+    display: none !important;
+  }
+  /* Cards/borders look better with crisper edges in print. */
+  .print-clean {
+    box-shadow: none !important;
+  }
+  /* Sticky elements push content around in print — un-stick them. */
+  .sticky {
+    position: static !important;
+  }
+}

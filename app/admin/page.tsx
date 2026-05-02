@@ -29,6 +29,11 @@ export default function AdminIndexPage() {
         description="Uložené konfigurace kampaní (klient, barva, kanály, štítky, délka) pro rychlé opakování."
       />
       <AdminCard
+        href="/admin/import"
+        title="Import CSV"
+        description="Hromadný import kampaní z CSV (migrace z Excelu)."
+      />
+      <AdminCard
         href="/admin/archive"
         title="Archiv"
         description="Archivované kampaně. Lze obnovit zpět, nebo definitivně smazat."

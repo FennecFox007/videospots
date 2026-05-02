@@ -18,6 +18,7 @@ export default function AdminLayout({
           <SubLink href="/admin/channels">Kanály (matice)</SubLink>
           <SubLink href="/admin/users">Uživatelé</SubLink>
           <SubLink href="/admin/templates">Šablony</SubLink>
+          <SubLink href="/admin/import">Import CSV</SubLink>
           <SubLink href="/admin/archive">Archiv</SubLink>
           <SubLink href="/admin/audit">Audit log</SubLink>
         </div>

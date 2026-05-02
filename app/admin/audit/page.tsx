@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db, auditLog, users, campaigns } from "@/lib/db/client";
 import { formatRelative } from "@/lib/utils";
 import { AuditFilterBar } from "@/components/audit-filter-bar";
+import { AiDigest } from "@/components/ai-digest";
 
 const PAGE_SIZE = 200;
 
@@ -108,6 +109,8 @@ export default async function AuditPage({
 
   return (
     <div className="space-y-4">
+      <AiDigest />
+
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         {hasAnyFilter
           ? `${rows.length} ${pluralRecords(rows.length)} odpovídajících filtrům.`

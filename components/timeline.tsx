@@ -347,7 +347,7 @@ export function Timeline({
           className={`flex border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-30 ${ROW_BG}`}
         >
           <div
-            className={`w-48 shrink-0 px-4 text-xs font-medium text-zinc-500 border-r border-zinc-200 dark:border-zinc-800 sticky left-0 z-10 ${ROW_BG} flex flex-col justify-end pb-2`}
+            className={`w-32 sm:w-48 shrink-0 px-4 text-xs font-medium text-zinc-500 border-r border-zinc-200 dark:border-zinc-800 sticky left-0 z-10 ${ROW_BG} flex flex-col justify-end pb-2`}
           >
             Kanál
           </div>
@@ -454,7 +454,7 @@ export function Timeline({
               }}
             >
               <div
-                className={`w-48 shrink-0 px-4 py-2.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 sticky left-0 z-10 ${GROUP_HEADER_BG} flex items-center gap-2`}
+                className={`w-32 sm:w-48 shrink-0 px-4 py-2.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 sticky left-0 z-10 ${GROUP_HEADER_BG} flex items-center gap-2`}
               >
                 <span className="text-base leading-none">{g.flag}</span>
                 <span>{g.name}</span>
@@ -479,7 +479,7 @@ export function Timeline({
                   className="flex border-b border-zinc-100 dark:border-zinc-800"
                 >
                   <div
-                    className={`w-48 shrink-0 px-4 text-sm text-zinc-700 dark:text-zinc-300 border-r border-zinc-100 dark:border-zinc-800 truncate flex items-center sticky left-0 z-10 ${ROW_BG}`}
+                    className={`w-32 sm:w-48 shrink-0 px-4 text-sm text-zinc-700 dark:text-zinc-300 border-r border-zinc-100 dark:border-zinc-800 truncate flex items-center sticky left-0 z-10 ${ROW_BG}`}
                     style={{ minHeight: rowHeight }}
                     onContextMenu={(e) => {
                       e.preventDefault();

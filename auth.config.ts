@@ -21,6 +21,8 @@ export const authConfig: NextAuthConfig = {
         path.startsWith("/share/") || // public read-only client links
         path === "/favicon.ico";
       if (isPublic) return true;
+      // /print/* still requires auth — printables are internal handoff aids,
+      // not external sharing (use /share/* for that).
       return !!auth?.user;
     },
     // Expose user.id on the session via JWT.sub. Runs on every session read,

@@ -263,6 +263,15 @@ export default async function Dashboard({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href={`/print/timeline?${queryParamsForward}${queryParamsForward.toString() ? "&" : ""}from=${toDateInputValue(rangeStart)}&to=${toDateInputValue(rangeEnd)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+            title="Tisková podoba aktuální timeline"
+          >
+            Tisk / PDF
+          </a>
           <Link
             href="/campaigns"
             className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"

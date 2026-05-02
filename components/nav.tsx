@@ -30,32 +30,42 @@ export async function Nav() {
     : [];
 
   return (
-    <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="font-semibold tracking-tight">
+    <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 print:hidden">
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 flex items-center justify-between h-14 gap-2">
+        <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+          <Link
+            href="/"
+            className="font-semibold tracking-tight shrink-0"
+          >
             videospots
           </Link>
-          <div className="flex items-center gap-1 text-sm">
+          <div className="flex items-center gap-0.5 text-sm overflow-x-auto -mx-1 px-1">
             <NavLink href="/">Timeline</NavLink>
             <NavLink href="/campaigns">Seznam</NavLink>
-            <NavLink href="/campaigns/new">Nová</NavLink>
-            <NavLink href="/admin/templates">Šablony</NavLink>
-            <NavLink href="/admin">Administrace</NavLink>
+            <NavLink href="/campaigns/new">+ Nová</NavLink>
+            <NavLink href="/tools/find-slot" className="hidden md:inline-flex">
+              Volný termín
+            </NavLink>
+            <NavLink href="/admin/templates" className="hidden md:inline-flex">
+              Šablony
+            </NavLink>
+            <NavLink href="/admin">Admin</NavLink>
           </div>
         </div>
 
         {session?.user && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-1 sm:gap-2 text-sm shrink-0">
             <span
-              className="hidden sm:inline-flex items-center gap-1 text-xs text-zinc-500 border border-zinc-200 dark:border-zinc-800 rounded-md px-2 py-1"
+              className="hidden lg:inline-flex items-center gap-1 text-xs text-zinc-500 border border-zinc-200 dark:border-zinc-800 rounded-md px-2 py-1"
               title="Stiskni Ctrl+K (Cmd+K na macu) pro vyhledávání"
             >
               🔍 <kbd className="font-mono">⌘K</kbd>
             </span>
             <ActivityFeed entries={recentActivity} />
             <DarkModeToggle />
-            <span className="text-zinc-500 px-2">{session.user.email}</span>
+            <span className="hidden md:inline text-zinc-500 px-2">
+              {session.user.email}
+            </span>
             <form
               action={async () => {
                 "use server";
@@ -64,9 +74,13 @@ export async function Nav() {
             >
               <button
                 type="submit"
-                className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 px-1"
+                title="Odhlásit"
               >
-                Odhlásit
+                <span className="hidden sm:inline">Odhlásit</span>
+                <span className="sm:hidden" aria-hidden>
+                  ⏻
+                </span>
               </button>
             </form>
           </div>
@@ -76,11 +90,22 @@ export async function Nav() {
   );
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+function NavLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <Link
       href={href}
-      className="px-3 py-1.5 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900 transition-colors"
+      className={
+        "px-2 sm:px-3 py-1.5 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900 transition-colors whitespace-nowrap inline-flex " +
+        (className ?? "")
+      }
     >
       {children}
     </Link>
