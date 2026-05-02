@@ -8,7 +8,7 @@ export default function AdminLayout({
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
       <div className="flex items-baseline justify-between mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Administrace</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Administrace</h1>
       </div>
 
       <div className="border-b border-zinc-200 dark:border-zinc-800 mb-6">

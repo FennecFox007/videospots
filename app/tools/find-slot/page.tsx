@@ -211,7 +211,7 @@ export default async function FindSlotPage({
         >
           ← Timeline
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight mt-1">
+        <h1 className="text-3xl font-semibold tracking-tight mt-1">
           Najít volný termín
         </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">

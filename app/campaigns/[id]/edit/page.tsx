@@ -39,7 +39,7 @@ export default async function EditCampaignPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
-      <h1 className="text-2xl font-semibold tracking-tight mb-1">
+      <h1 className="text-3xl font-semibold tracking-tight mb-1">
         Upravit kampaň
       </h1>
       <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">

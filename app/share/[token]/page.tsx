@@ -138,7 +138,7 @@ async function CampaignSharePage({
               className="inline-block w-4 h-4 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-800"
               style={{ background: c.color }}
             />
-            <h1 className="text-2xl font-semibold tracking-tight">{c.name}</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">{c.name}</h1>
             <StatusBadge status={c.status} runState={runState} />
             <CommunicationBadge type={c.communicationType} />
           </div>
@@ -322,7 +322,7 @@ async function TimelineSharePage({
 
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-3xl font-semibold tracking-tight">
             Plán kampaní
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">

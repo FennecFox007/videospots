@@ -277,7 +277,7 @@ export default async function Dashboard({
     <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Timeline</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Timeline</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
             {formatDate(rangeStart)} – {formatDate(addDays(rangeEnd, -1))} ·{" "}
             {distinctCampaignCount}{" "}

@@ -87,7 +87,7 @@ export default async function ReleasesPage() {
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       <div className="flex items-baseline justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-3xl font-semibold tracking-tight">
             Release kalendář
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
