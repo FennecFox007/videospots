@@ -267,7 +267,7 @@ export default async function CampaignDetailPage({
       </div>
 
       {product && (
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
           <h2 className="font-medium mb-3">Produkt</h2>
           <div className="flex items-start gap-4">
             {product.coverUrl && (
@@ -302,13 +302,13 @@ export default async function CampaignDetailPage({
       )}
 
       {c.videoUrl && (
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
           <h2 className="font-medium mb-3">Video</h2>
           <VideoEmbed url={c.videoUrl} />
         </div>
       )}
 
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h2 className="font-medium mb-3">
           Kanály ({channelRows.length})
         </h2>
@@ -331,7 +331,7 @@ export default async function CampaignDetailPage({
       </div>
 
       {c.notes && (
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
           <h2 className="font-medium mb-2">Poznámky</h2>
           <p className="text-sm whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
             {c.notes}
@@ -339,7 +339,7 @@ export default async function CampaignDetailPage({
         </div>
       )}
 
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h2 className="font-medium mb-3">
           Komentáře ({commentRows.length})
         </h2>
@@ -403,7 +403,7 @@ export default async function CampaignDetailPage({
         </form>
       </div>
 
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h2 className="font-medium mb-3">
           Historie změn ({historyRows.length})
         </h2>
@@ -671,7 +671,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+    <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-4">
       <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">
         {label}
       </div>

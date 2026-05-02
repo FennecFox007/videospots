@@ -64,7 +64,7 @@ export default async function ProductEditPage({
         </div>
       </div>
 
-      <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+      <section className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h3 className="font-medium mb-3">Upravit</h3>
         <form
           action={updateProduct.bind(null, productId)}
@@ -136,7 +136,7 @@ export default async function ProductEditPage({
       </section>
 
       {p.coverUrl && (
-        <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <section className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
           <h3 className="font-medium mb-3">Cover</h3>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -147,7 +147,7 @@ export default async function ProductEditPage({
         </section>
       )}
 
-      <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+      <section className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h3 className="font-medium mb-3">
           Kampaně k tomuto produktu ({linkedCampaigns.length})
         </h3>

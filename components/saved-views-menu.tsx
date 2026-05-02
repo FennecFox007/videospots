@@ -154,7 +154,7 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
       {open && (
         <div
           role="menu"
-          className="absolute z-40 top-full left-0 mt-1 w-72 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden"
+          className="absolute z-40 top-full left-0 mt-1 w-72 rounded-md bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-lg overflow-hidden"
         >
           {views.length === 0 ? (
             <div className="px-3 py-3 text-xs text-zinc-500">

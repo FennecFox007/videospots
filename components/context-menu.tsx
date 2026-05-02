@@ -71,7 +71,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
       ref={ref}
       role="menu"
       style={{ position: "fixed", left: pos.x, top: pos.y, zIndex: 100 }}
-      className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg py-1 min-w-56 select-none"
+      className="rounded-md bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-lg py-1 min-w-56 select-none"
     >
       {items.map((item, i) => {
         if (item.kind === "separator") {

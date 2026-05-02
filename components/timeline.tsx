@@ -541,7 +541,7 @@ export function Timeline({
   const hasNoCampaigns = campaigns.length === 0;
 
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-x-auto">
+    <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm overflow-x-auto">
       <div className="min-w-[900px]">
         {/* HEADER ----------------------------------------------------------- */}
         <div

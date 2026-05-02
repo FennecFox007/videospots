@@ -124,7 +124,7 @@ export default async function ReleasesPage() {
           {groups.map((g) => (
             <section
               key={g.key}
-              className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden"
+              className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm overflow-hidden"
             >
               <div className="px-4 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 capitalize text-sm font-semibold">
                 {g.label}{" "}

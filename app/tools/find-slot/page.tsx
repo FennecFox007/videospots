@@ -223,7 +223,7 @@ export default async function FindSlotPage({
 
       <form
         method="get"
-        className="space-y-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5"
+        className="space-y-4 rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5"
       >
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -297,7 +297,7 @@ export default async function FindSlotPage({
       </form>
 
       {channelIds.length > 0 && (
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
           <div className="flex items-baseline justify-between mb-3">
             <h2 className="font-medium">
               {slots.length === 0

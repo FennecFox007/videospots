@@ -105,7 +105,7 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
 
   return (
     <>
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-x-auto">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 text-left">
             <tr>
@@ -270,7 +270,7 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
               Barva ▾
             </button>
             {colorPickerOpen && (
-              <div className="absolute bottom-full left-0 mb-1 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg p-2 flex gap-1">
+              <div className="absolute bottom-full left-0 mb-1 rounded-md bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-lg p-2 flex gap-1">
                 {CAMPAIGN_COLORS.map((c) => (
                   <button
                     key={c.value}

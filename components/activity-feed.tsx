@@ -70,7 +70,7 @@ export function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-1rem)] rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-1rem)] rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-lg z-50 overflow-hidden">
           <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-500 uppercase tracking-wide">
             Aktivita
           </div>

@@ -66,7 +66,7 @@ export default async function ProductsAdminPage({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+      <section className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h2 className="font-medium mb-3">Přidat produkt</h2>
         <form action={createProduct} className="grid gap-3 md:grid-cols-2">
           <Field
@@ -113,7 +113,7 @@ export default async function ProductsAdminPage({
         </form>
       </section>
 
-      <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+      <section className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm">
         <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex flex-wrap gap-3 items-end">
           <form className="flex flex-wrap gap-3 items-end flex-1" method="get">
             <div className="flex-1 min-w-48">

@@ -58,7 +58,7 @@ async function SignInForm({
           throw e;
         }
       }}
-      className="space-y-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6"
+      className="space-y-4 rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-6"
     >
       <div>
         <label

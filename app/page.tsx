@@ -511,7 +511,7 @@ function LiveRunningCard({
 }) {
   if (running.length === 0) {
     return (
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-4 py-3">
         <div className="flex items-center gap-2 mb-1">
           <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
           <span className="font-medium text-sm text-zinc-500">
@@ -576,7 +576,7 @@ function UpcomingCard({
 }) {
   if (upcoming.length === 0) {
     return (
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-4 py-3">
         <div className="flex items-center gap-2 mb-1">
           <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
           <span className="font-medium text-sm text-zinc-500">
@@ -648,7 +648,7 @@ function EndingSoonCard({
 }) {
   if (ending.length === 0) {
     return (
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-4 py-3">
         <div className="flex items-center gap-2 mb-1">
           <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
           <span className="font-medium text-sm text-zinc-500">
@@ -850,7 +850,7 @@ function StatCard({
   small?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+    <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-4">
       <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">
         {label}
       </div>

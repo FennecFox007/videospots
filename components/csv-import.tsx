@@ -125,7 +125,7 @@ export function CsvImport() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-3">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-3">
         <div>
           <h2 className="font-medium">Formát CSV</h2>
           <p className="text-xs text-zinc-500 mt-1">
@@ -161,7 +161,7 @@ export function CsvImport() {
       </div>
 
       {rows && rows.length > 0 && !result && (
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm overflow-hidden">
           <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
             <span className="text-sm font-medium">
               Náhled: {rows.length} řádků

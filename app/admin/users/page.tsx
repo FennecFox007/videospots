@@ -19,7 +19,7 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+      <section className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h2 className="font-medium mb-3">Přidat uživatele</h2>
         <form
           action={createUser}
@@ -56,7 +56,7 @@ export default async function UsersPage() {
         </form>
       </section>
 
-      <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+      <section className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 text-left">
             <tr>
