@@ -136,11 +136,12 @@ export const games = products;
 
 // Campaign = a video spot scheduled for a date range on a set of channels.
 //
-// Status: workflow state set explicitly by users.
-//   - 'draft'     — in planning, not committed (dashed bar, muted)
-//   - 'approved'  — committed to the schedule (solid bar — default visual)
-//   - 'cancelled' — was approved but called off; kept for history (gray, strike)
-// "Active / upcoming / done" are computed from dates + status, not stored.
+// Status: there's no draft/approval workflow — a campaign is either active or
+// explicitly cancelled.
+//   - 'approved'  — active (default; legacy value kept so audit history stays
+//                   readable; user-facing label is "Aktivní")
+//   - 'cancelled' — historical mark, set via the detail-page button
+// "Active / upcoming / done" are computed from dates, not stored.
 export const campaigns = pgTable("campaign", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -151,7 +152,7 @@ export const campaigns = pgTable("campaign", {
   }),
   startsAt: timestamp("starts_at", { mode: "date" }).notNull(),
   endsAt: timestamp("ends_at", { mode: "date" }).notNull(),
-  status: text("status").notNull().default("draft"), // draft | approved | cancelled
+  status: text("status").notNull().default("approved"), // approved | cancelled
   // Communication intent of the campaign — preorder / launch / outnow / dlc /
   // update / promo / sale / bundle / brand. Drives badges and filters. See
   // lib/communication.ts for the canonical list.

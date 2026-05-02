@@ -10,7 +10,6 @@ const ACTIONS = [
   { value: "created", label: "vytvořeno" },
   { value: "updated", label: "upraveno" },
   { value: "deleted", label: "smazáno" },
-  { value: "approved", label: "schváleno (legacy)" },
   { value: "cancelled", label: "zrušeno" },
 ];
 

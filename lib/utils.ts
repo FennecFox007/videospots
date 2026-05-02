@@ -102,13 +102,12 @@ export function pluralCs(
 // Campaign status
 // ---------------------------------------------------------------------------
 //
-// We removed the "draft / needs approval" phase: whoever creates a campaign
-// auto-approves it. Stored status is therefore just "approved" (the default)
-// or "cancelled" (explicit historical mark, set via the detail-page button).
-// "Active / upcoming / done" are computed from dates + status, not stored.
+// Campaigns are either active or cancelled — there is no draft/approval step.
+// "Active / upcoming / done" are computed from dates, not stored.
 //
-// "approved" is kept as the value rather than renamed to "active" so existing
-// audit_log rows stay readable.
+// The DB column value for active is the string "approved" (kept for backward
+// compatibility with existing rows and audit log entries — the user-facing
+// label is "Aktivní" so this never leaks).
 
 export const CAMPAIGN_STATUSES = [
   { value: "approved", label: "Aktivní", short: "OK" },

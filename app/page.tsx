@@ -158,16 +158,14 @@ export default async function Dashboard({
     campaignRows.map((c) => c.campaignId)
   ).size;
 
-  // ---- Live "running now" + "upcoming" + "needs attention" widgets
+  // ---- Live "running now" + "upcoming" + "ending soon" widgets
   const now = new Date();
   const UPCOMING_WINDOW_DAYS = 30;
   const ENDING_WINDOW_DAYS = 7;
-  const RELEASE_WINDOW_DAYS = 30;
   const upcomingHorizon = addDays(now, UPCOMING_WINDOW_DAYS);
   const endingHorizon = addDays(now, ENDING_WINDOW_DAYS);
-  const releaseHorizon = addDays(now, RELEASE_WINDOW_DAYS);
 
-  const [runningRows, upcomingRows, endingRows, upcomingReleases] = await Promise.all([
+  const [runningRows, upcomingRows, endingRows] = await Promise.all([
     db
       .select({
         id: campaigns.id,
@@ -226,67 +224,7 @@ export default async function Dashboard({
       )
       .orderBy(asc(campaigns.endsAt))
       .limit(8),
-    // Upcoming product releases — used to spot launches with no campaign.
-    db
-      .select({
-        id: products.id,
-        name: products.name,
-        kind: products.kind,
-        coverUrl: products.coverUrl,
-        releaseDate: products.releaseDate,
-      })
-      .from(products)
-      .where(
-        and(
-          gte(products.releaseDate, now),
-          lte(products.releaseDate, releaseHorizon)
-        )
-      )
-      .orderBy(asc(products.releaseDate))
-      .limit(20),
   ]);
-
-  // For each upcoming release, count approved campaigns whose date range
-  // includes the release date. Anything with zero coverage is a "naked launch"
-  // and gets surfaced as needing attention.
-  const releaseIds = upcomingReleases.map((r) => r.id);
-  const releaseCoverageRows =
-    releaseIds.length === 0
-      ? []
-      : await db
-          .select({
-            productId: campaigns.productId,
-            startsAt: campaigns.startsAt,
-            endsAt: campaigns.endsAt,
-          })
-          .from(campaigns)
-          .where(
-            and(
-              inArray(campaigns.productId, releaseIds),
-              eq(campaigns.status, "approved"),
-              isNull(campaigns.archivedAt)
-            )
-          );
-  const coverageByProduct = new Map<number, number>();
-  for (const row of releaseCoverageRows) {
-    if (row.productId === null) continue;
-    const release = upcomingReleases.find((r) => r.id === row.productId)
-      ?.releaseDate;
-    if (!release) continue;
-    const r = release.getTime();
-    if (
-      row.startsAt.getTime() <= r &&
-      row.endsAt.getTime() + ONE_DAY_MS >= r
-    ) {
-      coverageByProduct.set(
-        row.productId,
-        (coverageByProduct.get(row.productId) ?? 0) + 1
-      );
-    }
-  }
-  const releasesWithoutCampaign = upcomingReleases.filter(
-    (r) => !coverageByProduct.has(r.id)
-  );
 
   const allFeaturedIds = [
     ...runningRows.map((r) => r.id),
@@ -363,7 +301,7 @@ export default async function Dashboard({
         </div>
       </div>
 
-      {/* Live trio: running now / upcoming / needs attention */}
+      {/* Live trio: running now / upcoming / ending soon */}
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         <LiveRunningCard
           running={runningRows}
@@ -375,11 +313,9 @@ export default async function Dashboard({
           windowDays={UPCOMING_WINDOW_DAYS}
           channelCountByCampaign={channelCountByCampaign}
         />
-        <NeedsAttentionCard
+        <EndingSoonCard
           ending={endingRows}
-          endingWindowDays={ENDING_WINDOW_DAYS}
-          releasesWithoutCampaign={releasesWithoutCampaign}
-          releaseWindowDays={RELEASE_WINDOW_DAYS}
+          windowDays={ENDING_WINDOW_DAYS}
           channelCountByCampaign={channelCountByCampaign}
         />
       </div>
@@ -678,20 +614,9 @@ function UpcomingCard({
   );
 }
 
-/**
- * Triage card combining two operational signals:
- * 1) Campaigns ending in <ENDING_WINDOW_DAYS — refresh / extend / wrap up
- * 2) Product releases coming in <RELEASE_WINDOW_DAYS with NO approved campaign
- *    overlapping the release date ("naked launch")
- *
- * The single card replaces the older "Konec brzy" widget — both items are
- * things the team should look at this week, so they belong together.
- */
-function NeedsAttentionCard({
+function EndingSoonCard({
   ending,
-  endingWindowDays,
-  releasesWithoutCampaign,
-  releaseWindowDays,
+  windowDays,
   channelCountByCampaign,
 }: {
   ending: {
@@ -701,31 +626,20 @@ function NeedsAttentionCard({
     startsAt: Date;
     endsAt: Date;
   }[];
-  endingWindowDays: number;
-  releasesWithoutCampaign: {
-    id: number;
-    name: string;
-    kind: string;
-    coverUrl: string | null;
-    releaseDate: Date | null;
-  }[];
-  releaseWindowDays: number;
+  windowDays: number;
   channelCountByCampaign: Map<number, number>;
 }) {
-  const totalIssues = ending.length + releasesWithoutCampaign.length;
-
-  if (totalIssues === 0) {
+  if (ending.length === 0) {
     return (
       <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3">
         <div className="flex items-center gap-2 mb-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-          <span className="font-medium text-sm text-zinc-700 dark:text-zinc-300">
-            Vše v pořádku
+          <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+          <span className="font-medium text-sm text-zinc-500">
+            Žádná kampaň brzy nekončí
           </span>
         </div>
         <p className="text-xs text-zinc-500">
-          Žádná kampaň nekončí v {endingWindowDays} dnech, žádný release v{" "}
-          {releaseWindowDays} dnech bez kampaně.
+          V příštích {windowDays} dnech nekončí žádná aktivně běžící kampaň.
         </p>
       </div>
     );
@@ -736,97 +650,40 @@ function NeedsAttentionCard({
       <div className="flex items-center gap-2 mb-2">
         <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
         <span className="font-medium text-sm text-amber-900 dark:text-amber-200">
-          Vyžaduje pozornost: {totalIssues}
+          Konec do {windowDays} dnů: {ending.length}{" "}
+          {pluralCs(ending.length, "kampaň", "kampaně", "kampaní")}
         </span>
       </div>
-
-      {ending.length > 0 && (
-        <div className="mb-2">
-          <div className="text-[11px] uppercase tracking-wide text-amber-800/80 dark:text-amber-300/70 mb-0.5">
-            Končí do {endingWindowDays} dnů ({ending.length})
-          </div>
-          <ul className="divide-y divide-amber-200/60 dark:divide-amber-900/40">
-            {ending.map((e) => {
-              const daysLeft = Math.max(
-                0,
-                Math.ceil(
-                  (e.endsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                )
-              );
-              return (
-                <li key={e.id}>
-                  <Link
-                    href={`/campaigns/${e.id}`}
-                    className="flex items-center gap-2 py-1.5 text-xs hover:underline"
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ background: e.color }}
-                    />
-                    <span className="font-medium truncate flex-1">
-                      {e.name}
-                    </span>
-                    <span className="text-amber-700 dark:text-amber-400 whitespace-nowrap">
-                      {channelCountByCampaign.get(e.id) ?? 0}× ·{" "}
-                      {daysLeft === 0
-                        ? "dnes"
-                        : `za ${daysLeft} ${pluralCs(daysLeft, "den", "dny", "dní")}`}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      {releasesWithoutCampaign.length > 0 && (
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-amber-800/80 dark:text-amber-300/70 mb-0.5">
-            Vychází bez kampaně ({releasesWithoutCampaign.length})
-          </div>
-          <ul className="divide-y divide-amber-200/60 dark:divide-amber-900/40">
-            {releasesWithoutCampaign.map((r) => {
-              if (!r.releaseDate) return null;
-              const daysUntil = Math.max(
-                0,
-                Math.ceil(
-                  (r.releaseDate.getTime() - Date.now()) /
-                    (1000 * 60 * 60 * 24)
-                )
-              );
-              const launchHref = `/campaigns/new?productName=${encodeURIComponent(
-                r.name
-              )}&communicationType=launch&from=${toDateInputValue(addDays(r.releaseDate, -7))}&to=${toDateInputValue(addDays(r.releaseDate, 7))}`;
-              return (
-                <li key={r.id}>
-                  <div className="flex items-center gap-2 py-1.5 text-xs">
-                    <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
-                    <Link
-                      href={`/admin/products/${r.id}`}
-                      className="font-medium truncate flex-1 hover:underline"
-                    >
-                      {r.name}
-                    </Link>
-                    <span className="text-amber-700 dark:text-amber-400 whitespace-nowrap">
-                      {daysUntil === 0
-                        ? "dnes"
-                        : `za ${daysUntil} ${pluralCs(daysUntil, "den", "dny", "dní")}`}
-                    </span>
-                    <Link
-                      href={launchHref}
-                      className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200/60 dark:bg-amber-900/40 hover:bg-amber-300 dark:hover:bg-amber-800 whitespace-nowrap"
-                      title="Vytvořit launch kampaň pro tento release"
-                    >
-                      + Launch
-                    </Link>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
+      <ul className="divide-y divide-amber-200/60 dark:divide-amber-900/40">
+        {ending.map((e) => {
+          const daysLeft = Math.max(
+            0,
+            Math.ceil(
+              (e.endsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+            )
+          );
+          return (
+            <li key={e.id}>
+              <Link
+                href={`/campaigns/${e.id}`}
+                className="flex items-center gap-2 py-1.5 text-xs hover:underline"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: e.color }}
+                />
+                <span className="font-medium truncate flex-1">{e.name}</span>
+                <span className="text-amber-700 dark:text-amber-400 whitespace-nowrap">
+                  {channelCountByCampaign.get(e.id) ?? 0}× kanál ·{" "}
+                  {daysLeft === 0
+                    ? "dnes"
+                    : `za ${daysLeft} ${pluralCs(daysLeft, "den", "dny", "dní")}`}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

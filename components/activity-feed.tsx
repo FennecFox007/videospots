@@ -22,7 +22,6 @@ const ACTION_VERB: Record<string, string> = {
   created: "vytvořil(a)",
   updated: "upravil(a)",
   deleted: "smazal(a)",
-  approved: "schválil(a)",
   cancelled: "zrušil(a)",
 };
 

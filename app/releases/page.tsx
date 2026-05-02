@@ -82,9 +82,6 @@ export default async function ReleasesPage() {
   const totalUpcoming = releaseRows.filter(
     (r) => r.releaseDate && r.releaseDate >= now
   ).length;
-  const totalWithoutCampaigns = releaseRows.filter(
-    (r) => r.releaseDate && r.releaseDate >= now && !countByProduct.has(r.id)
-  ).length;
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -96,14 +93,6 @@ export default async function ReleasesPage() {
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
             {totalUpcoming}{" "}
             {pluralCs(totalUpcoming, "produkt v pipeline", "produkty v pipeline", "produktů v pipeline")}
-            {totalWithoutCampaigns > 0 && (
-              <>
-                {" · "}
-                <span className="text-amber-700 dark:text-amber-400 font-medium">
-                  {totalWithoutCampaigns} bez kampaně
-                </span>
-              </>
-            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -189,11 +178,6 @@ export default async function ReleasesPage() {
                           >
                             {status.label}
                           </span>
-                          {cnt === 0 && (
-                            <span className="inline-flex items-center rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-900 px-2 py-0.5 text-[10px] font-medium">
-                              Bez kampaně
-                            </span>
-                          )}
                         </div>
                         <div className="text-xs text-zinc-500 mt-0.5">
                           Vydání {formatDate(release)}

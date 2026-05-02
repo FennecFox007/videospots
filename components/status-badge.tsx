@@ -1,6 +1,6 @@
 // Visual badge for campaign status. Uses the computed run state (upcoming /
-// active / done / cancelled) since stored status only carries the cancelled
-// override after the approval flow was removed.
+// active / done / cancelled). There is no draft/approval step — campaigns
+// are either active or explicitly cancelled.
 
 import type { RunState } from "@/lib/utils";
 

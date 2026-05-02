@@ -450,7 +450,6 @@ function historyVerb(action: string): string {
     created: "vytvořil(a)",
     updated: "upravil(a)",
     deleted: "smazal(a)",
-    approved: "schválil(a)",
     cancelled: "zrušil(a)",
     archived: "archivoval(a)",
   };
