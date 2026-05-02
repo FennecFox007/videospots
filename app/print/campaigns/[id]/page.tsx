@@ -2,6 +2,8 @@
 // "Save as PDF" handoff to a client. Strips action buttons, comments, history.
 
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
+import QRCode from "qrcode";
 import { eq, asc } from "drizzle-orm";
 import {
   db,
@@ -70,35 +72,58 @@ export default async function PrintCampaignPage({
   const lifecycleText =
     lifecyclePhase === "no-release" ? "" : lifecycleLabel(lifecyclePhase);
 
+  // QR code: prefer the trailer URL (typical use case = scan from printed
+  // brief to preview the spot), fall back to the internal campaign detail
+  // URL if there's no video. Produced server-side as inline SVG so the print
+  // is fully self-contained.
+  const reqHeaders = await headers();
+  const proto =
+    reqHeaders.get("x-forwarded-proto") ?? reqHeaders.get("x-proto") ?? "https";
+  const host =
+    reqHeaders.get("x-forwarded-host") ??
+    reqHeaders.get("host") ??
+    "localhost:3000";
+  const internalUrl = `${proto}://${host}/campaigns/${campaignId}`;
+  const qrTarget = c.videoUrl || internalUrl;
+  const qrLabel = c.videoUrl ? "Otevřít video" : "Otevřít kampaň";
+  const qrSvg = await QRCode.toString(qrTarget, {
+    type: "svg",
+    margin: 0,
+    width: 96,
+    errorCorrectionLevel: "M",
+    color: { dark: "#000000", light: "#ffffff" },
+  });
+
   return (
     <div className="bg-white text-black mx-auto max-w-3xl px-8 py-10 print-clean">
       <AutoPrint />
 
-      <div className="border-b-2 border-black pb-4 mb-6">
-        <div className="flex items-baseline justify-between gap-4">
-          <span className="text-xs uppercase tracking-widest text-zinc-500">
-            videospots · rozpis kampaně
-          </span>
-          <span className="text-xs text-zinc-500">
-            Vytvořeno {formatDate(new Date())}
-          </span>
-        </div>
-        <div className="flex items-center gap-3 mt-3">
-          <span
-            className="inline-block w-5 h-5 rounded-full ring-2 ring-zinc-300"
-            style={{ background: c.color }}
-          />
-          <h1 className="text-3xl font-bold">{c.name}</h1>
-          <span className="ml-auto text-sm font-medium px-2 py-0.5 rounded bg-zinc-100 border border-zinc-300">
-            {runState === "active"
-              ? "Právě běží"
-              : runState === "upcoming"
-                ? "Čeká na start"
-                : runState === "done"
-                  ? "Doběhlo"
-                  : statusLabel(c.status)}
-          </span>
-        </div>
+      <div className="border-b-2 border-black pb-4 mb-6 flex items-start gap-6">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline justify-between gap-4">
+            <span className="text-xs uppercase tracking-widest text-zinc-500">
+              videospots · rozpis kampaně
+            </span>
+            <span className="text-xs text-zinc-500">
+              Vytvořeno {formatDate(new Date())}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 mt-3">
+            <span
+              className="inline-block w-5 h-5 rounded-full ring-2 ring-zinc-300"
+              style={{ background: c.color }}
+            />
+            <h1 className="text-3xl font-bold">{c.name}</h1>
+            <span className="ml-auto text-sm font-medium px-2 py-0.5 rounded bg-zinc-100 border border-zinc-300">
+              {runState === "active"
+                ? "Právě běží"
+                : runState === "upcoming"
+                  ? "Čeká na start"
+                  : runState === "done"
+                    ? "Doběhlo"
+                    : statusLabel(c.status)}
+            </span>
+          </div>
         {(c.communicationType || lifecycleText) && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {c.communicationType && (
@@ -126,6 +151,21 @@ export default async function PrintCampaignPage({
             ))}
           </div>
         )}
+        </div>
+        {/* QR — scan to open trailer (or campaign detail if no video) */}
+        <div className="shrink-0 flex flex-col items-center text-[9px] text-zinc-600 leading-tight">
+          <div
+            className="border border-zinc-300 p-1 bg-white"
+            // SVG produced server-side from a trusted helper; safe to inline.
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: qrSvg }}
+            style={{
+              WebkitPrintColorAdjust: "exact",
+              printColorAdjust: "exact",
+            }}
+          />
+          <span className="mt-1 text-center max-w-24">{qrLabel}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-6">

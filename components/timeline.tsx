@@ -18,6 +18,7 @@ import {
   formatDateShort,
   formatMonthName,
   pluralCs,
+  snapToMondayStart,
   toDateInputValue,
 } from "@/lib/utils";
 import {
@@ -25,6 +26,7 @@ import {
   type ContextMenuItem,
 } from "@/components/context-menu";
 import {
+  communicationTypeClasses,
   communicationTypeLabel,
   computeLifecyclePhase,
   lifecycleLabel,
@@ -117,6 +119,14 @@ export function Timeline({
     items: ContextMenuItem[];
   } | null>(null);
 
+  // Hover tooltip state — single shared instance, anchored to the bar's
+  // viewport rect. Bars trigger via onMouseEnter (with 250ms delay so brief
+  // pointer flybys don't fire) and clear via onMouseLeave.
+  const [hoverTooltip, setHoverTooltip] = useState<{
+    bar: TimelineCampaign;
+    rect: DOMRect;
+  } | null>(null);
+
   // ---------------------------------------------------------------------------
   // Header drag-pan: grab the days strip and drag left/right to scrub through
   // dates. Visually we just translateX the right-side track during the drag;
@@ -130,6 +140,13 @@ export function Timeline({
     startX: number;
     msPerPx: number;
   } | null>(null);
+  // Live cursor position during pan, for the floating "Zobrazí: …" preview.
+  // Tracks shift state so the tooltip can show the snapped range too.
+  const [panCursor, setPanCursor] = useState<{
+    x: number;
+    y: number;
+    shift: boolean;
+  } | null>(null);
 
   function onHeaderPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return;
@@ -141,11 +158,13 @@ export function Timeline({
       startX: e.clientX,
       msPerPx: totalMs / Math.max(1, rect.width),
     });
+    setPanCursor({ x: e.clientX, y: e.clientY, shift: e.shiftKey });
   }
 
   function onHeaderPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (!panDrag) return;
     setPanPx(e.clientX - panDrag.startX);
+    setPanCursor({ x: e.clientX, y: e.clientY, shift: e.shiftKey });
   }
 
   function onHeaderPointerUp(e: React.PointerEvent<HTMLDivElement>) {
@@ -156,8 +175,10 @@ export function Timeline({
     }
     const deltaPx = e.clientX - panDrag.startX;
     const msPerPx = panDrag.msPerPx;
+    const shift = e.shiftKey;
     setPanDrag(null);
     setPanPx(0);
+    setPanCursor(null);
 
     // Below threshold = treat as a click on the header, no nav.
     if (Math.abs(deltaPx) < 5) return;
@@ -168,8 +189,14 @@ export function Timeline({
     const deltaDays = Math.round(deltaMs / ONE_DAY_MS);
     if (deltaDays === 0) return;
 
-    const newStart = addDays(rangeStart, deltaDays);
-    const newEnd = addDays(rangeEnd, deltaDays);
+    let newStart = addDays(rangeStart, deltaDays);
+    let newEnd = addDays(rangeEnd, deltaDays);
+    if (shift) {
+      // Shift+drag = snap rangeStart to Monday, preserve length.
+      const totalMsBefore = rangeEnd.getTime() - rangeStart.getTime();
+      newStart = snapToMondayStart(newStart);
+      newEnd = new Date(newStart.getTime() + totalMsBefore);
+    }
     const sp = new URLSearchParams(searchParams.toString());
     sp.set("from", toDateInputValue(newStart));
     sp.set("to", toDateInputValue(newEnd));
@@ -184,6 +211,35 @@ export function Timeline({
     }
     setPanDrag(null);
     setPanPx(0);
+    setPanCursor(null);
+  }
+
+  function onHeaderDoubleClick() {
+    // Quick "jump to today" — convenience that pairs well with header drag,
+    // since panning far away is now easy. Snaps to Monday-of-this-week and
+    // preserves the current range length.
+    const totalMsBefore = rangeEnd.getTime() - rangeStart.getTime();
+    const newStart = snapToMondayStart(new Date());
+    const newEnd = new Date(newStart.getTime() + totalMsBefore);
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("from", toDateInputValue(newStart));
+    sp.set("to", toDateInputValue(newEnd));
+    router.push(`${pathname}?${sp.toString()}`);
+  }
+
+  // Computed preview range while panning — exposed to the floating tooltip.
+  let panPreview: { start: Date; end: Date; snapped: boolean } | null = null;
+  if (panDrag && panCursor && Math.abs(panPx) >= 5) {
+    const deltaMs = -panPx * panDrag.msPerPx;
+    const deltaDays = Math.round(deltaMs / ONE_DAY_MS);
+    let s = addDays(rangeStart, deltaDays);
+    let e = addDays(rangeEnd, deltaDays);
+    if (panCursor.shift) {
+      const len = rangeEnd.getTime() - rangeStart.getTime();
+      s = snapToMondayStart(s);
+      e = new Date(s.getTime() + len);
+    }
+    panPreview = { start: s, end: e, snapped: panCursor.shift };
   }
 
   // Inline style applied to all right-side tracks during pan so they translate
@@ -444,11 +500,12 @@ export function Timeline({
               cursor: panDrag ? "grabbing" : "grab",
               touchAction: "none",
             }}
-            title="Táhni vlevo/vpravo pro posun v čase"
+            title="Táhni vlevo/vpravo pro posun v čase. Shift+táhnout = snap na pondělí. Dvojklik = skok na dnešek."
             onPointerDown={onHeaderPointerDown}
             onPointerMove={onHeaderPointerMove}
             onPointerUp={onHeaderPointerUp}
             onPointerCancel={onHeaderPointerCancel}
+            onDoubleClick={onHeaderDoubleClick}
           >
             {/* Top sub-row: months */}
             <div className="h-6 relative border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50">
@@ -711,6 +768,10 @@ export function Timeline({
                               items: buildBarMenu(b),
                             });
                           }}
+                          onHoverShow={(bar, rect) =>
+                            setHoverTooltip({ bar, rect })
+                          }
+                          onHoverHide={() => setHoverTooltip(null)}
                         />
                       );
                     })}
@@ -750,6 +811,126 @@ export function Timeline({
           onClose={() => setMenu(null)}
         />
       )}
+
+      {hoverTooltip && (
+        <CampaignTooltip
+          bar={hoverTooltip.bar}
+          anchorRect={hoverTooltip.rect}
+        />
+      )}
+
+      {panPreview && panCursor && (
+        <div
+          className="fixed z-[100] pointer-events-none"
+          style={{
+            left: panCursor.x,
+            top: panCursor.y - 36,
+            transform: "translateX(-50%)",
+          }}
+          role="status"
+        >
+          <div className="rounded-md shadow-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs px-2.5 py-1 font-medium whitespace-nowrap">
+            {formatDateShort(panPreview.start)} –{" "}
+            {formatDateShort(addDays(panPreview.end, -1))}
+            {panPreview.snapped && (
+              <span className="ml-1.5 text-[10px] opacity-70">↦ Po</span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Floating info card shown on bar hover. Anchored above the bar by default;
+ * flips below if it would clip the top of the viewport. Pointer-events are
+ * disabled so the tooltip never intercepts clicks/drags on the bar.
+ */
+function CampaignTooltip({
+  bar,
+  anchorRect,
+}: {
+  bar: TimelineCampaign;
+  anchorRect: DOMRect;
+}) {
+  const TOOLTIP_GAP = 8;
+  const TOOLTIP_EST_HEIGHT = 130; // approximate; just used to choose flip direction
+  const flipBelow = anchorRect.top < TOOLTIP_EST_HEIGHT + TOOLTIP_GAP;
+  const top = flipBelow
+    ? anchorRect.bottom + TOOLTIP_GAP
+    : anchorRect.top - TOOLTIP_GAP;
+  const transform = flipBelow ? "translateX(-50%)" : "translate(-50%, -100%)";
+  const left = anchorRect.left + anchorRect.width / 2;
+
+  const phase = computeLifecyclePhase(
+    bar.startsAt,
+    bar.endsAt,
+    bar.productReleaseDate ?? null
+  );
+  const phaseLabel =
+    phase === "no-release" ? "" : lifecycleLabel(phase);
+  const commLabel = bar.communicationType
+    ? communicationTypeLabel(bar.communicationType)
+    : "";
+  const dur = daysBetween(bar.startsAt, bar.endsAt);
+  const isCancelled = bar.status === "cancelled";
+
+  return (
+    <div
+      className="fixed z-[100] pointer-events-none"
+      style={{ top, left, transform }}
+      role="tooltip"
+    >
+      <div className="rounded-md shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs min-w-[220px] max-w-[320px]">
+        <div className="flex items-start gap-2 mb-1">
+          <span
+            className="inline-block w-3 h-3 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700 mt-0.5 shrink-0"
+            style={{ background: isCancelled ? "#9ca3af" : bar.color }}
+          />
+          <div className="font-semibold leading-tight text-zinc-900 dark:text-zinc-100 break-words">
+            {bar.name}
+            {isCancelled && (
+              <span className="ml-1 text-zinc-500 font-normal">(zrušeno)</span>
+            )}
+          </div>
+        </div>
+        <div className="text-zinc-600 dark:text-zinc-400 leading-snug space-y-0.5">
+          <div>
+            {formatDate(bar.startsAt)} – {formatDate(bar.endsAt)}{" "}
+            <span className="text-zinc-400">
+              ({dur} {pluralCs(dur, "den", "dny", "dní")})
+            </span>
+          </div>
+          {(commLabel || phaseLabel) && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {commLabel && (
+                <span
+                  className={
+                    "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium " +
+                    (bar.communicationType
+                      ? communicationTypeClasses(bar.communicationType)
+                      : "")
+                  }
+                >
+                  {commLabel}
+                </span>
+              )}
+              {phaseLabel && (
+                <span className="inline-flex items-center rounded-full bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 px-1.5 py-0.5 text-[10px] font-medium">
+                  {phaseLabel}
+                </span>
+              )}
+            </div>
+          )}
+          {bar.productReleaseDate && (
+            <div className="pt-1">
+              <span className="text-zinc-500">⭐ Vydání:</span>{" "}
+              {formatDate(bar.productReleaseDate)}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -784,6 +965,8 @@ function DraggableBar({
   rangeEnd,
   now,
   onContextMenu,
+  onHoverShow,
+  onHoverHide,
 }: {
   bar: TimelineCampaign;
   leftPct: number;
@@ -793,15 +976,38 @@ function DraggableBar({
   rangeEnd: Date;
   now: Date;
   onContextMenu?: (e: React.MouseEvent) => void;
+  onHoverShow?: (bar: TimelineCampaign, rect: DOMRect) => void;
+  onHoverHide?: () => void;
 }) {
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<number | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [optimistic, setOptimistic] = useState<{
     startsAt: Date;
     endsAt: Date;
   } | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  function onMouseEnter() {
+    if (drag) return;
+    if (hoverTimeoutRef.current !== null) {
+      window.clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = window.setTimeout(() => {
+      if (ref.current) {
+        onHoverShow?.(bar, ref.current.getBoundingClientRect());
+      }
+    }, 250);
+  }
+
+  function onMouseLeave() {
+    if (hoverTimeoutRef.current !== null) {
+      window.clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    onHoverHide?.();
+  }
 
   const totalMs = rangeEnd.getTime() - rangeStart.getTime();
   const pct = (d: Date) =>
@@ -1033,6 +1239,8 @@ function DraggableBar({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
       onContextMenu={onContextMenu}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       className="absolute text-white text-xs px-2 rounded flex items-center overflow-hidden select-none transition-shadow z-[1]"
       style={{
         left: `calc(${displayLeftPct}% + ${leftPxAdjust}px)`,
@@ -1054,7 +1262,7 @@ function DraggableBar({
         textDecoration: isCancelled ? "line-through" : undefined,
         touchAction: "none",
       }}
-      title={`${bar.name}${statusTitle}\n${formatDate(start)} – ${formatDate(end)} (${duration} ${pluralCs(duration, "den", "dny", "dní")})${tooltipExtras ? `\n${tooltipExtras}` : ""}${bar.productReleaseDate ? `\nVydání: ${formatDate(bar.productReleaseDate)}` : ""}`}
+      aria-label={`${bar.name}${statusTitle} · ${formatDate(start)} – ${formatDate(end)}${tooltipExtras ? ` · ${tooltipExtras}` : ""}`}
     >
       {/* Progress overlay (elapsed portion) — sits behind handles + content */}
       {elapsedRatio > 0 && !isCancelled && (

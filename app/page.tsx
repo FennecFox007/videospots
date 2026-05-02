@@ -461,7 +461,8 @@ export default async function Dashboard({
 
       <p className="text-xs text-zinc-500">
         Tip: táhni za střed = posun, za okraj = délka, klik = otevřít detail.
-        Hlavičku s dny můžeš chytit a posunout v čase doleva/doprava.
+        Hlavičku s dny chytni a táhni pro posun v čase. Shift+táhnout = snap
+        na pondělí. Dvojklik na hlavičku = skok na dnešek.
       </p>
 
       <Timeline
