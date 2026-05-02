@@ -1,0 +1,169 @@
+"use server";
+
+import { z } from "zod";
+import { redirect } from "next/navigation";
+import { sql } from "drizzle-orm";
+import { auth } from "@/auth";
+import {
+  db,
+  campaigns,
+  campaignChannels,
+  games,
+  auditLog,
+} from "@/lib/db/client";
+import { isValidCampaignColor, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
+import { isValidStatus, parseTags } from "@/lib/utils";
+
+const schema = z
+  .object({
+    name: z.string().min(1, "Název kampaně je povinný"),
+    client: z.string().optional().nullable(),
+    videoUrl: z.string().optional().nullable(),
+    color: z.string().optional(),
+    status: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    startsAt: z.string().min(1, "Začátek je povinný"),
+    endsAt: z.string().min(1, "Konec je povinný"),
+    notes: z.string().optional().nullable(),
+    channelIds: z
+      .array(z.coerce.number().int().positive())
+      .min(1, "Vyber alespoň jeden kanál"),
+    gameName: z.string().optional(),
+    gameReleaseDate: z.string().optional(),
+    gameCoverUrl: z.string().optional(),
+    gameSummary: z.string().optional(),
+  })
+  .refine((d) => new Date(d.endsAt) >= new Date(d.startsAt), {
+    message: "Konec musí být stejný nebo pozdější než začátek",
+    path: ["endsAt"],
+  });
+
+export async function createCampaign(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const channelIds = formData
+    .getAll("channelIds")
+    .map((v) => String(v))
+    .filter(Boolean);
+
+  const gameName = String(formData.get("gameName") ?? "").trim();
+  const colorRaw = String(formData.get("color") ?? "");
+  const statusRaw = String(formData.get("status") ?? "");
+  const tagsRaw = String(formData.get("tags") ?? "");
+
+  const parsed = schema.parse({
+    name: formData.get("name"),
+    client: formData.get("client") || undefined,
+    videoUrl: formData.get("videoUrl") || undefined,
+    color: colorRaw || undefined,
+    status: statusRaw || undefined,
+    tags: parseTags(tagsRaw),
+    startsAt: formData.get("startsAt"),
+    endsAt: formData.get("endsAt"),
+    notes: formData.get("notes") || undefined,
+    channelIds,
+    gameName: gameName || undefined,
+    gameReleaseDate: formData.get("gameReleaseDate") || undefined,
+    gameCoverUrl: formData.get("gameCoverUrl") || undefined,
+    gameSummary: formData.get("gameSummary") || undefined,
+  });
+
+  const color =
+    parsed.color && isValidCampaignColor(parsed.color)
+      ? parsed.color
+      : DEFAULT_CAMPAIGN_COLOR;
+  const status =
+    parsed.status && isValidStatus(parsed.status) ? parsed.status : "approved";
+
+  let gameId: number | null = null;
+  if (parsed.gameName) {
+    const existing = await db
+      .select({ id: games.id })
+      .from(games)
+      .where(sql`lower(${games.name}) = lower(${parsed.gameName})`)
+      .limit(1);
+
+    if (existing.length > 0) {
+      gameId = existing[0].id;
+    } else {
+      const [inserted] = await db
+        .insert(games)
+        .values({
+          name: parsed.gameName,
+          coverUrl: parsed.gameCoverUrl || null,
+          summary: parsed.gameSummary || null,
+          releaseDate: parsed.gameReleaseDate
+            ? new Date(parsed.gameReleaseDate)
+            : null,
+        })
+        .returning({ id: games.id });
+      gameId = inserted.id;
+    }
+  }
+
+  // Recurring series support: when "recurring" checkbox is on we create N
+  // campaigns with shifted dates instead of just one.
+  const isRecurring = formData.get("recurring") === "1";
+  const stepDaysRaw = Number(formData.get("recurringStep") ?? 7);
+  const countRaw = Number(formData.get("recurringCount") ?? 1);
+  const stepDays = Number.isFinite(stepDaysRaw) && stepDaysRaw > 0 ? stepDaysRaw : 7;
+  const occurrences = isRecurring
+    ? Math.min(24, Math.max(1, Number.isFinite(countRaw) ? Math.floor(countRaw) : 1))
+    : 1;
+
+  const baseStart = new Date(parsed.startsAt).getTime();
+  const baseEnd = new Date(parsed.endsAt).getTime();
+  const ONE_DAY_MS = 86_400_000;
+
+  const insertedIds: number[] = [];
+  for (let i = 0; i < occurrences; i++) {
+    const offsetMs = i * stepDays * ONE_DAY_MS;
+    const name =
+      occurrences > 1 ? `${parsed.name} (${i + 1}/${occurrences})` : parsed.name;
+
+    const [created] = await db
+      .insert(campaigns)
+      .values({
+        name,
+        client: parsed.client || null,
+        videoUrl: parsed.videoUrl || null,
+        color,
+        status,
+        tags: parsed.tags && parsed.tags.length > 0 ? parsed.tags : null,
+        gameId,
+        startsAt: new Date(baseStart + offsetMs),
+        endsAt: new Date(baseEnd + offsetMs),
+        notes: parsed.notes || null,
+        createdById: session.user.id,
+      })
+      .returning({ id: campaigns.id });
+
+    await db.insert(campaignChannels).values(
+      parsed.channelIds.map((channelId) => ({
+        campaignId: created.id,
+        channelId,
+      }))
+    );
+
+    await db.insert(auditLog).values({
+      action: "created",
+      entity: "campaign",
+      entityId: created.id,
+      userId: session.user.id,
+      changes: {
+        name,
+        status,
+        channelCount: parsed.channelIds.length,
+        ...(occurrences > 1
+          ? { series: `${i + 1}/${occurrences}`, stepDays }
+          : {}),
+      },
+    });
+    insertedIds.push(created.id);
+  }
+
+  // For a single campaign go to its detail; for a series land on the list view
+  // so the user sees all of them at once.
+  redirect(occurrences > 1 ? "/campaigns" : `/campaigns/${insertedIds[0]}`);
+}

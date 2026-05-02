@@ -1,0 +1,559 @@
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { and, eq, asc, desc } from "drizzle-orm";
+import {
+  db,
+  campaigns,
+  campaignChannels,
+  channels,
+  countries,
+  chains,
+  games,
+  comments,
+  users,
+  auditLog,
+} from "@/lib/db/client";
+import { auth } from "@/auth";
+import {
+  formatDate,
+  daysBetween,
+  pluralCs,
+  computedRunState,
+  formatRelative,
+} from "@/lib/utils";
+import {
+  archiveCampaign,
+  cloneCampaign,
+  cancelCampaign,
+  reactivateCampaign,
+  addComment,
+  deleteComment,
+} from "./actions";
+import { StatusBadge } from "@/components/status-badge";
+import { ShareButton } from "@/components/share-button";
+import { SaveAsTemplateButton } from "@/components/save-as-template-button";
+import { EditableCampaignTitle } from "@/components/editable-campaign-title";
+
+export default async function CampaignDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const campaignId = Number(id);
+  if (!Number.isFinite(campaignId)) notFound();
+
+  const [row] = await db
+    .select({
+      campaign: campaigns,
+      game: games,
+    })
+    .from(campaigns)
+    .leftJoin(games, eq(campaigns.gameId, games.id))
+    .where(eq(campaigns.id, campaignId))
+    .limit(1);
+
+  if (!row) notFound();
+
+  const channelRows = await db
+    .select({
+      countryName: countries.name,
+      countryFlag: countries.flagEmoji,
+      chainName: chains.name,
+    })
+    .from(campaignChannels)
+    .innerJoin(channels, eq(campaignChannels.channelId, channels.id))
+    .innerJoin(countries, eq(channels.countryId, countries.id))
+    .innerJoin(chains, eq(channels.chainId, chains.id))
+    .where(eq(campaignChannels.campaignId, campaignId))
+    .orderBy(asc(countries.sortOrder), asc(chains.sortOrder));
+
+  const c = row.campaign;
+  const game = row.game;
+  const runState = computedRunState(c);
+
+  const session = await auth();
+  const currentUserId = session?.user?.id ?? null;
+
+  const commentRows = await db
+    .select({
+      id: comments.id,
+      body: comments.body,
+      createdAt: comments.createdAt,
+      userId: comments.userId,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(comments)
+    .leftJoin(users, eq(comments.userId, users.id))
+    .where(eq(comments.campaignId, campaignId))
+    .orderBy(asc(comments.createdAt));
+
+  const historyRows = await db
+    .select({
+      id: auditLog.id,
+      action: auditLog.action,
+      changes: auditLog.changes,
+      createdAt: auditLog.createdAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(auditLog)
+    .leftJoin(users, eq(auditLog.userId, users.id))
+    .where(
+      and(eq(auditLog.entity, "campaign"), eq(auditLog.entityId, campaignId))
+    )
+    .orderBy(desc(auditLog.createdAt))
+    .limit(50);
+
+  // List of usernames/emails for @mention highlighting in comments.
+  const knownHandles = await db
+    .selectDistinct({ name: users.name, email: users.email })
+    .from(users);
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <Link
+            href="/"
+            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            ← Timeline
+          </Link>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <span
+              className="inline-block w-4 h-4 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-800"
+              style={{ background: c.color }}
+              aria-label="Barva v timeline"
+            />
+            <EditableCampaignTitle
+              campaignId={campaignId}
+              initialName={c.name}
+            />
+            <StatusBadge status={c.status} runState={runState} />
+          </div>
+          {c.client && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+              {c.client}
+            </p>
+          )}
+          {c.tags && c.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {c.tags.map((t) => (
+                <Link
+                  key={t}
+                  href={`/campaigns?tag=${encodeURIComponent(t)}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 px-2.5 py-0.5 text-xs text-zinc-700 dark:text-zinc-300"
+                >
+                  #{t}
+                </Link>
+              ))}
+            </div>
+          )}
+          {c.notes && (
+            <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400 italic max-w-2xl line-clamp-3 whitespace-pre-wrap">
+              {c.notes}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {c.status !== "cancelled" ? (
+            <form
+              action={async () => {
+                "use server";
+                await cancelCampaign(campaignId);
+              }}
+            >
+              <button
+                type="submit"
+                className="text-sm px-3 py-1.5 border border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400 rounded-md hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              >
+                Zrušit (historicky)
+              </button>
+            </form>
+          ) : (
+            <form
+              action={async () => {
+                "use server";
+                await reactivateCampaign(campaignId);
+              }}
+            >
+              <button
+                type="submit"
+                className="text-sm px-3 py-1.5 border border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400 rounded-md hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+              >
+                Obnovit
+              </button>
+            </form>
+          )}
+          <Link
+            href={`/campaigns/${campaignId}/edit`}
+            className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900"
+          >
+            Upravit
+          </Link>
+          <form
+            action={async () => {
+              "use server";
+              await cloneCampaign(campaignId);
+            }}
+          >
+            <button
+              type="submit"
+              className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900"
+            >
+              Klonovat
+            </button>
+          </form>
+          <ShareButton campaignId={campaignId} />
+          <SaveAsTemplateButton
+            campaignId={campaignId}
+            defaultName={c.name}
+          />
+          <form
+            action={async () => {
+              "use server";
+              await archiveCampaign(campaignId);
+            }}
+          >
+            <button
+              type="submit"
+              className="text-sm text-red-600 hover:text-red-700 px-3 py-1.5 border border-red-200 dark:border-red-900/50 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30"
+              title="Přesunout do archivu (lze obnovit)"
+            >
+              Archivovat
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card label="Začátek">{formatDate(c.startsAt)}</Card>
+        <Card label="Konec">{formatDate(c.endsAt)}</Card>
+        <Card label="Délka">
+          {(() => {
+            const d = daysBetween(c.startsAt, c.endsAt);
+            return `${d} ${pluralCs(d, "den", "dny", "dní")}`;
+          })()}
+        </Card>
+        <Card label="Total reach">
+          {(() => {
+            const d = daysBetween(c.startsAt, c.endsAt);
+            const sd = d * channelRows.length;
+            return (
+              <span>
+                {sd}{" "}
+                <span className="text-xs text-zinc-500 font-normal">
+                  screen-days · {channelRows.length} ×{" "}
+                  {pluralCs(d, "den", "dny", "dní")}
+                </span>
+              </span>
+            );
+          })()}
+        </Card>
+      </div>
+
+      {game && (
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <h2 className="font-medium mb-3">Hra</h2>
+          <div className="flex items-start gap-4">
+            {game.coverUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={game.coverUrl}
+                alt={game.name}
+                className="w-24 h-32 object-cover rounded"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="font-medium">{game.name}</div>
+              {game.releaseDate && (
+                <div className="text-sm text-zinc-500 mt-0.5">
+                  Vyšlo {formatDate(game.releaseDate)}
+                </div>
+              )}
+              {game.summary && (
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
+                  {game.summary}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {c.videoUrl && (
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <h2 className="font-medium mb-3">Video</h2>
+          <VideoEmbed url={c.videoUrl} />
+        </div>
+      )}
+
+      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <h2 className="font-medium mb-3">
+          Kanály ({channelRows.length})
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {channelRows.map((ch, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-sm"
+            >
+              <span>{ch.countryFlag}</span>
+              <span className="text-zinc-500">{ch.countryName}</span>
+              <span>·</span>
+              <span>{ch.chainName}</span>
+            </span>
+          ))}
+          {channelRows.length === 0 && (
+            <p className="text-sm text-zinc-500">Žádné kanály.</p>
+          )}
+        </div>
+      </div>
+
+      {c.notes && (
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+          <h2 className="font-medium mb-2">Poznámky</h2>
+          <p className="text-sm whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+            {c.notes}
+          </p>
+        </div>
+      )}
+
+      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <h2 className="font-medium mb-3">
+          Komentáře ({commentRows.length})
+        </h2>
+
+        {commentRows.length > 0 && (
+          <ul className="space-y-3 mb-4">
+            {commentRows.map((cm) => (
+              <li
+                key={cm.id}
+                className="rounded-md border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 p-3"
+              >
+                <div className="flex items-baseline justify-between gap-2 mb-1">
+                  <span className="text-sm font-medium">
+                    {cm.userName ?? cm.userEmail ?? "smazaný uživatel"}
+                  </span>
+                  <span className="text-xs text-zinc-500">
+                    {formatRelative(cm.createdAt)}
+                  </span>
+                </div>
+                <p className="text-sm whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+                  {renderCommentBody(cm.body, knownHandles)}
+                </p>
+                {cm.userId === currentUserId && (
+                  <form
+                    action={async () => {
+                      "use server";
+                      await deleteComment(cm.id);
+                    }}
+                    className="mt-1"
+                  >
+                    <button
+                      type="submit"
+                      className="text-xs text-zinc-500 hover:text-red-600"
+                    >
+                      Smazat
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <form action={addComment.bind(null, campaignId)} className="space-y-2">
+          <textarea
+            name="body"
+            required
+            rows={2}
+            maxLength={2000}
+            placeholder="Napsat komentář…  (zmíň kolegu přes @username)"
+            className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+          />
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5"
+            >
+              Přidat komentář
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+        <h2 className="font-medium mb-3">
+          Historie změn ({historyRows.length})
+        </h2>
+        {historyRows.length === 0 ? (
+          <p className="text-sm text-zinc-500">Žádná historie.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {historyRows.map((h) => (
+              <li
+                key={h.id}
+                className="text-sm text-zinc-600 dark:text-zinc-400 flex items-baseline gap-2 flex-wrap"
+              >
+                <span className="text-xs text-zinc-500 w-24 shrink-0">
+                  {formatRelative(h.createdAt)}
+                </span>
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                  {h.userName ?? h.userEmail ?? "?"}
+                </span>
+                <span>{historyVerb(h.action)}</span>
+                {h.changes != null && (
+                  <span className="text-xs text-zinc-500 font-mono">
+                    {summarizeChanges(h.changes)}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function historyVerb(action: string): string {
+  const map: Record<string, string> = {
+    created: "vytvořil(a)",
+    updated: "upravil(a)",
+    deleted: "smazal(a)",
+    approved: "schválil(a)",
+    cancelled: "zrušil(a)",
+    archived: "archivoval(a)",
+  };
+  return map[action] ?? action;
+}
+
+function summarizeChanges(changes: unknown): string {
+  if (!changes || typeof changes !== "object") return "";
+  const obj = changes as Record<string, unknown>;
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(obj)) {
+    parts.push(`${k}=${truncate(String(v), 30)}`);
+  }
+  return parts.join(", ");
+}
+
+function truncate(s: string, n: number) {
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
+
+/**
+ * Render comment body with @mentions visually highlighted. Mentions match a
+ * known username or email (substring before @, or the whole label) — anything
+ * else stays plain text.
+ */
+function renderCommentBody(
+  body: string,
+  knownHandles: { name: string | null; email: string }[]
+): React.ReactNode {
+  const handleSet = new Set<string>();
+  for (const h of knownHandles) {
+    if (h.email) handleSet.add(h.email.toLowerCase());
+    if (h.name) handleSet.add(h.name.toLowerCase());
+    // also bare local-part of email ("petr@firma.cz" → "petr")
+    const local = h.email?.split("@")[0]?.toLowerCase();
+    if (local) handleSet.add(local);
+  }
+  // Tokenize on @ followed by non-whitespace.
+  const re = /(@[\w.\-]+)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let i = 0;
+  while ((match = re.exec(body)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(body.slice(lastIndex, match.index));
+    }
+    const handle = match[1].slice(1).toLowerCase();
+    const known = handleSet.has(handle);
+    parts.push(
+      <span
+        key={`m-${i++}`}
+        className={
+          known
+            ? "rounded bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 px-1 font-medium"
+            : "text-zinc-500"
+        }
+      >
+        {match[1]}
+      </span>
+    );
+    lastIndex = re.lastIndex;
+  }
+  if (lastIndex < body.length) {
+    parts.push(body.slice(lastIndex));
+  }
+  return parts;
+}
+
+function Card({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+      <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">
+        {label}
+      </div>
+      <div className="text-base font-medium">{children}</div>
+    </div>
+  );
+}
+
+function VideoEmbed({ url }: { url: string }) {
+  const yt = url.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{11})/
+  );
+  const vimeo = url.match(/vimeo\.com\/(\d+)/);
+
+  if (yt) {
+    return (
+      <div className="aspect-video">
+        <iframe
+          src={`https://www.youtube.com/embed/${yt[1]}`}
+          className="w-full h-full rounded"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+  if (vimeo) {
+    return (
+      <div className="aspect-video">
+        <iframe
+          src={`https://player.vimeo.com/video/${vimeo[1]}`}
+          className="w-full h-full rounded"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+  if (/\.(mp4|webm|mov)(\?.*)?$/i.test(url)) {
+    return (
+      <video src={url} controls className="w-full rounded aspect-video" />
+    );
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 hover:underline break-all"
+    >
+      {url}
+    </a>
+  );
+}
