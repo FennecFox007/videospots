@@ -219,11 +219,28 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
             })}
             {rows.length === 0 && (
               <tr>
-                <td
-                  colSpan={10}
-                  className="px-4 py-8 text-center text-zinc-500"
-                >
-                  Žádné kampaně neodpovídají filtrům.
+                <td colSpan={10} className="px-4 py-12 text-center">
+                  <div className="text-3xl mb-2 opacity-30" aria-hidden>
+                    ∅
+                  </div>
+                  <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                    Žádné kampaně neodpovídají filtrům.
+                  </div>
+                  <div className="flex items-center justify-center gap-3 text-sm">
+                    <Link
+                      href="/campaigns"
+                      className="text-zinc-700 dark:text-zinc-300 hover:underline"
+                    >
+                      Vyčistit filtry
+                    </Link>
+                    <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                    <Link
+                      href="/campaigns/new"
+                      className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                    >
+                      + Nová kampaň
+                    </Link>
+                  </div>
                 </td>
               </tr>
             )}
