@@ -20,6 +20,11 @@ import {
   computedRunState,
   statusLabel,
 } from "@/lib/utils";
+import {
+  communicationTypeLabel,
+  computeLifecyclePhase,
+  lifecycleLabel,
+} from "@/lib/communication";
 import { AutoPrint } from "@/components/auto-print";
 
 export default async function PrintCampaignPage({
@@ -57,6 +62,13 @@ export default async function PrintCampaignPage({
   const dur = daysBetween(c.startsAt, c.endsAt);
   const totalReach = dur * channelRows.length;
   const runState = computedRunState(c);
+  const lifecyclePhase = computeLifecyclePhase(
+    c.startsAt,
+    c.endsAt,
+    product?.releaseDate ?? null
+  );
+  const lifecycleText =
+    lifecyclePhase === "no-release" ? "" : lifecycleLabel(lifecyclePhase);
 
   return (
     <div className="bg-white text-black mx-auto max-w-3xl px-8 py-10 print-clean">
@@ -87,6 +99,20 @@ export default async function PrintCampaignPage({
                   : statusLabel(c.status)}
           </span>
         </div>
+        {(c.communicationType || lifecycleText) && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {c.communicationType && (
+              <span className="text-xs bg-zinc-100 border border-zinc-400 rounded-full px-2 py-0.5">
+                Typ: {communicationTypeLabel(c.communicationType)}
+              </span>
+            )}
+            {lifecycleText && (
+              <span className="text-xs bg-zinc-100 border border-zinc-400 rounded-full px-2 py-0.5">
+                Fáze: {lifecycleText}
+              </span>
+            )}
+          </div>
+        )}
         {c.client && <p className="mt-1 text-zinc-600">{c.client}</p>}
         {c.tags && c.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">

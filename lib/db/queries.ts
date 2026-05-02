@@ -81,6 +81,8 @@ export type CampaignFilters = {
   /** Computed run state — translates to date+status SQL conditions.
    *  Values: "running" | "upcoming" | "done" | "cancelled". */
   runState?: string;
+  /** Communication intent (preorder/launch/outnow/...). Matched exactly. */
+  communicationType?: string;
   tag?: string;
   /** Optional date window (overlap test). */
   rangeStart?: Date;
@@ -176,6 +178,9 @@ async function buildWhere(filters: CampaignFilters): Promise<{
         break;
     }
   }
+  if (filters.communicationType) {
+    conds.push(eq(campaigns.communicationType, filters.communicationType));
+  }
   if (filters.tag) {
     // Postgres array contains: tags @> ARRAY['tag']
     conds.push(sql`${campaigns.tags} @> ARRAY[${filters.tag}]::text[]`);
@@ -237,7 +242,9 @@ export async function fetchTimelineCampaigns(
       name: campaigns.name,
       color: campaigns.color,
       status: campaigns.status,
+      communicationType: campaigns.communicationType,
       coverUrl: products.coverUrl,
+      productReleaseDate: products.releaseDate,
       startsAt: campaigns.startsAt,
       endsAt: campaigns.endsAt,
       channelId: campaignChannels.channelId,

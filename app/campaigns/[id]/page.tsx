@@ -34,6 +34,10 @@ import { StatusBadge } from "@/components/status-badge";
 import { ShareButton } from "@/components/share-button";
 import { SaveAsTemplateButton } from "@/components/save-as-template-button";
 import { EditableCampaignTitle } from "@/components/editable-campaign-title";
+import {
+  CommunicationBadge,
+  LifecycleBadge,
+} from "@/components/communication-badge";
 
 export default async function CampaignDetailPage({
   params,
@@ -133,6 +137,12 @@ export default async function CampaignDetailPage({
               initialName={c.name}
             />
             <StatusBadge status={c.status} runState={runState} />
+            <CommunicationBadge type={c.communicationType} />
+            <LifecycleBadge
+              campaignStart={c.startsAt}
+              campaignEnd={c.endsAt}
+              productReleaseDate={product?.releaseDate ?? null}
+            />
           </div>
           {c.client && (
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">

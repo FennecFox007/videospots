@@ -24,6 +24,11 @@ import {
   ContextMenu,
   type ContextMenuItem,
 } from "@/components/context-menu";
+import {
+  communicationTypeLabel,
+  computeLifecyclePhase,
+  lifecycleLabel,
+} from "@/lib/communication";
 
 export type TimelineChannel = {
   id: number;
@@ -46,8 +51,14 @@ export type TimelineCampaign = {
   name: string;
   color: string;
   status: string; // approved | cancelled
+  /** Communication intent (preorder/launch/outnow/...). Shown in tooltip + as
+   *  context for the lifecycle phase. Null when not set. */
+  communicationType: string | null;
   /** Product cover image URL (joined from product table). Optional thumbnail. */
   coverUrl: string | null;
+  /** Product release date (joined). When inside the bar, we draw a small star
+   *  marker; either way it feeds lifecycle phase computation in the tooltip. */
+  productReleaseDate: Date | null;
   startsAt: Date;
   endsAt: Date;
   channelId: number;
@@ -900,6 +911,33 @@ function DraggableBar({
 
   const statusTitle = isCancelled ? " · ZRUŠENO" : "";
 
+  // Lifecycle phase (campaign dates × product release) — shown in tooltip and
+  // drives the in-bar release-date star marker below.
+  const lifecyclePhase = computeLifecyclePhase(
+    start,
+    end,
+    bar.productReleaseDate ?? null
+  );
+  const phaseLabel =
+    lifecyclePhase === "no-release" ? "" : lifecycleLabel(lifecyclePhase);
+  const commLabel = bar.communicationType
+    ? communicationTypeLabel(bar.communicationType)
+    : "";
+  const tooltipExtras = [commLabel, phaseLabel].filter(Boolean).join(" · ");
+
+  // Position the release-date marker as a percentage of the bar's own width.
+  // We only show it when the release falls inside [start, end+1day] — outside
+  // that the lifecycle badge in the tooltip is already explanatory.
+  let releaseMarkerPct: number | null = null;
+  if (bar.productReleaseDate) {
+    const r = bar.productReleaseDate.getTime();
+    const s = start.getTime();
+    const e = end.getTime() + ONE_DAY_MS;
+    if (r >= s && r <= e && e > s) {
+      releaseMarkerPct = ((r - s) / (e - s)) * 100;
+    }
+  }
+
   return (
     <div
       ref={ref}
@@ -929,7 +967,7 @@ function DraggableBar({
         textDecoration: isCancelled ? "line-through" : undefined,
         touchAction: "none",
       }}
-      title={`${bar.name}${statusTitle}\n${formatDate(start)} – ${formatDate(end)} (${duration} ${pluralCs(duration, "den", "dny", "dní")})`}
+      title={`${bar.name}${statusTitle}\n${formatDate(start)} – ${formatDate(end)} (${duration} ${pluralCs(duration, "den", "dny", "dní")})${tooltipExtras ? `\n${tooltipExtras}` : ""}${bar.productReleaseDate ? `\nVydání: ${formatDate(bar.productReleaseDate)}` : ""}`}
     >
       {/* Progress overlay (elapsed portion) — sits behind handles + content */}
       {elapsedRatio > 0 && !isCancelled && (
@@ -961,6 +999,20 @@ function DraggableBar({
       <span className="truncate pointer-events-none px-0.5 font-medium">
         {bar.name}
       </span>
+      {releaseMarkerPct !== null && (
+        <span
+          aria-hidden
+          className="absolute top-0 bottom-0 pointer-events-none flex items-center"
+          style={{ left: `${releaseMarkerPct}%`, transform: "translateX(-50%)" }}
+        >
+          <span
+            className="text-[11px] leading-none drop-shadow"
+            title="Vydání produktu"
+          >
+            ⭐
+          </span>
+        </span>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@
 import { toDateInputValue } from "@/lib/utils";
 import { CAMPAIGN_COLORS, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
 import { PRODUCT_KINDS, DEFAULT_PRODUCT_KIND } from "@/lib/products";
+import { COMMUNICATION_TYPES } from "@/lib/communication";
 import { ChannelsPicker } from "./channels-picker";
 
 export type CampaignFormDefaults = {
@@ -16,6 +17,7 @@ export type CampaignFormDefaults = {
   notes?: string | null;
   color?: string | null;
   status?: string | null;
+  communicationType?: string | null;
   tags?: string[] | null;
   product?: {
     name?: string | null;
@@ -59,6 +61,7 @@ export function CampaignFormBody({
   const endsAt = defaults?.endsAt ?? twoWeeks;
   const selected = defaults?.channelIds ?? new Set<number>();
   const currentColor = defaults?.color ?? DEFAULT_CAMPAIGN_COLOR;
+  const currentCommunicationType = defaults?.communicationType ?? "";
   const currentTags = defaults?.tags ?? [];
 
   return (
@@ -82,17 +85,36 @@ export function CampaignFormBody({
           />
         </Field>
 
-        <Field
-          label="Štítky"
-          hint='Odděl čárkou: "priorita, jaro, launch"'
-        >
-          <input
-            name="tags"
-            defaultValue={currentTags.join(", ")}
-            placeholder="priorita, sezóna, …"
-            className={inputClass}
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field
+            label="Typ komunikace"
+            hint="Co přesně tahle kampaň dělá vůči releasu produktu"
+          >
+            <select
+              name="communicationType"
+              defaultValue={currentCommunicationType}
+              className={inputClass}
+            >
+              <option value="">— neuvedeno —</option>
+              {COMMUNICATION_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label} — {t.description}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field
+            label="Štítky"
+            hint='Odděl čárkou: "priorita, jaro, …"'
+          >
+            <input
+              name="tags"
+              defaultValue={currentTags.join(", ")}
+              placeholder="priorita, sezóna, …"
+              className={inputClass}
+            />
+          </Field>
+        </div>
 
         <Field label="Barva v timeline">
           <div className="flex flex-wrap gap-3">

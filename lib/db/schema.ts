@@ -152,6 +152,10 @@ export const campaigns = pgTable("campaign", {
   startsAt: timestamp("starts_at", { mode: "date" }).notNull(),
   endsAt: timestamp("ends_at", { mode: "date" }).notNull(),
   status: text("status").notNull().default("draft"), // draft | approved | cancelled
+  // Communication intent of the campaign — preorder / launch / outnow / dlc /
+  // update / promo / sale / bundle / brand. Drives badges and filters. See
+  // lib/communication.ts for the canonical list.
+  communicationType: text("communication_type"),
   // Hex color used for the timeline bar. Picked from a fixed palette in the
   // form so it always contrasts with white text. See lib/colors.ts.
   color: text("color").notNull().default("#3b82f6"),

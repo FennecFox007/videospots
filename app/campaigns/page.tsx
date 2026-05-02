@@ -20,6 +20,7 @@ type SearchParams = {
   status?: string;
   runState?: string;
   tag?: string;
+  communicationType?: string;
   sort?: string; // "starts" | "name" | "client" | "status" | "duration"
   order?: string; // "asc" | "desc"
 };
@@ -40,6 +41,7 @@ export default async function CampaignsListPage({
     client: params.client,
     status: params.status,
     runState: params.runState,
+    communicationType: params.communicationType,
     tag: params.tag,
   });
 
@@ -75,8 +77,10 @@ export default async function CampaignsListPage({
     client: campaign.client,
     productName: product?.name ?? null,
     productKind: product?.kind ?? null,
+    productReleaseDate: product?.releaseDate ?? null,
     color: campaign.color,
     status: campaign.status,
+    communicationType: campaign.communicationType,
     startsAt: campaign.startsAt,
     endsAt: campaign.endsAt,
     channelCount: countByCampaign.get(campaign.id) ?? 0,

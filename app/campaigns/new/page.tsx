@@ -13,6 +13,10 @@ type SearchParams = {
   /** ISO YYYY-MM-DD pre-fill for the date inputs. */
   from?: string;
   to?: string;
+  /** Pre-fill product name (used by /releases "Launch kampaň" buttons). */
+  productName?: string;
+  /** Pre-fill communication type (e.g. "launch", "preorder"). */
+  communicationType?: string;
 };
 
 function parseDateParam(s: string | undefined): Date | null {
@@ -82,10 +86,18 @@ export default async function NewCampaignPage({
   const explicitFrom = parseDateParam(params.from);
   const explicitTo = parseDateParam(params.to);
 
+  // Optional pre-fill from /releases page: product name + communication type.
+  // We may also need to seed releaseDate from the product table so the lifecycle
+  // badge / star marker show correctly in the form context.
+  const productNameParam = (params.productName ?? "").trim();
+  const commTypeParam = (params.communicationType ?? "").trim();
+
   if (
     explicitChannels.length > 0 ||
     explicitFrom !== null ||
-    explicitTo !== null
+    explicitTo !== null ||
+    productNameParam ||
+    commTypeParam
   ) {
     defaults = {
       ...(defaults ?? {}),
@@ -94,6 +106,10 @@ export default async function NewCampaignPage({
         : {}),
       ...(explicitFrom ? { startsAt: explicitFrom } : {}),
       ...(explicitTo ? { endsAt: explicitTo } : {}),
+      ...(commTypeParam ? { communicationType: commTypeParam } : {}),
+      ...(productNameParam
+        ? { product: { ...(defaults?.product ?? {}), name: productNameParam } }
+        : {}),
     };
   }
 
@@ -105,6 +121,13 @@ export default async function NewCampaignPage({
       <>
         Předvyplněno ze šablony{" "}
         <span className="font-medium">„{templateName}"</span>.
+      </>
+    );
+  } else if (productNameParam) {
+    hint = (
+      <>
+        Předvyplněno z release kalendáře pro produkt{" "}
+        <span className="font-medium">„{productNameParam}"</span>.
       </>
     );
   } else if (explicitChannels.length > 0 || explicitFrom) {

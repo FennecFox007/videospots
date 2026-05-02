@@ -45,6 +45,7 @@ type SearchParams = {
   status?: string;
   runState?: string;
   tag?: string;
+  communicationType?: string;
 };
 
 export default async function PrintTimelinePage({
@@ -114,6 +115,7 @@ export default async function PrintTimelinePage({
     client: params.client,
     status: params.status,
     runState: params.runState,
+    communicationType: params.communicationType,
     tag: params.tag,
     rangeStart,
     rangeEnd,
@@ -196,6 +198,16 @@ export default async function PrintTimelinePage({
                       const right = pct(clamp(visualEnd));
                       const width = Math.max(right - left, 0.5);
                       const isCancelled = b.status === "cancelled";
+                      // Release-date marker: only inside the bar's own range.
+                      let releaseMarkerPct: number | null = null;
+                      if (b.productReleaseDate) {
+                        const r = b.productReleaseDate.getTime();
+                        const s = b.startsAt.getTime();
+                        const e = b.endsAt.getTime() + ONE_DAY_MS;
+                        if (r >= s && r <= e && e > s) {
+                          releaseMarkerPct = ((r - s) / (e - s)) * 100;
+                        }
+                      }
                       return (
                         <div
                           key={bi}
@@ -217,6 +229,18 @@ export default async function PrintTimelinePage({
                           <span className="truncate font-medium">
                             {b.name}
                           </span>
+                          {releaseMarkerPct !== null && (
+                            <span
+                              aria-hidden
+                              className="absolute top-0 bottom-0 flex items-center text-[10px]"
+                              style={{
+                                left: `${releaseMarkerPct}%`,
+                                transform: "translateX(-50%)",
+                              }}
+                            >
+                              ⭐
+                            </span>
+                          )}
                         </div>
                       );
                     })}

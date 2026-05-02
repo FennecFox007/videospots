@@ -16,6 +16,7 @@ export default function AdminLayout({
           <SubLink href="/admin/countries">Státy</SubLink>
           <SubLink href="/admin/chains">Řetězce</SubLink>
           <SubLink href="/admin/channels">Kanály (matice)</SubLink>
+          <SubLink href="/admin/products">Produkty</SubLink>
           <SubLink href="/admin/users">Uživatelé</SubLink>
           <SubLink href="/admin/templates">Šablony</SubLink>
           <SubLink href="/admin/import">Import CSV</SubLink>

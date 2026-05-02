@@ -43,6 +43,9 @@ export async function Nav() {
             <NavLink href="/">Timeline</NavLink>
             <NavLink href="/campaigns">Seznam</NavLink>
             <NavLink href="/campaigns/new">+ Nová</NavLink>
+            <NavLink href="/releases" className="hidden md:inline-flex">
+              Releasy
+            </NavLink>
             <NavLink href="/tools/find-slot" className="hidden md:inline-flex">
               Volný termín
             </NavLink>

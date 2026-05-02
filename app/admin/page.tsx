@@ -19,6 +19,11 @@ export default function AdminIndexPage() {
         description="Matice Stát × Řetězec. Označ které kombinace skutečně existují."
       />
       <AdminCard
+        href="/admin/products"
+        title="Produkty"
+        description="Hry, konzole, ovladače, příslušenství… s daty vydání a covery. Kampaně se na ně mapují."
+      />
+      <AdminCard
         href="/admin/users"
         title="Uživatelé"
         description="Přidávej, mažeš, nastavuješ hesla členům týmu."

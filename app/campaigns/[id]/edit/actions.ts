@@ -16,6 +16,7 @@ import {
   isValidKind,
   DEFAULT_PRODUCT_KIND,
 } from "@/lib/products";
+import { isValidCommunicationType } from "@/lib/communication";
 import { isValidStatus, parseTags } from "@/lib/utils";
 
 const schema = z
@@ -25,6 +26,7 @@ const schema = z
     videoUrl: z.string().optional().nullable(),
     color: z.string().optional(),
     status: z.string().optional(),
+    communicationType: z.string().optional(),
     tags: z.array(z.string()).optional(),
     startsAt: z.string().min(1),
     endsAt: z.string().min(1),
@@ -63,6 +65,7 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
     videoUrl: formData.get("videoUrl") || undefined,
     color: colorRaw || undefined,
     status: statusRaw || undefined,
+    communicationType: formData.get("communicationType") || undefined,
     tags: parseTags(tagsRaw),
     startsAt: formData.get("startsAt"),
     endsAt: formData.get("endsAt"),
@@ -81,6 +84,11 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
       : DEFAULT_CAMPAIGN_COLOR;
   const status =
     parsed.status && isValidStatus(parsed.status) ? parsed.status : "approved";
+  const communicationType =
+    parsed.communicationType &&
+    isValidCommunicationType(parsed.communicationType)
+      ? parsed.communicationType
+      : null;
 
   const productKind =
     parsed.productKind && isValidKind(parsed.productKind)
@@ -133,6 +141,7 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
       videoUrl: parsed.videoUrl || null,
       color,
       status,
+      communicationType,
       tags: parsed.tags && parsed.tags.length > 0 ? parsed.tags : null,
       productId,
       startsAt: new Date(parsed.startsAt),

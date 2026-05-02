@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { COMMUNICATION_TYPES } from "@/lib/communication";
 
 const RUN_STATES = [
   { value: "running", label: "Právě běží" },
@@ -61,9 +62,16 @@ export function FilterBar({ countries, chains, clients, tags }: Props) {
   const client = searchParams.get("client") ?? "";
   const runState = searchParams.get("runState") ?? "";
   const tag = searchParams.get("tag") ?? "";
+  const commType = searchParams.get("communicationType") ?? "";
 
   const hasFilters =
-    !!search || !!country || !!chain || !!client || !!runState || !!tag;
+    !!search ||
+    !!country ||
+    !!chain ||
+    !!client ||
+    !!runState ||
+    !!tag ||
+    !!commType;
 
   function clearAll() {
     const params = new URLSearchParams(searchParams);
@@ -75,6 +83,7 @@ export function FilterBar({ countries, chains, clients, tags }: Props) {
       "runState",
       "status",
       "tag",
+      "communicationType",
     ].forEach((k) => params.delete(k));
     setSearch("");
     lastSearchRef.current = "";
@@ -109,6 +118,15 @@ export function FilterBar({ countries, chains, clients, tags }: Props) {
         onChange={(v) => setParam("runState", v)}
         options={RUN_STATES.map((s) => ({ value: s.value, label: s.label }))}
         placeholder="Všechny stavy"
+      />
+      <Select
+        value={commType}
+        onChange={(v) => setParam("communicationType", v)}
+        options={COMMUNICATION_TYPES.map((t) => ({
+          value: t.value,
+          label: t.label,
+        }))}
+        placeholder="Všechny typy komunikace"
       />
       {clients.length > 0 && (
         <Select
