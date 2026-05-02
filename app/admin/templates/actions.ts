@@ -7,7 +7,7 @@ import {
   db,
   campaigns,
   campaignChannels,
-  games,
+  products,
   campaignTemplates,
 } from "@/lib/db/client";
 import { daysBetween } from "@/lib/utils";
@@ -26,8 +26,9 @@ export type TemplatePayload = {
   durationDays: number;
   notes: string | null;
   channelIds: number[];
-  game: {
+  product: {
     name: string;
+    kind: string;
     releaseDate: string | null;
     coverUrl: string | null;
     summary: string | null;
@@ -49,9 +50,9 @@ export async function saveCampaignAsTemplate(
   if (name.length > 80) throw new Error("Příliš dlouhý název");
 
   const [row] = await db
-    .select({ campaign: campaigns, game: games })
+    .select({ campaign: campaigns, product: products })
     .from(campaigns)
-    .leftJoin(games, eq(campaigns.gameId, games.id))
+    .leftJoin(products, eq(campaigns.productId, products.id))
     .where(eq(campaigns.id, campaignId))
     .limit(1);
   if (!row) throw new Error("Kampaň nenalezena");
@@ -70,14 +71,15 @@ export async function saveCampaignAsTemplate(
     durationDays: daysBetween(c.startsAt, c.endsAt),
     notes: c.notes,
     channelIds: channelRows.map((r) => r.channelId),
-    game: row.game
+    product: row.product
       ? {
-          name: row.game.name,
-          releaseDate: row.game.releaseDate
-            ? row.game.releaseDate.toISOString()
+          name: row.product.name,
+          kind: row.product.kind,
+          releaseDate: row.product.releaseDate
+            ? row.product.releaseDate.toISOString()
             : null,
-          coverUrl: row.game.coverUrl,
-          summary: row.game.summary,
+          coverUrl: row.product.coverUrl,
+          summary: row.product.summary,
         }
       : null,
   };

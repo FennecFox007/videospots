@@ -8,11 +8,12 @@ import {
   channels,
   countries,
   chains,
-  games,
+  products,
   comments,
   users,
   auditLog,
 } from "@/lib/db/client";
+import { kindLabel, kindEmoji } from "@/lib/products";
 import { auth } from "@/auth";
 import {
   formatDate,
@@ -46,10 +47,10 @@ export default async function CampaignDetailPage({
   const [row] = await db
     .select({
       campaign: campaigns,
-      game: games,
+      product: products,
     })
     .from(campaigns)
-    .leftJoin(games, eq(campaigns.gameId, games.id))
+    .leftJoin(products, eq(campaigns.productId, products.id))
     .where(eq(campaigns.id, campaignId))
     .limit(1);
 
@@ -69,7 +70,7 @@ export default async function CampaignDetailPage({
     .orderBy(asc(countries.sortOrder), asc(chains.sortOrder));
 
   const c = row.campaign;
-  const game = row.game;
+  const product = row.product;
   const runState = computedRunState(c);
 
   const session = await auth();
@@ -263,28 +264,34 @@ export default async function CampaignDetailPage({
         </Card>
       </div>
 
-      {game && (
+      {product && (
         <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
-          <h2 className="font-medium mb-3">Hra</h2>
+          <h2 className="font-medium mb-3">Produkt</h2>
           <div className="flex items-start gap-4">
-            {game.coverUrl && (
+            {product.coverUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={game.coverUrl}
-                alt={game.name}
+                src={product.coverUrl}
+                alt={product.name}
                 className="w-24 h-32 object-cover rounded"
               />
             )}
             <div className="flex-1 min-w-0">
-              <div className="font-medium">{game.name}</div>
-              {game.releaseDate && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium">{product.name}</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs text-zinc-700 dark:text-zinc-300">
+                  <span aria-hidden>{kindEmoji(product.kind)}</span>
+                  {kindLabel(product.kind)}
+                </span>
+              </div>
+              {product.releaseDate && (
                 <div className="text-sm text-zinc-500 mt-0.5">
-                  Vyšlo {formatDate(game.releaseDate)}
+                  Vyšlo {formatDate(product.releaseDate)}
                 </div>
               )}
-              {game.summary && (
+              {product.summary && (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
-                  {game.summary}
+                  {product.summary}
                 </p>
               )}
             </div>

@@ -7,7 +7,7 @@ import {
   chains,
   campaigns,
   campaignChannels,
-  games,
+  products,
 } from "@/lib/db/client";
 import {
   Timeline,
@@ -722,13 +722,13 @@ async function DashboardStats() {
         .limit(3),
       db
         .select({
-          name: games.name,
+          name: products.name,
           c: sql<number>`count(*)::int`,
         })
         .from(campaigns)
-        .innerJoin(games, eq(campaigns.gameId, games.id))
+        .innerJoin(products, eq(campaigns.productId, products.id))
         .where(isNull(campaigns.archivedAt))
-        .groupBy(games.name)
+        .groupBy(products.name)
         .orderBy(sql`count(*) desc`)
         .limit(3),
       // Approved campaigns overlapping this month — used for screen-days math.

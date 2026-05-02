@@ -4,7 +4,7 @@ import {
   db,
   campaigns,
   campaignChannels,
-  games,
+  products,
 } from "@/lib/db/client";
 import { FilterBar } from "@/components/filter-bar";
 import { CampaignsTable } from "@/components/campaigns-table";
@@ -47,9 +47,9 @@ export default async function CampaignsListPage({
     matchingIds.length === 0
       ? []
       : await db
-          .select({ campaign: campaigns, game: games })
+          .select({ campaign: campaigns, product: products })
           .from(campaigns)
-          .leftJoin(games, eq(campaigns.gameId, games.id))
+          .leftJoin(products, eq(campaigns.productId, products.id))
           .where(inArray(campaigns.id, matchingIds));
 
   // Channel counts per campaign (single grouped query).
@@ -69,11 +69,12 @@ export default async function CampaignsListPage({
   );
 
   // Pack into the shape CampaignsTable wants, then sort.
-  const rows: CampaignsTableRow[] = rawRows.map(({ campaign, game }) => ({
+  const rows: CampaignsTableRow[] = rawRows.map(({ campaign, product }) => ({
     id: campaign.id,
     name: campaign.name,
     client: campaign.client,
-    gameName: game?.name ?? null,
+    productName: product?.name ?? null,
+    productKind: product?.kind ?? null,
     color: campaign.color,
     status: campaign.status,
     startsAt: campaign.startsAt,

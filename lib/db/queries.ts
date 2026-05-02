@@ -19,7 +19,7 @@ import {
   chains,
   campaigns,
   campaignChannels,
-  games,
+  products,
 } from "./client";
 import type { CountryGroup } from "@/components/campaign-form-body";
 
@@ -107,7 +107,7 @@ export async function findCampaignIds(
   const rows = await db
     .selectDistinct({ id: campaigns.id })
     .from(campaigns)
-    .leftJoin(games, eq(campaigns.gameId, games.id))
+    .leftJoin(products, eq(campaigns.productId, products.id))
     .leftJoin(
       campaignChannels,
       eq(campaigns.id, campaignChannels.campaignId)
@@ -139,7 +139,7 @@ async function buildWhere(filters: CampaignFilters): Promise<{
       or(
         ilike(campaigns.name, like),
         ilike(campaigns.client, like),
-        ilike(games.name, like)
+        ilike(products.name, like)
       )!
     );
   }
@@ -222,7 +222,7 @@ export async function getFilterOptions() {
 }
 
 /**
- * Fetch campaigns matching filters, with their channel row + game cover for
+ * Fetch campaigns matching filters, with their channel row + product cover for
  * timeline rendering.
  */
 export async function fetchTimelineCampaigns(
@@ -237,7 +237,7 @@ export async function fetchTimelineCampaigns(
       name: campaigns.name,
       color: campaigns.color,
       status: campaigns.status,
-      coverUrl: games.coverUrl,
+      coverUrl: products.coverUrl,
       startsAt: campaigns.startsAt,
       endsAt: campaigns.endsAt,
       channelId: campaignChannels.channelId,
@@ -247,7 +247,7 @@ export async function fetchTimelineCampaigns(
       campaignChannels,
       eq(campaigns.id, campaignChannels.campaignId)
     )
-    .leftJoin(games, eq(campaigns.gameId, games.id))
+    .leftJoin(products, eq(campaigns.productId, products.id))
     .where(
       and(
         inArray(campaigns.id, ids),

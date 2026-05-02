@@ -13,18 +13,22 @@ import {
   channels,
   countries,
   chains,
-  games,
+  products,
   auditLog,
 } from "@/lib/db/client";
 import {
   isValidCampaignColor,
   DEFAULT_CAMPAIGN_COLOR,
 } from "@/lib/colors";
+import { isValidKind, DEFAULT_PRODUCT_KIND } from "@/lib/products";
 
 export type ImportRow = {
   name: string;
   client?: string;
-  gameName?: string;
+  /** Display name of the product (game / console / controller / …). */
+  productName?: string;
+  /** Kind of product. Defaults to "game" if missing. */
+  productKind?: string;
   startsAt: string;
   endsAt: string;
   color?: string;
@@ -135,23 +139,32 @@ export async function importCampaignsCsv(
         });
       }
 
-      // Resolve game (find or create by case-insensitive name).
-      let gameId: number | null = null;
-      const gameName = (row.gameName ?? "").trim();
-      if (gameName) {
+      // Resolve product (find or create by case-insensitive name). Accept
+      // legacy "gameName" header for backwards-compat with older exports.
+      let productId: number | null = null;
+      const productName = (
+        row.productName ??
+        (row as unknown as Record<string, string | undefined>).gameName ??
+        ""
+      ).trim();
+      const productKind =
+        row.productKind && isValidKind(row.productKind)
+          ? row.productKind
+          : DEFAULT_PRODUCT_KIND;
+      if (productName) {
         const existing = await db
-          .select({ id: games.id })
-          .from(games)
-          .where(sql`lower(${games.name}) = lower(${gameName})`)
+          .select({ id: products.id })
+          .from(products)
+          .where(sql`lower(${products.name}) = lower(${productName})`)
           .limit(1);
         if (existing.length > 0) {
-          gameId = existing[0].id;
+          productId = existing[0].id;
         } else {
           const [inserted] = await db
-            .insert(games)
-            .values({ name: gameName })
-            .returning({ id: games.id });
-          gameId = inserted.id;
+            .insert(products)
+            .values({ name: productName, kind: productKind })
+            .returning({ id: products.id });
+          productId = inserted.id;
         }
       }
 
@@ -175,7 +188,7 @@ export async function importCampaignsCsv(
           status: "approved",
           color,
           tags,
-          gameId,
+          productId,
           startsAt,
           endsAt,
           createdById: userId,

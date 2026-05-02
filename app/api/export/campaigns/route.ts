@@ -15,7 +15,7 @@ import {
   channels,
   countries,
   chains,
-  games,
+  products,
 } from "@/lib/db/client";
 import { findCampaignIds } from "@/lib/db/queries";
 import {
@@ -45,9 +45,9 @@ export async function GET(req: NextRequest) {
     ids.length === 0
       ? []
       : await db
-          .select({ campaign: campaigns, game: games })
+          .select({ campaign: campaigns, product: products })
           .from(campaigns)
-          .leftJoin(games, eq(campaigns.gameId, games.id))
+          .leftJoin(products, eq(campaigns.productId, products.id))
           .where(inArray(campaigns.id, ids));
 
   // Channel labels, grouped per campaign.
@@ -77,7 +77,8 @@ export async function GET(req: NextRequest) {
     "ID",
     "Název",
     "Klient",
-    "Hra",
+    "Produkt",
+    "Druh produktu",
     "Stav",
     "Začátek",
     "Konec",
@@ -89,13 +90,14 @@ export async function GET(req: NextRequest) {
   ];
 
   const lines: string[] = [HEADER.map(esc).join(",")];
-  for (const { campaign: c, game } of rows) {
+  for (const { campaign: c, product } of rows) {
     lines.push(
       [
         c.id,
         c.name,
         c.client ?? "",
-        game?.name ?? "",
+        product?.name ?? "",
+        product?.kind ?? "",
         statusLabel(c.status),
         formatDate(c.startsAt),
         formatDate(c.endsAt),

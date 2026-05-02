@@ -170,8 +170,8 @@ export function CommandPalette() {
                   <span className="text-[10px] text-zinc-400 uppercase tracking-wide">
                     {r.type === "campaign"
                       ? "kampaň"
-                      : r.type === "game"
-                        ? "hra"
+                      : r.type === "product"
+                        ? "produkt"
                         : "klient"}
                   </span>
                 </button>

@@ -10,8 +10,9 @@ import {
   channels,
   countries,
   chains,
-  games,
+  products,
 } from "@/lib/db/client";
+import { kindLabel, kindEmoji } from "@/lib/products";
 import {
   formatDate,
   daysBetween,
@@ -31,9 +32,9 @@ export default async function PrintCampaignPage({
   if (!Number.isFinite(campaignId)) notFound();
 
   const [row] = await db
-    .select({ campaign: campaigns, game: games })
+    .select({ campaign: campaigns, product: products })
     .from(campaigns)
-    .leftJoin(games, eq(campaigns.gameId, games.id))
+    .leftJoin(products, eq(campaigns.productId, products.id))
     .where(eq(campaigns.id, campaignId))
     .limit(1);
   if (!row) notFound();
@@ -52,7 +53,7 @@ export default async function PrintCampaignPage({
     .orderBy(asc(countries.sortOrder), asc(chains.sortOrder));
 
   const c = row.campaign;
-  const game = row.game;
+  const product = row.product;
   const dur = daysBetween(c.startsAt, c.endsAt);
   const totalReach = dur * channelRows.length;
   const runState = computedRunState(c);
@@ -115,26 +116,32 @@ export default async function PrintCampaignPage({
         />
       </div>
 
-      {game && (
-        <Section title="Hra">
+      {product && (
+        <Section title="Produkt">
           <div className="flex items-start gap-4">
-            {game.coverUrl && (
+            {product.coverUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={game.coverUrl}
-                alt={game.name}
+                src={product.coverUrl}
+                alt={product.name}
                 className="w-20 h-28 object-cover rounded border border-zinc-300"
               />
             )}
             <div>
-              <div className="text-lg font-semibold">{game.name}</div>
-              {game.releaseDate && (
+              <div className="text-lg font-semibold flex items-center gap-2">
+                {product.name}
+                <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 border border-zinc-300 px-2 py-0.5 text-xs font-normal">
+                  <span aria-hidden>{kindEmoji(product.kind)}</span>
+                  {kindLabel(product.kind)}
+                </span>
+              </div>
+              {product.releaseDate && (
                 <div className="text-sm text-zinc-600">
-                  Vyšlo {formatDate(game.releaseDate)}
+                  Vyšlo {formatDate(product.releaseDate)}
                 </div>
               )}
-              {game.summary && (
-                <p className="text-sm mt-2">{game.summary}</p>
+              {product.summary && (
+                <p className="text-sm mt-2">{product.summary}</p>
               )}
             </div>
           </div>

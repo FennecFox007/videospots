@@ -57,14 +57,15 @@ export default async function NewCampaignPage({
         startsAt: today,
         endsAt: addDays(today, Math.max(1, p.durationDays - 1)),
         notes: p.notes,
-        game: p.game
+        product: p.product
           ? {
-              name: p.game.name,
-              releaseDate: p.game.releaseDate
-                ? new Date(p.game.releaseDate)
+              name: p.product.name,
+              kind: p.product.kind,
+              releaseDate: p.product.releaseDate
+                ? new Date(p.product.releaseDate)
                 : null,
-              coverUrl: p.game.coverUrl,
-              summary: p.game.summary,
+              coverUrl: p.product.coverUrl,
+              summary: p.product.summary,
             }
           : null,
         channelIds: new Set(p.channelIds),

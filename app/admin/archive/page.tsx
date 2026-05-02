@@ -4,7 +4,7 @@ import {
   db,
   campaigns,
   campaignChannels,
-  games,
+  products,
 } from "@/lib/db/client";
 import { findCampaignIds } from "@/lib/db/queries";
 import {
@@ -33,10 +33,10 @@ export default async function ArchivePage() {
             startsAt: campaigns.startsAt,
             endsAt: campaigns.endsAt,
             archivedAt: campaigns.archivedAt,
-            gameName: games.name,
+            productName: products.name,
           })
           .from(campaigns)
-          .leftJoin(games, eq(campaigns.gameId, games.id))
+          .leftJoin(products, eq(campaigns.productId, products.id))
           .where(inArray(campaigns.id, ids));
 
   const channelCounts =
@@ -107,7 +107,7 @@ export default async function ArchivePage() {
                     {r.client ?? "—"}
                   </td>
                   <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">
-                    {r.gameName ?? "—"}
+                    {r.productName ?? "—"}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
                     {formatDate(r.startsAt)} – {formatDate(r.endsAt)}{" "}

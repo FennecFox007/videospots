@@ -111,12 +111,18 @@ export const channels = pgTable(
   (t) => [uniqueIndex("channel_country_chain_idx").on(t.countryId, t.chainId)]
 );
 
-// Game metadata. Currently entered manually in the campaign form, deduped by
-// case-insensitive name. Project is PS5-only — no platform field needed.
-export const games = pgTable("game", {
+// Product metadata: what's being promoted in a campaign. Most often a game,
+// but also consoles, controllers, accessories or services.
+//
+// JS export is `products`; the DB table is still called "game" — renaming a
+// live table would need a manual migration and there's no payoff. The `kind`
+// column distinguishes types in code/UI.
+export const products = pgTable("game", {
   id: serial("id").primaryKey(),
   igdbId: integer("igdb_id").unique(),
   name: text("name").notNull(),
+  // game | console | controller | accessory | service | other
+  kind: text("kind").notNull().default("game"),
   slug: text("slug"),
   coverUrl: text("cover_url"),
   summary: text("summary"),
@@ -124,6 +130,9 @@ export const games = pgTable("game", {
   rawIgdb: jsonb("raw_igdb"), // kept for forward compatibility
   fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
 });
+
+/** @deprecated Renamed to `products`. Kept as an alias for incremental migration. */
+export const games = products;
 
 // Campaign = a video spot scheduled for a date range on a set of channels.
 //
@@ -137,7 +146,7 @@ export const campaigns = pgTable("campaign", {
   name: text("name").notNull(),
   client: text("client"), // e.g. "Sony Interactive Entertainment"
   videoUrl: text("video_url"),
-  gameId: integer("game_id").references(() => games.id, {
+  productId: integer("game_id").references(() => products.id, {
     onDelete: "set null",
   }),
   startsAt: timestamp("starts_at", { mode: "date" }).notNull(),
@@ -149,6 +158,8 @@ export const campaigns = pgTable("campaign", {
   // Free-form labels (priority, season, theme…). Filterable in the UI.
   tags: text("tags").array(),
   notes: text("notes"),
+  // (DB column stays `game_id`; renamed to `productId` in JS — see products
+  // table comment.)
   // Soft-delete timestamp. Non-null = "archived" (hidden from default lists,
   // restorable from /admin/archive). Null = active.
   archivedAt: timestamp("archived_at", { mode: "date" }),
@@ -262,12 +273,15 @@ export const channelsRelations = relations(channels, ({ one, many }) => ({
   campaignChannels: many(campaignChannels),
 }));
 
-export const gamesRelations = relations(games, ({ many }) => ({
+export const productsRelations = relations(products, ({ many }) => ({
   campaigns: many(campaigns),
 }));
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
-  game: one(games, { fields: [campaigns.gameId], references: [games.id] }),
+  product: one(products, {
+    fields: [campaigns.productId],
+    references: [products.id],
+  }),
   createdBy: one(users, {
     fields: [campaigns.createdById],
     references: [users.id],

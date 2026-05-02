@@ -8,10 +8,14 @@ import {
   db,
   campaigns,
   campaignChannels,
-  games,
+  products,
   auditLog,
 } from "@/lib/db/client";
 import { isValidCampaignColor, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
+import {
+  isValidKind,
+  DEFAULT_PRODUCT_KIND,
+} from "@/lib/products";
 import { isValidStatus, parseTags } from "@/lib/utils";
 
 const schema = z
@@ -28,10 +32,11 @@ const schema = z
     channelIds: z
       .array(z.coerce.number().int().positive())
       .min(1, "Vyber alespoň jeden kanál"),
-    gameName: z.string().optional(),
-    gameReleaseDate: z.string().optional(),
-    gameCoverUrl: z.string().optional(),
-    gameSummary: z.string().optional(),
+    productName: z.string().optional(),
+    productKind: z.string().optional(),
+    productReleaseDate: z.string().optional(),
+    productCoverUrl: z.string().optional(),
+    productSummary: z.string().optional(),
   })
   .refine((d) => new Date(d.endsAt) >= new Date(d.startsAt), {
     message: "Konec musí být stejný nebo pozdější než začátek",
@@ -47,7 +52,7 @@ export async function createCampaign(formData: FormData) {
     .map((v) => String(v))
     .filter(Boolean);
 
-  const gameName = String(formData.get("gameName") ?? "").trim();
+  const productName = String(formData.get("productName") ?? "").trim();
   const colorRaw = String(formData.get("color") ?? "");
   const statusRaw = String(formData.get("status") ?? "");
   const tagsRaw = String(formData.get("tags") ?? "");
@@ -63,10 +68,11 @@ export async function createCampaign(formData: FormData) {
     endsAt: formData.get("endsAt"),
     notes: formData.get("notes") || undefined,
     channelIds,
-    gameName: gameName || undefined,
-    gameReleaseDate: formData.get("gameReleaseDate") || undefined,
-    gameCoverUrl: formData.get("gameCoverUrl") || undefined,
-    gameSummary: formData.get("gameSummary") || undefined,
+    productName: productName || undefined,
+    productKind: formData.get("productKind") || undefined,
+    productReleaseDate: formData.get("productReleaseDate") || undefined,
+    productCoverUrl: formData.get("productCoverUrl") || undefined,
+    productSummary: formData.get("productSummary") || undefined,
   });
 
   const color =
@@ -76,29 +82,36 @@ export async function createCampaign(formData: FormData) {
   const status =
     parsed.status && isValidStatus(parsed.status) ? parsed.status : "approved";
 
-  let gameId: number | null = null;
-  if (parsed.gameName) {
+  // Find or create the product by case-insensitive name match.
+  const productKind =
+    parsed.productKind && isValidKind(parsed.productKind)
+      ? parsed.productKind
+      : DEFAULT_PRODUCT_KIND;
+
+  let productId: number | null = null;
+  if (parsed.productName) {
     const existing = await db
-      .select({ id: games.id })
-      .from(games)
-      .where(sql`lower(${games.name}) = lower(${parsed.gameName})`)
+      .select({ id: products.id })
+      .from(products)
+      .where(sql`lower(${products.name}) = lower(${parsed.productName})`)
       .limit(1);
 
     if (existing.length > 0) {
-      gameId = existing[0].id;
+      productId = existing[0].id;
     } else {
       const [inserted] = await db
-        .insert(games)
+        .insert(products)
         .values({
-          name: parsed.gameName,
-          coverUrl: parsed.gameCoverUrl || null,
-          summary: parsed.gameSummary || null,
-          releaseDate: parsed.gameReleaseDate
-            ? new Date(parsed.gameReleaseDate)
+          name: parsed.productName,
+          kind: productKind,
+          coverUrl: parsed.productCoverUrl || null,
+          summary: parsed.productSummary || null,
+          releaseDate: parsed.productReleaseDate
+            ? new Date(parsed.productReleaseDate)
             : null,
         })
-        .returning({ id: games.id });
-      gameId = inserted.id;
+        .returning({ id: products.id });
+      productId = inserted.id;
     }
   }
 
@@ -131,7 +144,7 @@ export async function createCampaign(formData: FormData) {
         color,
         status,
         tags: parsed.tags && parsed.tags.length > 0 ? parsed.tags : null,
-        gameId,
+        productId,
         startsAt: new Date(baseStart + offsetMs),
         endsAt: new Date(baseEnd + offsetMs),
         notes: parsed.notes || null,

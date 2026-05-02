@@ -20,12 +20,14 @@ import {
   computedRunState,
 } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
+import { kindEmoji, kindLabel } from "@/lib/products";
 
 export type CampaignsTableRow = {
   id: number;
   name: string;
   client: string | null;
-  gameName: string | null;
+  productName: string | null;
+  productKind: string | null;
   color: string;
   status: string;
   startsAt: Date;
@@ -106,7 +108,7 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
               <th className="px-3 py-2 font-medium w-6"></th>
               <SortHeader label="Kampaň" sortKey="name" sort={sort} order={order} params={params} />
               <SortHeader label="Klient" sortKey="client" sort={sort} order={order} params={params} />
-              <th className="px-3 py-2 font-medium">Hra</th>
+              <th className="px-3 py-2 font-medium">Produkt</th>
               <SortHeader label="Začátek" sortKey="starts" sort={sort} order={order} params={params} />
               <SortHeader label="Délka" sortKey="duration" sort={sort} order={order} params={params} />
               <th className="px-3 py-2 font-medium text-right">Kanály</th>
@@ -154,7 +156,16 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
                     {r.client ?? "—"}
                   </td>
                   <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">
-                    {r.gameName ?? "—"}
+                    {r.productName ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span aria-hidden title={kindLabel(r.productKind ?? "game")}>
+                          {kindEmoji(r.productKind ?? "game")}
+                        </span>
+                        {r.productName}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     {formatDate(r.startsAt)}

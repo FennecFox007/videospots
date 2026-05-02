@@ -46,7 +46,7 @@ export type TimelineCampaign = {
   name: string;
   color: string;
   status: string; // approved | cancelled
-  /** Game cover image URL (from games.cover_url join). Optional thumbnail. */
+  /** Product cover image URL (joined from product table). Optional thumbnail. */
   coverUrl: string | null;
   startsAt: Date;
   endsAt: Date;

@@ -409,7 +409,7 @@ export async function cloneCampaign(campaignId: number) {
       name: `${original.name} (kopie)`,
       client: original.client,
       videoUrl: original.videoUrl,
-      gameId: original.gameId,
+      productId: original.productId,
       startsAt: original.startsAt,
       endsAt: original.endsAt,
       notes: original.notes,

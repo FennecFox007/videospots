@@ -4,13 +4,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { desc, eq, ilike, or, sql } from "drizzle-orm";
 import { auth } from "@/auth";
-import { db, campaigns, games } from "@/lib/db/client";
+import { db, campaigns, products } from "@/lib/db/client";
+import { kindLabel } from "@/lib/products";
 
 export type SearchResult = {
-  type: "campaign" | "game" | "client";
+  type: "campaign" | "product" | "client";
   id?: number;
   label: string;
-  /** Optional secondary line (client / status). */
+  /** Optional secondary line (client / kind / status). */
   sub?: string;
   href: string;
   color?: string;
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   const like = `%${q}%`;
 
-  const [campaignRows, gameRows, clientRows] = await Promise.all([
+  const [campaignRows, productRows, clientRows] = await Promise.all([
     db
       .select({
         id: campaigns.id,
@@ -42,9 +43,9 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(campaigns.startsAt))
       .limit(8),
     db
-      .select({ id: games.id, name: games.name })
-      .from(games)
-      .where(ilike(games.name, like))
+      .select({ id: products.id, name: products.name, kind: products.kind })
+      .from(products)
+      .where(ilike(products.name, like))
       .limit(4),
     db
       .selectDistinct({ client: campaigns.client })
@@ -66,13 +67,13 @@ export async function GET(req: NextRequest) {
         color: c.color,
       })
     ),
-    ...gameRows.map(
-      (g): SearchResult => ({
-        type: "game",
-        id: g.id,
-        label: g.name,
-        sub: "hra",
-        href: `/campaigns?q=${encodeURIComponent(g.name)}`,
+    ...productRows.map(
+      (p): SearchResult => ({
+        type: "product",
+        id: p.id,
+        label: p.name,
+        sub: kindLabel(p.kind),
+        href: `/campaigns?q=${encodeURIComponent(p.name)}`,
       })
     ),
     ...clientRows

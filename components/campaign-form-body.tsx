@@ -4,6 +4,7 @@
 
 import { toDateInputValue } from "@/lib/utils";
 import { CAMPAIGN_COLORS, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
+import { PRODUCT_KINDS, DEFAULT_PRODUCT_KIND } from "@/lib/products";
 import { ChannelsPicker } from "./channels-picker";
 
 export type CampaignFormDefaults = {
@@ -16,8 +17,9 @@ export type CampaignFormDefaults = {
   color?: string | null;
   status?: string | null;
   tags?: string[] | null;
-  game?: {
+  product?: {
     name?: string | null;
+    kind?: string | null;
     releaseDate?: Date | null;
     coverUrl?: string | null;
     summary?: string | null;
@@ -124,36 +126,51 @@ export function CampaignFormBody({
       </Section>
 
       <Section
-        title="Hra"
-        hint="Volitelné. Pokud kampaň propaguje konkrétní titul, vyplň co máš — ostatní pole nech prázdná."
+        title="Produkt"
+        hint="Co kampaň propaguje — hra, konzole, ovladač, příslušenství… Volitelné, ale pomáhá při třídění."
       >
-        <Field label="Název hry">
-          <input
-            name="gameName"
-            defaultValue={defaults?.game?.name ?? ""}
-            placeholder="např. Saros"
-            className={inputClass}
-          />
-        </Field>
+        <div className="grid grid-cols-[1fr_auto] gap-3">
+          <Field label="Název produktu">
+            <input
+              name="productName"
+              defaultValue={defaults?.product?.name ?? ""}
+              placeholder="např. Saros, PS5 Slim, DualSense Edge…"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Druh">
+            <select
+              name="productKind"
+              defaultValue={defaults?.product?.kind ?? DEFAULT_PRODUCT_KIND}
+              className={inputClass}
+            >
+              {PRODUCT_KINDS.map((k) => (
+                <option key={k.value} value={k.value}>
+                  {k.emoji} {k.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Datum vydání">
+          <Field label="Datum vydání" hint="Volitelné, hodí se pro launchy">
             <input
-              name="gameReleaseDate"
+              name="productReleaseDate"
               type="date"
               defaultValue={
-                defaults?.game?.releaseDate
-                  ? toDateInputValue(defaults.game.releaseDate)
+                defaults?.product?.releaseDate
+                  ? toDateInputValue(defaults.product.releaseDate)
                   : ""
               }
               className={inputClass}
             />
           </Field>
-          <Field label="Cover URL" hint="Odkaz na obrázek (jpg, png, webp)">
+          <Field label="Obrázek (URL)" hint="Cover, packshot, render…">
             <input
-              name="gameCoverUrl"
+              name="productCoverUrl"
               type="url"
-              defaultValue={defaults?.game?.coverUrl ?? ""}
+              defaultValue={defaults?.product?.coverUrl ?? ""}
               placeholder="https://…"
               className={inputClass}
             />
@@ -162,10 +179,10 @@ export function CampaignFormBody({
 
         <Field label="Stručný popis">
           <textarea
-            name="gameSummary"
+            name="productSummary"
             rows={2}
-            defaultValue={defaults?.game?.summary ?? ""}
-            placeholder="krátká věta o hře"
+            defaultValue={defaults?.product?.summary ?? ""}
+            placeholder="krátká věta o produktu"
             className={`${inputClass} resize-y`}
           />
         </Field>

@@ -18,7 +18,8 @@ const REQUIRED_COLUMNS = ["name", "startsAt", "endsAt", "channels"];
 const KNOWN_COLUMNS = [
   "name",
   "client",
-  "gameName",
+  "productName",
+  "productKind",
   "startsAt",
   "endsAt",
   "color",
@@ -68,7 +69,9 @@ export function CsvImport() {
             _warnings: warnings,
             name: rec.name ?? "",
             client: rec.client || undefined,
-            gameName: rec.gameName || undefined,
+            // Accept both productName (current) and gameName (legacy) headers.
+            productName: rec.productName || rec.gameName || undefined,
+            productKind: rec.productKind || undefined,
             startsAt: rec.startsAt ?? "",
             endsAt: rec.endsAt ?? "",
             color: rec.color || undefined,
@@ -98,7 +101,8 @@ export function CsvImport() {
     const payload: ImportRow[] = rows.map((r) => ({
       name: r.name,
       client: r.client,
-      gameName: r.gameName,
+      productName: r.productName,
+      productKind: r.productKind,
       startsAt: r.startsAt,
       endsAt: r.endsAt,
       color: r.color,
@@ -178,7 +182,7 @@ export function CsvImport() {
                   <th className="px-2 py-1.5">#</th>
                   <th className="px-2 py-1.5">Název</th>
                   <th className="px-2 py-1.5">Klient</th>
-                  <th className="px-2 py-1.5">Hra</th>
+                  <th className="px-2 py-1.5">Produkt</th>
                   <th className="px-2 py-1.5">Začátek</th>
                   <th className="px-2 py-1.5">Konec</th>
                   <th className="px-2 py-1.5">Kanály</th>
@@ -205,7 +209,12 @@ export function CsvImport() {
                       {r.client ?? "—"}
                     </td>
                     <td className="px-2 py-1 text-zinc-600 dark:text-zinc-400">
-                      {r.gameName ?? "—"}
+                      {r.productName ?? "—"}
+                      {r.productKind && (
+                        <span className="ml-1 text-zinc-400">
+                          ({r.productKind})
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-1 whitespace-nowrap">
                       {r.startsAt}
