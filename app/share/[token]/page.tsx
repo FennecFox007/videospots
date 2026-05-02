@@ -29,6 +29,7 @@ import {
 } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
 import { CommunicationBadge } from "@/components/communication-badge";
+import { VideoEmbed } from "@/components/video-embed";
 import {
   PublicTimeline,
   type PublicCountryGroup,
@@ -408,49 +409,3 @@ function Card({
   );
 }
 
-function VideoEmbed({ url }: { url: string }) {
-  const yt = url.match(
-    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{11})/
-  );
-  const vimeo = url.match(/vimeo\.com\/(\d+)/);
-
-  if (yt) {
-    return (
-      <div className="aspect-video">
-        <iframe
-          src={`https://www.youtube.com/embed/${yt[1]}`}
-          className="w-full h-full rounded"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
-    );
-  }
-  if (vimeo) {
-    return (
-      <div className="aspect-video">
-        <iframe
-          src={`https://player.vimeo.com/video/${vimeo[1]}`}
-          className="w-full h-full rounded"
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
-    );
-  }
-  if (/\.(mp4|webm|mov)(\?.*)?$/i.test(url)) {
-    return (
-      <video src={url} controls className="w-full rounded aspect-video" />
-    );
-  }
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-blue-600 hover:underline break-all"
-    >
-      {url}
-    </a>
-  );
-}

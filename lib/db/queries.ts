@@ -243,6 +243,7 @@ export async function fetchTimelineCampaigns(
       color: campaigns.color,
       status: campaigns.status,
       communicationType: campaigns.communicationType,
+      videoUrl: campaigns.videoUrl,
       coverUrl: products.coverUrl,
       startsAt: campaigns.startsAt,
       endsAt: campaigns.endsAt,

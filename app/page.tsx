@@ -475,9 +475,9 @@ export default async function Dashboard({
       />
 
       <p className="text-xs text-zinc-500">
-        Tip: táhni za střed = posun, za okraj = délka, klik = otevřít detail.
-        Hlavičku s dny chytni a táhni pro posun v čase. Shift+táhnout = snap
-        na pondělí. Dvojklik na hlavičku = skok na dnešek.
+        Tip: táhni za střed = posun, za okraj = délka, klik = otevřít detail,
+        ▶ na baru = přehrát spot. Hlavičku s dny chytni a táhni pro posun
+        v čase, shift+táhnout = snap na pondělí, dvojklik = skok na dnešek.
       </p>
 
       <Timeline
