@@ -283,6 +283,13 @@ export async function moveCampaign(
     throw new Error("Neplatné datumy");
   }
 
+  // Capture old dates so the audit log can render a diff.
+  const [before] = await db
+    .select({ startsAt: campaigns.startsAt, endsAt: campaigns.endsAt })
+    .from(campaigns)
+    .where(eq(campaigns.id, campaignId))
+    .limit(1);
+
   await db
     .update(campaigns)
     .set({
@@ -292,16 +299,26 @@ export async function moveCampaign(
     })
     .where(eq(campaigns.id, campaignId));
 
+  const changes: Record<string, unknown> = { via: "timeline-drag" };
+  if (before && before.startsAt.getTime() !== start.getTime()) {
+    changes.startsAt = {
+      from: before.startsAt.toISOString(),
+      to: start.toISOString(),
+    };
+  }
+  if (before && before.endsAt.getTime() !== end.getTime()) {
+    changes.endsAt = {
+      from: before.endsAt.toISOString(),
+      to: end.toISOString(),
+    };
+  }
+
   await db.insert(auditLog).values({
     action: "updated",
     entity: "campaign",
     entityId: campaignId,
     userId,
-    changes: {
-      via: "timeline-drag",
-      startsAt: start.toISOString(),
-      endsAt: end.toISOString(),
-    },
+    changes,
   });
 
   revalidatePath("/");

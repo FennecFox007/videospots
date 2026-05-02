@@ -430,12 +430,9 @@ export default async function CampaignDetailPage({
                 <span className="font-medium text-zinc-700 dark:text-zinc-300">
                   {h.userName ?? h.userEmail ?? "?"}
                 </span>
-                <span>{historyVerb(h.action)}</span>
-                {h.changes != null && (
-                  <span className="text-xs text-zinc-500 font-mono">
-                    {summarizeChanges(h.changes)}
-                  </span>
-                )}
+                <span className="leading-snug">
+                  {humanizeAuditEntry(h.action, h.changes)}
+                </span>
               </li>
             ))}
           </ul>
@@ -445,29 +442,184 @@ export default async function CampaignDetailPage({
   );
 }
 
-function historyVerb(action: string): string {
-  const map: Record<string, string> = {
-    created: "vytvořil(a)",
-    updated: "upravil(a)",
-    deleted: "smazal(a)",
-    cancelled: "zrušil(a)",
-    archived: "archivoval(a)",
-  };
-  return map[action] ?? action;
-}
+/**
+ * Render a single audit-log entry as a Czech sentence. Handles two storage
+ * shapes side by side, since we changed the format and old rows still live in
+ * the DB:
+ *
+ * - **Diff** (newer): `{ name: { from: "X", to: "Y" }, … }` — render as
+ *   "upravil(a) — název X → Y, kanálů 6 → 7".
+ * - **Snapshot** (older): `{ name: "X", channelCount: 6 }` — flat values,
+ *   render as "upravil(a) — kampaň 'X', 6 kanálů".
+ *
+ * Special-case shapes from the various server actions (drag-channel,
+ * timeline-drag, rename, reactivate, clone, etc.) are detected first so the
+ * sentence stays short.
+ */
+function humanizeAuditEntry(action: string, changes: unknown): React.ReactNode {
+  const obj =
+    changes && typeof changes === "object"
+      ? (changes as Record<string, unknown>)
+      : null;
 
-function summarizeChanges(changes: unknown): string {
-  if (!changes || typeof changes !== "object") return "";
-  const obj = changes as Record<string, unknown>;
-  const parts: string[] = [];
-  for (const [k, v] of Object.entries(obj)) {
-    parts.push(`${k}=${truncate(String(v), 30)}`);
+  // Action-led summaries — these have no useful detail beyond the verb.
+  if (action === "cancelled") return "zrušil(a) kampaň";
+  if (action === "archived") return "archivoval(a) kampaň";
+  if (action === "deleted") {
+    const name = obj && typeof obj.name === "string" ? obj.name : null;
+    return name ? (
+      <>smazal(a) kampaň „{name}"</>
+    ) : (
+      "smazal(a) kampaň"
+    );
   }
-  return parts.join(", ");
+
+  if (action === "created") {
+    if (obj && typeof obj.clonedFrom === "number") {
+      return <>vytvořil(a) kampaň naklonováním z #{obj.clonedFrom}</>;
+    }
+    if (obj && typeof obj.series === "string") {
+      return <>vytvořil(a) kampaň (série {String(obj.series)})</>;
+    }
+    return "vytvořil(a) kampaň";
+  }
+
+  // Specific edit shapes
+  if (obj && obj.via === "timeline-drag-channel") {
+    const from = obj.from;
+    const to = obj.to;
+    return (
+      <>
+        přesunul(a) kampaň na jiný kanál
+        {typeof from === "number" && typeof to === "number" && (
+          <span className="text-xs text-zinc-500 ml-1">
+            (#{from} → #{to})
+          </span>
+        )}
+      </>
+    );
+  }
+  if (obj && obj.unarchived === true) return "obnovil(a) z archivu";
+  if (obj && obj.reactivated === true) return "obnovil(a) zrušenou kampaň";
+  if (obj && obj.renamed && isDiff(obj.renamed)) {
+    return (
+      <>
+        přejmenoval(a) z „{String(obj.renamed.from)}" na „
+        {String(obj.renamed.to)}"
+      </>
+    );
+  }
+
+  // Generic update — walk the change object, building a list of
+  // "field: from → to" or "field: value" depending on shape.
+  if (action === "updated" && obj) {
+    const parts: React.ReactNode[] = [];
+    let key = 0;
+    for (const [field, value] of Object.entries(obj)) {
+      if (field === "via") continue; // skip metadata keys
+      const label = AUDIT_FIELD_LABEL[field];
+      if (!label) continue; // unknown key — skip rather than render gibberish
+      if (isDiff(value)) {
+        parts.push(
+          <span key={key++} className="whitespace-nowrap">
+            {label}: {formatAuditValue(field, value.from)}{" "}
+            <span className="text-zinc-400">→</span>{" "}
+            {formatAuditValue(field, value.to)}
+          </span>
+        );
+      } else {
+        parts.push(
+          <span key={key++} className="whitespace-nowrap">
+            {label}: {formatAuditValue(field, value)}
+          </span>
+        );
+      }
+    }
+    if (parts.length === 0) return "upravil(a) kampaň";
+    const joined: React.ReactNode[] = [];
+    parts.forEach((p, i) => {
+      if (i > 0) joined.push(<span key={`sep-${i}`}>, </span>);
+      joined.push(p);
+    });
+    return (
+      <>
+        upravil(a) — <span className="text-zinc-500">{joined}</span>
+      </>
+    );
+  }
+
+  return action;
 }
 
-function truncate(s: string, n: number) {
-  return s.length > n ? s.slice(0, n - 1) + "…" : s;
+const AUDIT_FIELD_LABEL: Record<string, string> = {
+  name: "název",
+  client: "klient",
+  videoUrl: "video",
+  color: "barva",
+  status: "stav",
+  communicationType: "typ",
+  notes: "poznámka",
+  tags: "štítky",
+  startsAt: "začátek",
+  endsAt: "konec",
+  productName: "produkt",
+  channels: "kanály",
+  channelCount: "kanálů",
+};
+
+function isDiff(v: unknown): v is { from: unknown; to: unknown } {
+  return (
+    !!v &&
+    typeof v === "object" &&
+    "from" in (v as object) &&
+    "to" in (v as object)
+  );
+}
+
+function formatAuditValue(field: string, value: unknown): React.ReactNode {
+  if (value === null || value === undefined || value === "") {
+    return <span className="text-zinc-400 italic">—</span>;
+  }
+  if (field === "startsAt" || field === "endsAt") {
+    if (value instanceof Date) return formatDate(value);
+    if (typeof value === "string") {
+      const d = new Date(value);
+      if (!Number.isNaN(d.getTime())) return formatDate(d);
+    }
+  }
+  if (field === "status") {
+    return value === "approved"
+      ? "Aktivní"
+      : value === "cancelled"
+        ? "Zrušeno"
+        : String(value);
+  }
+  if (field === "tags" && Array.isArray(value)) {
+    return value.length === 0 ? (
+      <span className="text-zinc-400 italic">žádné</span>
+    ) : (
+      value.map((t) => `#${t}`).join(", ")
+    );
+  }
+  if (field === "channels" && Array.isArray(value)) {
+    return `${value.length} kanálů`;
+  }
+  if (field === "color" && typeof value === "string") {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <span
+          className="inline-block w-2 h-2 rounded-full ring-1 ring-zinc-300 dark:ring-zinc-600"
+          style={{ background: value }}
+        />
+        <span className="font-mono text-[10px]">{value}</span>
+      </span>
+    );
+  }
+  if (typeof value === "string") {
+    if (value.length > 40) return `„${value.slice(0, 39)}…"`;
+    return `„${value}"`;
+  }
+  return String(value);
 }
 
 /**
