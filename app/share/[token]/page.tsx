@@ -13,6 +13,7 @@ import {
   shareLinks,
   campaigns,
   campaignChannels,
+  campaignVideos,
   channels,
   countries,
   chains,
@@ -123,6 +124,18 @@ async function CampaignSharePage({
     .where(eq(campaignChannels.campaignId, campaignId))
     .orderBy(asc(countries.sortOrder), asc(chains.sortOrder));
 
+  const videoRows = await db
+    .select({
+      countryName: countries.name,
+      countryFlag: countries.flagEmoji,
+      countryCode: countries.code,
+      videoUrl: campaignVideos.videoUrl,
+    })
+    .from(campaignVideos)
+    .innerJoin(countries, eq(campaignVideos.countryId, countries.id))
+    .where(eq(campaignVideos.campaignId, campaignId))
+    .orderBy(asc(countries.sortOrder));
+
   const c = row.campaign;
   const product = row.product;
   const runState = computedRunState(c);
@@ -205,10 +218,25 @@ async function CampaignSharePage({
           </div>
         )}
 
-        {c.videoUrl && (
-          <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
-            <h2 className="font-medium mb-3">Video</h2>
-            <VideoEmbed url={c.videoUrl} />
+        {videoRows.length > 0 && (
+          <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-5">
+            <h2 className="font-medium">
+              Spoty podle země ({videoRows.length})
+            </h2>
+            {videoRows.map((v) => (
+              <div key={v.countryCode}>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-base leading-none" aria-hidden>
+                    {v.countryFlag}
+                  </span>
+                  <span className="text-sm font-medium">{v.countryName}</span>
+                  <span className="text-xs text-zinc-500 font-mono uppercase">
+                    {v.countryCode}
+                  </span>
+                </div>
+                <VideoEmbed url={v.videoUrl} />
+              </div>
+            ))}
           </div>
         )}
 

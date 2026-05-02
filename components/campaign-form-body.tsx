@@ -11,7 +11,10 @@ import { ChannelsPicker } from "./channels-picker";
 export type CampaignFormDefaults = {
   name?: string;
   client?: string | null;
-  videoUrl?: string | null;
+  /** Per-country video URLs, keyed by country.id. Empty entry = no video for
+   *  that country. Each country runs its own language cut of the spot, so
+   *  there's no single "campaign video URL" — see lib/db/schema.ts. */
+  videosByCountry?: Record<number, string>;
   startsAt?: Date;
   endsAt?: Date;
   notes?: string | null;
@@ -210,16 +213,29 @@ export function CampaignFormBody({
         </Field>
       </Section>
 
-      <Section title="Video">
-        <Field label="URL videa" hint="YouTube, Vimeo nebo přímý odkaz na mp4">
-          <input
-            name="videoUrl"
-            type="url"
-            defaultValue={defaults?.videoUrl ?? ""}
-            placeholder="https://…"
-            className={inputClass}
-          />
-        </Field>
+      <Section
+        title="Video (jazyková mutace pro každou zemi)"
+        hint="Každá země běží vlastní jazykovou verzi spotu. Nech prázdné, pokud pro tu zemi spot zatím nemáte."
+      >
+        <div className="space-y-2">
+          {groups.map((g) => (
+            <div key={g.id} className="grid grid-cols-[auto_1fr] items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300 w-20 sm:w-24 shrink-0">
+                <span className="text-base leading-none" aria-hidden>
+                  {g.flag}
+                </span>
+                <span className="font-mono text-xs uppercase">{g.code}</span>
+              </span>
+              <input
+                name={`videoUrl_${g.id}`}
+                type="url"
+                defaultValue={defaults?.videosByCountry?.[g.id] ?? ""}
+                placeholder="YouTube / Vimeo / přímý mp4 odkaz"
+                className={inputClass}
+              />
+            </div>
+          ))}
+        </div>
       </Section>
 
       <Section title="Termín">

@@ -8,9 +8,11 @@ import {
   db,
   campaigns,
   campaignChannels,
+  campaignVideos,
   products,
   auditLog,
 } from "@/lib/db/client";
+import { extractVideosByCountry } from "@/lib/campaign-video-form";
 import { isValidCampaignColor, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
 import {
   isValidKind,
@@ -49,7 +51,6 @@ const schema = z
   .object({
     name: z.string().min(1, "Název kampaně je povinný"),
     client: z.string().optional().nullable(),
-    videoUrl: z.string().optional().nullable(),
     color: z.string().optional(),
     status: z.string().optional(),
     communicationType: z.string().optional(),
@@ -85,10 +86,12 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
   const statusRaw = String(formData.get("status") ?? "");
   const tagsRaw = String(formData.get("tags") ?? "");
 
+  // Per-country videoUrls — keyed inputs videoUrl_<countryId>.
+  const videosByCountry = extractVideosByCountry(formData);
+
   const parsed = schema.parse({
     name: formData.get("name"),
     client: formData.get("client") || undefined,
-    videoUrl: formData.get("videoUrl") || undefined,
     color: colorRaw || undefined,
     status: statusRaw || undefined,
     communicationType: formData.get("communicationType") || undefined,
@@ -137,6 +140,24 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
   const beforeChannelIds = beforeChannelRows.map((r) => r.channelId).sort(
     (a, b) => a - b
   );
+
+  // Snapshot existing per-country videos so the audit log can show what
+  // changed. Result is a "<countryId>:<url>" sorted list — comparing arrays
+  // is enough for "did this set of videos change at all".
+  const beforeVideos = await db
+    .select({
+      countryId: campaignVideos.countryId,
+      videoUrl: campaignVideos.videoUrl,
+    })
+    .from(campaignVideos)
+    .where(eq(campaignVideos.campaignId, campaignId))
+    .orderBy(asc(campaignVideos.countryId));
+  const beforeVideosKey = beforeVideos
+    .map((v) => `${v.countryId}:${v.videoUrl}`)
+    .sort();
+  const newVideosKey = videosByCountry
+    .map((v) => `${v.countryId}:${v.videoUrl}`)
+    .sort();
 
   let beforeProductName: string | null = null;
   if (before.productId !== null) {
@@ -191,7 +212,9 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
     .set({
       name: parsed.name,
       client: parsed.client || null,
-      videoUrl: parsed.videoUrl || null,
+      // Legacy column — null going forward; per-country URLs are persisted
+      // in campaign_video below.
+      videoUrl: null,
       color,
       status,
       communicationType,
@@ -215,6 +238,22 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
     }))
   );
 
+  // Replace per-country videos: simplest is delete-all + re-insert. The
+  // campaign_video table is small and this keeps the code identical to how
+  // we handle channels above.
+  await db
+    .delete(campaignVideos)
+    .where(eq(campaignVideos.campaignId, campaignId));
+  if (videosByCountry.length > 0) {
+    await db.insert(campaignVideos).values(
+      videosByCountry.map((v) => ({
+        campaignId,
+        countryId: v.countryId,
+        videoUrl: v.videoUrl,
+      }))
+    );
+  }
+
   // Build diff: only include fields that actually changed. Each entry is
   // {from, to}; the renderer (campaign detail page) walks the object and
   // produces a Czech-language one-line summary like
@@ -230,7 +269,14 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
 
   add("name", diff<string>(before.name, parsed.name));
   add("client", diff<string | null>(before.client, parsed.client || null));
-  add("videoUrl", diff<string | null>(before.videoUrl, parsed.videoUrl || null));
+  // Per-country videos: capture a single audit entry that shows the count
+  // before and after. Renderer treats `videos` like `channels` — count diff.
+  add(
+    "videos",
+    diff(beforeVideosKey, newVideosKey, (a, b) =>
+      a.length === b.length && a.every((v, i) => v === b[i])
+    )
+  );
   add("color", diff<string>(before.color, color));
   add("status", diff<string>(before.status, status));
   add(

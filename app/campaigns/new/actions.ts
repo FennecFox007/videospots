@@ -8,6 +8,7 @@ import {
   db,
   campaigns,
   campaignChannels,
+  campaignVideos,
   products,
   auditLog,
 } from "@/lib/db/client";
@@ -18,12 +19,12 @@ import {
 } from "@/lib/products";
 import { isValidCommunicationType } from "@/lib/communication";
 import { isValidStatus, parseTags } from "@/lib/utils";
+import { extractVideosByCountry } from "@/lib/campaign-video-form";
 
 const schema = z
   .object({
     name: z.string().min(1, "Název kampaně je povinný"),
     client: z.string().optional().nullable(),
-    videoUrl: z.string().optional().nullable(),
     color: z.string().optional(),
     status: z.string().optional(),
     communicationType: z.string().optional(),
@@ -59,10 +60,14 @@ export async function createCampaign(formData: FormData) {
   const statusRaw = String(formData.get("status") ?? "");
   const tagsRaw = String(formData.get("tags") ?? "");
 
+  // Per-country video URLs come in as `videoUrl_<countryId>` form fields
+  // (one per country we render in the form). Pull them out before zod parses
+  // the rest — schema doesn't validate these, they're a flat URL/empty map.
+  const videosByCountry = extractVideosByCountry(formData);
+
   const parsed = schema.parse({
     name: formData.get("name"),
     client: formData.get("client") || undefined,
-    videoUrl: formData.get("videoUrl") || undefined,
     color: colorRaw || undefined,
     status: statusRaw || undefined,
     communicationType: formData.get("communicationType") || undefined,
@@ -148,7 +153,9 @@ export async function createCampaign(formData: FormData) {
       .values({
         name,
         client: parsed.client || null,
-        videoUrl: parsed.videoUrl || null,
+        // videoUrl on `campaigns` is the deprecated legacy column — leave it
+        // null going forward; per-country URLs go to campaignVideos below.
+        videoUrl: null,
         color,
         status,
         communicationType,
@@ -167,6 +174,16 @@ export async function createCampaign(formData: FormData) {
         channelId,
       }))
     );
+
+    if (videosByCountry.length > 0) {
+      await db.insert(campaignVideos).values(
+        videosByCountry.map((v) => ({
+          campaignId: created.id,
+          countryId: v.countryId,
+          videoUrl: v.videoUrl,
+        }))
+      );
+    }
 
     await db.insert(auditLog).values({
       action: "created",
@@ -189,3 +206,4 @@ export async function createCampaign(formData: FormData) {
   // so the user sees all of them at once.
   redirect(occurrences > 1 ? "/campaigns" : `/campaigns/${insertedIds[0]}`);
 }
+

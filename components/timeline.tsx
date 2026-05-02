@@ -29,7 +29,6 @@ import {
   communicationTypeClasses,
   communicationTypeLabel,
 } from "@/lib/communication";
-import { VideoPlayerModal } from "@/components/video-player-modal";
 
 export type TimelineChannel = {
   id: number;
@@ -126,12 +125,6 @@ export function Timeline({
     rect: DOMRect;
   } | null>(null);
 
-  // Video player state — opened from the play button on bars that have a
-  // videoUrl. Stays mounted until user closes (ESC, X, or backdrop).
-  const [playingVideo, setPlayingVideo] = useState<{
-    url: string;
-    name: string;
-  } | null>(null);
 
   // ---------------------------------------------------------------------------
   // Header drag-pan: grab the days strip and drag left/right to scrub through
@@ -883,10 +876,6 @@ export function Timeline({
                             setHoverTooltip({ bar, rect })
                           }
                           onHoverHide={() => setHoverTooltip(null)}
-                          onPlay={(url, name) => {
-                            setHoverTooltip(null);
-                            setPlayingVideo({ url, name });
-                          }}
                         />
                       );
                     })}
@@ -928,18 +917,10 @@ export function Timeline({
         />
       )}
 
-      {hoverTooltip && !playingVideo && (
+      {hoverTooltip && (
         <CampaignTooltip
           bar={hoverTooltip.bar}
           anchorRect={hoverTooltip.rect}
-        />
-      )}
-
-      {playingVideo && (
-        <VideoPlayerModal
-          url={playingVideo.url}
-          title={playingVideo.name}
-          onClose={() => setPlayingVideo(null)}
         />
       )}
 
@@ -1071,7 +1052,6 @@ function DraggableBar({
   onContextMenu,
   onHoverShow,
   onHoverHide,
-  onPlay,
 }: {
   bar: TimelineCampaign;
   leftPct: number;
@@ -1083,7 +1063,6 @@ function DraggableBar({
   onContextMenu?: (e: React.MouseEvent) => void;
   onHoverShow?: (bar: TimelineCampaign, rect: DOMRect) => void;
   onHoverHide?: () => void;
-  onPlay?: (url: string, name: string) => void;
 }) {
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
@@ -1378,18 +1357,20 @@ function DraggableBar({
         {bar.name}
       </span>
       {bar.videoUrl && !isCancelled && (
-        // Play button — opens VideoPlayerModal without navigating away from
-        // timeline. Stops both pointer-down (so it doesn't trigger drag) and
-        // click (so it doesn't reach the bar's click → navigate handler).
-        <button
-          type="button"
+        // Play button — opens the country-specific spot URL in a new tab.
+        // Stops pointer-down so it doesn't trigger bar drag; stops click so
+        // it doesn't reach the bar's navigate-on-click. Anchor (not button)
+        // so the browser handles target=_blank natively, including
+        // middle-click → open in background tab.
+        <a
+          href={bar.videoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
           aria-label={`Přehrát spot ${bar.name}`}
+          title="Přehrát spot v novém panelu"
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (bar.videoUrl) onPlay?.(bar.videoUrl, bar.name);
-          }}
+          onClick={(e) => e.stopPropagation()}
           className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/95 hover:bg-white text-zinc-900 flex items-center justify-center shadow-sm ring-1 ring-black/10 transition-colors cursor-pointer"
           style={{ touchAction: "manipulation" }}
         >
@@ -1402,7 +1383,7 @@ function DraggableBar({
           >
             <path d="M1.5 0.5l6.5 4-6.5 4z" />
           </svg>
-        </button>
+        </a>
       )}
     </div>
   );

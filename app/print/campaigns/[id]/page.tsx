@@ -9,6 +9,7 @@ import {
   db,
   campaigns,
   campaignChannels,
+  campaignVideos,
   channels,
   countries,
   chains,
@@ -61,10 +62,22 @@ export default async function PrintCampaignPage({
   const totalReach = dur * channelRows.length;
   const runState = computedRunState(c);
 
-  // QR code: prefer the trailer URL (typical use case = scan from printed
-  // brief to preview the spot), fall back to the internal campaign detail
-  // URL if there's no video. Produced server-side as inline SVG so the print
-  // is fully self-contained.
+  const videoRows = await db
+    .select({
+      countryName: countries.name,
+      countryCode: countries.code,
+      countryFlag: countries.flagEmoji,
+      videoUrl: campaignVideos.videoUrl,
+    })
+    .from(campaignVideos)
+    .innerJoin(countries, eq(campaignVideos.countryId, countries.id))
+    .where(eq(campaignVideos.campaignId, campaignId))
+    .orderBy(asc(countries.sortOrder));
+
+  // QR code: prefer the first available video URL (a scan-from-print should
+  // open SOMETHING playable). When the campaign has multiple country
+  // versions, we point to the first by sortOrder — typically CZ. Falls back
+  // to the internal campaign detail URL if no video is set.
   const reqHeaders = await headers();
   const proto =
     reqHeaders.get("x-forwarded-proto") ?? reqHeaders.get("x-proto") ?? "https";
@@ -73,8 +86,11 @@ export default async function PrintCampaignPage({
     reqHeaders.get("host") ??
     "localhost:3000";
   const internalUrl = `${proto}://${host}/campaigns/${campaignId}`;
-  const qrTarget = c.videoUrl || internalUrl;
-  const qrLabel = c.videoUrl ? "Otevřít video" : "Otevřít kampaň";
+  const firstVideoUrl = videoRows[0]?.videoUrl ?? null;
+  const qrTarget = firstVideoUrl || internalUrl;
+  const qrLabel = firstVideoUrl
+    ? `Otevřít video${videoRows.length > 1 ? ` (${videoRows[0].countryCode})` : ""}`
+    : "Otevřít kampaň";
   const qrSvg = await QRCode.toString(qrTarget, {
     type: "svg",
     margin: 0,
@@ -221,11 +237,27 @@ export default async function PrintCampaignPage({
         </table>
       </Section>
 
-      {c.videoUrl && (
-        <Section title="Video">
-          <a href={c.videoUrl} className="text-sm text-zinc-600 break-all">
-            {c.videoUrl}
-          </a>
+      {videoRows.length > 0 && (
+        <Section title={`Spoty podle země (${videoRows.length})`}>
+          <ul className="space-y-1.5">
+            {videoRows.map((v) => (
+              <li
+                key={v.countryCode}
+                className="flex items-baseline gap-2 text-sm"
+              >
+                <span aria-hidden>{v.countryFlag}</span>
+                <span className="font-medium w-20 shrink-0">
+                  {v.countryName}
+                </span>
+                <a
+                  href={v.videoUrl}
+                  className="text-zinc-600 break-all hover:underline"
+                >
+                  {v.videoUrl}
+                </a>
+              </li>
+            ))}
+          </ul>
         </Section>
       )}
 

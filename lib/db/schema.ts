@@ -189,6 +189,31 @@ export const campaignChannels = pgTable(
   (t) => [primaryKey({ columns: [t.campaignId, t.channelId] })]
 );
 
+// Per-country video spot URLs. A campaign typically runs in multiple countries
+// and each country gets its own language-localized cut of the spot, so the
+// video URL is keyed by (campaign, country) — NOT a single value on the
+// campaign row (which would force one video across all markets and
+// silently leak the wrong language version into other countries).
+//
+// `campaigns.videoUrl` is kept as a deprecated legacy column for now; new
+// code only reads/writes through this table. Existing rows are migrated by
+// the ad-hoc SQL run alongside the schema push.
+export const campaignVideos = pgTable(
+  "campaign_video",
+  {
+    campaignId: integer("campaign_id")
+      .notNull()
+      .references(() => campaigns.id, { onDelete: "cascade" }),
+    countryId: integer("country_id")
+      .notNull()
+      .references(() => countries.id, { onDelete: "cascade" }),
+    videoUrl: text("video_url").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.campaignId, t.countryId] })]
+);
+
 // Audit log — multi-user shared tool, so we want "who changed what when".
 export const auditLog = pgTable("audit_log", {
   id: serial("id").primaryKey(),

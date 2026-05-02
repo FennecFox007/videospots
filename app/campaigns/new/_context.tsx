@@ -69,7 +69,9 @@ export async function loadNewCampaignContext(
       defaults = {
         name: t.name,
         client: p.client,
-        videoUrl: p.videoUrl,
+        // Templates carry a single legacy videoUrl; we don't migrate it
+        // automatically — the user picks per-country videos for each new
+        // campaign. (Old templates' videoUrl is essentially ignored.)
         color: p.color,
         tags: p.tags,
         startsAt: today,

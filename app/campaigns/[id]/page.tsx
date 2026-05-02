@@ -5,6 +5,7 @@ import {
   db,
   campaigns,
   campaignChannels,
+  campaignVideos,
   channels,
   countries,
   chains,
@@ -70,6 +71,20 @@ export default async function CampaignDetailPage({
     .innerJoin(chains, eq(channels.chainId, chains.id))
     .where(eq(campaignChannels.campaignId, campaignId))
     .orderBy(asc(countries.sortOrder), asc(chains.sortOrder));
+
+  // Per-country video URLs. Each country may have its own language cut of
+  // the spot — we render them as a separate block per country.
+  const videoRows = await db
+    .select({
+      countryName: countries.name,
+      countryFlag: countries.flagEmoji,
+      countryCode: countries.code,
+      videoUrl: campaignVideos.videoUrl,
+    })
+    .from(campaignVideos)
+    .innerJoin(countries, eq(campaignVideos.countryId, countries.id))
+    .where(eq(campaignVideos.campaignId, campaignId))
+    .orderBy(asc(countries.sortOrder));
 
   const c = row.campaign;
   const product = row.product;
@@ -302,10 +317,25 @@ export default async function CampaignDetailPage({
         </div>
       )}
 
-      {c.videoUrl && (
-        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
-          <h2 className="font-medium mb-3">Video</h2>
-          <VideoEmbed url={c.videoUrl} />
+      {videoRows.length > 0 && (
+        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-5">
+          <h2 className="font-medium">
+            Spoty podle země ({videoRows.length})
+          </h2>
+          {videoRows.map((v) => (
+            <div key={v.countryCode}>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-base leading-none" aria-hidden>
+                  {v.countryFlag}
+                </span>
+                <span className="text-sm font-medium">{v.countryName}</span>
+                <span className="text-xs text-zinc-500 font-mono uppercase">
+                  {v.countryCode}
+                </span>
+              </div>
+              <VideoEmbed url={v.videoUrl} />
+            </div>
+          ))}
         </div>
       )}
 
@@ -547,7 +577,8 @@ function humanizeAuditEntry(action: string, changes: unknown): React.ReactNode {
 const AUDIT_FIELD_LABEL: Record<string, string> = {
   name: "název",
   client: "klient",
-  videoUrl: "video",
+  videoUrl: "video", // legacy
+  videos: "videa",
   color: "barva",
   status: "stav",
   communicationType: "typ",
@@ -596,6 +627,11 @@ function formatAuditValue(field: string, value: unknown): React.ReactNode {
   }
   if (field === "channels" && Array.isArray(value)) {
     return `${value.length} kanálů`;
+  }
+  if (field === "videos" && Array.isArray(value)) {
+    return value.length === 0
+      ? "žádné"
+      : `${value.length} ${value.length === 1 ? "země" : value.length <= 4 ? "země" : "zemí"}`;
   }
   if (field === "color" && typeof value === "string") {
     return (

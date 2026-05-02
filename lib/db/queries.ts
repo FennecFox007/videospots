@@ -19,6 +19,7 @@ import {
   chains,
   campaigns,
   campaignChannels,
+  campaignVideos,
   products,
 } from "./client";
 import type { CountryGroup } from "@/components/campaign-form-body";
@@ -236,6 +237,11 @@ export async function fetchTimelineCampaigns(
   rangeEnd: Date
 ) {
   if (ids.length === 0) return [];
+  // Each row = (campaign × channel). The video URL is per-COUNTRY, so we
+  // join channels → countries → campaign_video to land the right
+  // language version on each bar (CZ Alza bar gets the CZ video, SK bar
+  // gets the SK video, etc.). LEFT JOIN because not every (campaign,
+  // country) pair has a video set.
   return db
     .select({
       campaignId: campaigns.id,
@@ -243,7 +249,7 @@ export async function fetchTimelineCampaigns(
       color: campaigns.color,
       status: campaigns.status,
       communicationType: campaigns.communicationType,
-      videoUrl: campaigns.videoUrl,
+      videoUrl: campaignVideos.videoUrl,
       coverUrl: products.coverUrl,
       startsAt: campaigns.startsAt,
       endsAt: campaigns.endsAt,
@@ -253,6 +259,14 @@ export async function fetchTimelineCampaigns(
     .innerJoin(
       campaignChannels,
       eq(campaigns.id, campaignChannels.campaignId)
+    )
+    .innerJoin(channels, eq(channels.id, campaignChannels.channelId))
+    .leftJoin(
+      campaignVideos,
+      and(
+        eq(campaignVideos.campaignId, campaigns.id),
+        eq(campaignVideos.countryId, channels.countryId)
+      )
     )
     .leftJoin(products, eq(campaigns.productId, products.id))
     .where(

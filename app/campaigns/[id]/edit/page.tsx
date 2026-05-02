@@ -4,6 +4,7 @@ import {
   db,
   campaigns,
   campaignChannels,
+  campaignVideos,
   products,
 } from "@/lib/db/client";
 import { CampaignFormBody } from "@/components/campaign-form-body";
@@ -33,6 +34,16 @@ export default async function EditCampaignPage({
     .from(campaignChannels)
     .where(eq(campaignChannels.campaignId, campaignId));
 
+  const videoRows = await db
+    .select({
+      countryId: campaignVideos.countryId,
+      videoUrl: campaignVideos.videoUrl,
+    })
+    .from(campaignVideos)
+    .where(eq(campaignVideos.campaignId, campaignId));
+  const videosByCountry: Record<number, string> = {};
+  for (const v of videoRows) videosByCountry[v.countryId] = v.videoUrl;
+
   const groups = await getChannelGroups();
 
   const action = updateCampaign.bind(null, campaignId);
@@ -52,9 +63,10 @@ export default async function EditCampaignPage({
           defaults={{
             name: row.campaign.name,
             client: row.campaign.client,
-            videoUrl: row.campaign.videoUrl,
+            videosByCountry,
             color: row.campaign.color,
             status: row.campaign.status,
+            communicationType: row.campaign.communicationType,
             tags: row.campaign.tags,
             startsAt: row.campaign.startsAt,
             endsAt: row.campaign.endsAt,
