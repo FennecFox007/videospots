@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { CommandPalette } from "@/components/command-palette";
+import { DialogProvider } from "@/components/dialog/dialog-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -56,10 +57,12 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950">
-        {!hideNav && <Nav />}
-        <main className="flex-1">{children}</main>
-        {!hideNav && <CommandPalette />}
-        {modal}
+        <DialogProvider>
+          {!hideNav && <Nav />}
+          <main className="flex-1">{children}</main>
+          {!hideNav && <CommandPalette />}
+          {modal}
+        </DialogProvider>
       </body>
     </html>
   );

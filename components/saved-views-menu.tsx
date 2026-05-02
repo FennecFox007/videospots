@@ -13,6 +13,7 @@ import {
   createSavedView,
   deleteSavedView,
 } from "@/app/saved-views/actions";
+import { useDialog } from "@/components/dialog/dialog-provider";
 
 export type SavedView = {
   id: number;
@@ -34,6 +35,7 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
+  const { confirm, prompt, toast } = useDialog();
 
   // Close on outside click / Escape.
   useEffect(() => {
@@ -63,7 +65,7 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
     });
   }
 
-  function saveCurrent() {
+  async function saveCurrent() {
     // Only save if there's actually something to save — empty filter state
     // is a meaningless "saved view".
     const entries: Record<string, string> = {};
@@ -71,36 +73,44 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
       if (v) entries[k] = v;
     }
     if (Object.keys(entries).length === 0) {
-      window.alert(
-        "Není co uložit. Nejdřív nastav filtry (vyhledávání, stát, řetězec, …)."
+      toast.error(
+        "Není co uložit. Nejdřív nastav filtry (vyhledávání, stát, řetězec…)."
       );
       return;
     }
-    const name = window.prompt(
-      "Název pohledu (např. CZ + SK aktivní)?"
-    );
-    if (!name || !name.trim()) return;
     setOpen(false);
+    const name = await prompt({
+      title: "Pojmenovat pohled",
+      message: "Pohled si zapamatuje aktuálně nastavené filtry.",
+      placeholder: "např. CZ + SK aktivní",
+      confirmLabel: "Uložit",
+      validate: (v) => (v.trim() ? null : "Název nesmí být prázdný"),
+    });
+    if (!name) return;
     startTransition(async () => {
       try {
-        await createSavedView(name.trim(), scope, entries);
+        await createSavedView(name, scope, entries);
+        toast.success("Pohled uložen");
       } catch (e) {
-        window.alert(
-          e instanceof Error ? e.message : "Uložení pohledu selhalo"
-        );
+        toast.error(e instanceof Error ? e.message : "Uložení pohledu selhalo");
       }
     });
   }
 
-  function removeView(v: SavedView) {
-    if (!window.confirm(`Smazat uložený pohled „${v.name}"?`)) return;
+  async function removeView(v: SavedView) {
+    const ok = await confirm({
+      title: `Smazat pohled „${v.name}"?`,
+      message: "Tahle akce je nevratná. Filtry se nesmažou, jen jejich uložené pojmenování.",
+      confirmLabel: "Smazat",
+      destructive: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       try {
         await deleteSavedView(v.id);
+        toast.success("Pohled smazán");
       } catch (e) {
-        window.alert(
-          e instanceof Error ? e.message : "Smazání pohledu selhalo"
-        );
+        toast.error(e instanceof Error ? e.message : "Smazání pohledu selhalo");
       }
     });
   }

@@ -22,6 +22,10 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { CommunicationBadge } from "@/components/communication-badge";
 import { kindEmoji, kindLabel } from "@/lib/products";
+import {
+  useDialog,
+  type ConfirmOptions,
+} from "@/components/dialog/dialog-provider";
 
 export type CampaignsTableRow = {
   id: number;
@@ -52,6 +56,7 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const { confirm, toast } = useDialog();
 
   const allIds = rows.map((r) => r.id);
   const allSelected =
@@ -77,10 +82,19 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
     setSelected(new Set());
   }
 
-  function runBulk(fn: () => Promise<void>, confirmMsg?: string) {
-    if (confirmMsg && !window.confirm(confirmMsg)) return;
+  async function runBulk(
+    fn: () => Promise<void>,
+    confirmOpts?: ConfirmOptions,
+    successMsg?: string
+  ) {
+    if (confirmOpts && !(await confirm(confirmOpts))) return;
     startTransition(async () => {
-      await fn();
+      try {
+        await fn();
+        if (successMsg) toast.success(successMsg);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Akce selhala");
+      }
       setSelected(new Set());
       setColorPickerOpen(false);
     });
@@ -231,7 +245,14 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
             onClick={() =>
               runBulk(
                 () => bulkCancelCampaigns(ids),
-                `Zrušit ${count} ${pluralCs(count, "kampaň", "kampaně", "kampaní")}?`
+                {
+                  title: `Zrušit ${count} ${pluralCs(count, "kampaň", "kampaně", "kampaní")}?`,
+                  message:
+                    "Kampaně zůstanou v historii s označením jako zrušené.",
+                  confirmLabel: "Zrušit historicky",
+                  destructive: true,
+                },
+                `${count} ${pluralCs(count, "kampaň zrušena", "kampaně zrušeny", "kampaní zrušeno")}`
               )
             }
             className="text-xs px-2 py-1 rounded border border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 disabled:opacity-50"
@@ -255,7 +276,11 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
                     key={c.value}
                     type="button"
                     onClick={() =>
-                      runBulk(() => bulkChangeColor(ids, c.value))
+                      runBulk(
+                        () => bulkChangeColor(ids, c.value),
+                        undefined,
+                        "Barva změněna"
+                      )
                     }
                     title={c.name}
                     className="w-6 h-6 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700 hover:scale-110 transition-transform"
@@ -272,7 +297,13 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
             onClick={() =>
               runBulk(
                 () => bulkArchiveCampaigns(ids),
-                `Archivovat ${count} ${pluralCs(count, "kampaň", "kampaně", "kampaní")}? Půjde obnovit z /admin/archive.`
+                {
+                  title: `Archivovat ${count} ${pluralCs(count, "kampaň", "kampaně", "kampaní")}?`,
+                  message: "Půjde obnovit z /admin/archive.",
+                  confirmLabel: "Archivovat",
+                  destructive: true,
+                },
+                `${count} ${pluralCs(count, "kampaň archivována", "kampaně archivovány", "kampaní archivováno")}`
               )
             }
             className="text-xs px-2 py-1 rounded border border-red-300 text-red-700 dark:border-red-900 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50"
