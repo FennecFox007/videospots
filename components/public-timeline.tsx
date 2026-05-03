@@ -11,6 +11,8 @@ import {
   pluralCs,
 } from "@/lib/utils";
 import { communicationTypeLabel } from "@/lib/communication";
+import { localizedCountryName } from "@/lib/i18n/country";
+import type { Locale } from "@/lib/i18n/messages";
 
 export type PublicChannel = {
   id: number;
@@ -19,6 +21,8 @@ export type PublicChannel = {
 
 export type PublicCountryGroup = {
   id: number;
+  /** ISO code, used to localize the country name when locale=en. */
+  code: string;
   name: string;
   flag: string | null;
   channels: PublicChannel[];
@@ -42,6 +46,11 @@ type Props = {
   rangeStart: Date;
   rangeEnd: Date;
   now: Date;
+  /** BCP-47 locale tag (e.g. "cs-CZ", "en-US"). Used for month names in the
+   *  header. Defaults to Czech for back-compat with existing share links. */
+  locale?: string;
+  /** UI locale ("cs" | "en"). Used for country-name lookup. */
+  uiLocale?: Locale;
 };
 
 const BAR_HEIGHT = 28;
@@ -58,6 +67,8 @@ export function PublicTimeline({
   rangeStart,
   rangeEnd,
   now,
+  locale = "cs-CZ",
+  uiLocale = "cs",
 }: Props) {
   const totalMs = rangeEnd.getTime() - rangeStart.getTime();
   const totalDays = Math.round(totalMs / ONE_DAY_MS);
@@ -106,7 +117,7 @@ export function PublicTimeline({
       const start = cur < rangeStart ? rangeStart : cur;
       const end = next > rangeEnd ? rangeEnd : next;
       monthBands.push({
-        name: formatMonthName(cur),
+        name: formatMonthName(cur, locale),
         startPct: pct(start),
         endPct: pct(end),
       });
@@ -222,7 +233,7 @@ export function PublicTimeline({
             <div className="flex border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
               <div className="w-32 sm:w-48 shrink-0 px-4 py-2.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
                 <span className="text-base leading-none">{g.flag}</span>
-                <span>{g.name}</span>
+                <span>{localizedCountryName(g.code, g.name, uiLocale)}</span>
               </div>
               <div className="flex-1" />
             </div>

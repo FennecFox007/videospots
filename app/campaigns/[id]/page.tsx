@@ -37,6 +37,7 @@ import { EditableCampaignTitle } from "@/components/editable-campaign-title";
 import { CommunicationBadge } from "@/components/communication-badge";
 import { VideoEmbed } from "@/components/video-embed";
 import { getT } from "@/lib/i18n/server";
+import { localizedCountryName } from "@/lib/i18n/country";
 
 export default async function CampaignDetailPage({
   params,
@@ -61,6 +62,7 @@ export default async function CampaignDetailPage({
 
   const channelRows = await db
     .select({
+      countryCode: countries.code,
       countryName: countries.name,
       countryFlag: countries.flagEmoji,
       chainName: chains.name,
@@ -354,7 +356,9 @@ export default async function CampaignDetailPage({
               className="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-sm"
             >
               <span>{ch.countryFlag}</span>
-              <span className="text-zinc-500">{ch.countryName}</span>
+              <span className="text-zinc-500">
+                {localizedCountryName(ch.countryCode, ch.countryName, t.locale)}
+              </span>
               <span>·</span>
               <span>{ch.chainName}</span>
             </span>

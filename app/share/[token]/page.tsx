@@ -31,6 +31,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { CommunicationBadge } from "@/components/communication-badge";
 import { VideoEmbed } from "@/components/video-embed";
 import { getT } from "@/lib/i18n/server";
+import { localizedCountryName } from "@/lib/i18n/country";
 import {
   PublicTimeline,
   type PublicCountryGroup,
@@ -114,6 +115,7 @@ async function CampaignSharePage({
 
   const channelRows = await db
     .select({
+      countryCode: countries.code,
       countryName: countries.name,
       countryFlag: countries.flagEmoji,
       chainName: chains.name,
@@ -252,7 +254,9 @@ async function CampaignSharePage({
                 className="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-sm"
               >
                 <span>{ch.countryFlag}</span>
-                <span className="text-zinc-500">{ch.countryName}</span>
+                <span className="text-zinc-500">
+                  {localizedCountryName(ch.countryCode, ch.countryName, t.locale)}
+                </span>
                 <span>·</span>
                 <span>{ch.chainName}</span>
               </span>
@@ -295,6 +299,7 @@ async function TimelineSharePage({
     .select({
       channelId: channels.id,
       countryId: countries.id,
+      countryCode: countries.code,
       countryName: countries.name,
       countryFlag: countries.flagEmoji,
       chainName: chains.name,
@@ -314,6 +319,7 @@ async function TimelineSharePage({
     if (!groupMap.has(r.countryId)) {
       groupMap.set(r.countryId, {
         id: r.countryId,
+        code: r.countryCode,
         name: r.countryName,
         flag: r.countryFlag,
         channels: [],
@@ -376,6 +382,8 @@ async function TimelineSharePage({
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
           now={now}
+          locale={t.locale === "en" ? "en-US" : "cs-CZ"}
+          uiLocale={t.locale}
         />
 
         <PublicFooter expiresAt={link.expiresAt} t={t} />

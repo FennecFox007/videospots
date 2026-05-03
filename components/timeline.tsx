@@ -30,6 +30,7 @@ import {
   communicationTypeLabel,
 } from "@/lib/communication";
 import { useT } from "@/lib/i18n/client";
+import { localizedCountryName } from "@/lib/i18n/country";
 
 export type TimelineChannel = {
   id: number;
@@ -520,7 +521,7 @@ export function Timeline({
       const start = cur < rangeStart ? rangeStart : cur;
       const end = next > rangeEnd ? rangeEnd : next;
       monthBands.push({
-        name: formatMonthName(cur),
+        name: formatMonthName(cur, t.locale === "en" ? "en-US" : "cs-CZ"),
         startPct: pct(start),
         endPct: pct(end),
       });
@@ -677,7 +678,7 @@ export function Timeline({
             <div
               role="button"
               aria-expanded={!isCollapsed}
-              aria-label={`${g.name} — klik pro ${isCollapsed ? "rozbalení" : "sbalení"}`}
+              aria-label={localizedCountryName(g.code, g.name, t.locale)}
               className={`flex border-b border-zinc-100 dark:border-zinc-800 ${GROUP_HEADER_BG} cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors`}
               onClick={() => toggleCountryCollapsed(g.code)}
               onContextMenu={(e) => {
@@ -702,7 +703,7 @@ export function Timeline({
                   ▸
                 </span>
                 <span className="text-base leading-none">{g.flag}</span>
-                <span>{g.name}</span>
+                <span>{localizedCountryName(g.code, g.name, t.locale)}</span>
               </div>
               <div className="flex-1 flex items-center px-3">
                 {isCollapsed && aggCount > 0 && (

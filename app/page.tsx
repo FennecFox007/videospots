@@ -340,7 +340,7 @@ export default async function Dashboard({
           <Link
             href={rangeUrl(shiftBackStart, totalDays, queryParamsForward)}
             className="px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-r border-zinc-300 dark:border-zinc-700"
-            title="Posunout o týden zpět"
+            title={t("timeline.shift_back")}
           >
             ←
           </Link>
@@ -352,12 +352,12 @@ export default async function Dashboard({
             )}
             className="px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-r border-zinc-300 dark:border-zinc-700 font-medium"
           >
-            Dnes
+            {t("timeline.today")}
           </Link>
           <Link
             href={rangeUrl(shiftFwdStart, totalDays, queryParamsForward)}
             className="px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            title="Posunout o týden vpřed"
+            title={t("timeline.shift_forward")}
           >
             →
           </Link>
@@ -366,10 +366,10 @@ export default async function Dashboard({
         <div className="inline-flex rounded-md border border-zinc-300 dark:border-zinc-700 overflow-hidden">
           {(
             [
-              { label: "Týden", days: 7 },
-              { label: "2 týdny", days: 14 },
-              { label: "Měsíc", days: 35 },
-              { label: "Kvartál", days: 84 },
+              { label: t("timeline.zoom_week"), days: 7 },
+              { label: t("timeline.zoom_2weeks"), days: 14 },
+              { label: t("timeline.zoom_month"), days: 35 },
+              { label: t("timeline.zoom_quarter"), days: 84 },
             ] as const
           ).map((z, i, arr) => {
             const active = totalDays === z.days;
@@ -420,17 +420,17 @@ export default async function Dashboard({
             );
             const presets = [
               {
-                label: "Tento týden",
+                label: t("timeline.preset_this_week"),
                 start: thisMonday,
                 days: 7,
               },
               {
-                label: "Příští týden",
+                label: t("timeline.preset_next_week"),
                 start: addDays(thisMonday, 7),
                 days: 7,
               },
               {
-                label: "Tento měsíc",
+                label: t("timeline.preset_this_month"),
                 start: thisMonthStart,
                 days: Math.round(
                   (monthEnd.getTime() - thisMonthStart.getTime()) /
@@ -438,7 +438,7 @@ export default async function Dashboard({
                 ),
               },
               {
-                label: "Příští měsíc",
+                label: t("timeline.preset_next_month"),
                 start: nextMonthStart,
                 days: Math.round(
                   (nextMonthEndExclusive.getTime() -

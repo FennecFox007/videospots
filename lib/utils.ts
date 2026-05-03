@@ -39,6 +39,7 @@ const csDateShort = new Intl.DateTimeFormat("cs-CZ", {
 });
 
 const csMonthLong = new Intl.DateTimeFormat("cs-CZ", { month: "long" });
+const monthFmtCache: Record<string, Intl.DateTimeFormat> = { "cs-CZ": csMonthLong };
 
 /** "27. 4. 2026" */
 export function formatDate(d: Date): string {
@@ -50,9 +51,16 @@ export function formatDateShort(d: Date): string {
   return csDateShort.format(d);
 }
 
-/** "duben" — full month name in Czech */
-export function formatMonthName(d: Date): string {
-  return csMonthLong.format(d);
+/**
+ * Locale-aware month name. Default is Czech for back-compat with callers
+ * that don't care; pass `"en-US"` (or any BCP-47 tag) to get the English
+ * name. Formatters are cached per locale.
+ */
+export function formatMonthName(d: Date, locale: string = "cs-CZ"): string {
+  if (!monthFmtCache[locale]) {
+    monthFmtCache[locale] = new Intl.DateTimeFormat(locale, { month: "long" });
+  }
+  return monthFmtCache[locale].format(d);
 }
 
 /**

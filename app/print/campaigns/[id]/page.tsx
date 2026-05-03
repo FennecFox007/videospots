@@ -25,6 +25,7 @@ import {
 import { communicationTypeLabel } from "@/lib/communication";
 import { AutoPrint } from "@/components/auto-print";
 import { getT } from "@/lib/i18n/server";
+import { localizedCountryName } from "@/lib/i18n/country";
 
 export default async function PrintCampaignPage({
   params,
@@ -45,6 +46,7 @@ export default async function PrintCampaignPage({
 
   const channelRows = await db
     .select({
+      countryCode: countries.code,
       countryName: countries.name,
       countryFlag: countries.flagEmoji,
       chainName: chains.name,
@@ -235,7 +237,7 @@ export default async function PrintCampaignPage({
               >
                 <td className="py-1.5 pr-4">
                   <span className="mr-1.5">{ch.countryFlag}</span>
-                  {ch.countryName}
+                  {localizedCountryName(ch.countryCode, ch.countryName, t.locale)}
                 </td>
                 <td className="py-1.5">{ch.chainName}</td>
               </tr>

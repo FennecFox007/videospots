@@ -23,6 +23,8 @@ import {
   products,
 } from "./client";
 import type { CountryGroup } from "@/components/campaign-form-body";
+import { getLocale } from "@/lib/i18n/server";
+import { localizedCountryName } from "@/lib/i18n/country";
 
 /**
  * Fetch all channels grouped by country. Used by the campaign create/edit
@@ -198,7 +200,9 @@ async function buildWhere(filters: CampaignFilters): Promise<{
 
 /**
  * Distinct values used to populate the FilterBar's dropdowns. Cheap enough
- * to compute on every page load given our row counts.
+ * to compute on every page load given our row counts. Country names are
+ * localized for the current UI locale (the DB only stores Czech names but
+ * we resolve via Intl.DisplayNames for English).
  */
 export async function getFilterOptions() {
   const [allCountries, allChains, clientRows, tagRows] = await Promise.all([
@@ -213,10 +217,12 @@ export async function getFilterOptions() {
     ),
   ]);
 
+  const locale = await getLocale();
+
   return {
     countries: allCountries.map((c) => ({
       value: c.code,
-      label: `${c.flagEmoji ?? ""} ${c.name}`.trim(),
+      label: `${c.flagEmoji ?? ""} ${localizedCountryName(c.code, c.name, locale)}`.trim(),
     })),
     chains: allChains.map((c) => ({ value: c.code, label: c.name })),
     clients: clientRows

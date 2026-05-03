@@ -23,6 +23,7 @@ import {
 } from "@/lib/db/queries";
 import { AutoPrint } from "@/components/auto-print";
 import { getT } from "@/lib/i18n/server";
+import { localizedCountryName } from "@/lib/i18n/country";
 
 const ONE_DAY_MS = 86_400_000;
 const DEFAULT_RANGE_DAYS = 35;
@@ -68,6 +69,7 @@ export default async function PrintTimelinePage({
     .select({
       channelId: channels.id,
       countryId: countries.id,
+      countryCode: countries.code,
       countryName: countries.name,
       countryFlag: countries.flagEmoji,
       chainName: chains.name,
@@ -86,6 +88,7 @@ export default async function PrintTimelinePage({
   type Row = { channelId: number; chainName: string };
   type Group = {
     id: number;
+    code: string;
     name: string;
     flag: string | null;
     rows: Row[];
@@ -95,6 +98,7 @@ export default async function PrintTimelinePage({
     if (!groupMap.has(r.countryId)) {
       groupMap.set(r.countryId, {
         id: r.countryId,
+        code: r.countryCode,
         name: r.countryName,
         flag: r.countryFlag,
         rows: [],
@@ -176,7 +180,7 @@ export default async function PrintTimelinePage({
           >
             <div className="bg-zinc-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide border-b border-zinc-300">
               <span className="mr-1.5">{g.flag}</span>
-              {g.name}
+              {localizedCountryName(g.code, g.name, t.locale)}
             </div>
             {g.rows.map((ch, ri) => {
               const bars = byChannel.get(ch.channelId) ?? [];

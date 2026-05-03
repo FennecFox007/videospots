@@ -21,6 +21,8 @@ const ONE_DAY_MS = 86_400_000;
 const LOOKBACK_DAYS = 14;
 
 export default async function ReleasesPage() {
+  const t = await getT();
+  const localeTag = t.locale === "en" ? "en-US" : "cs-CZ";
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   const horizonStart = addDays(now, -LOOKBACK_DAYS);
@@ -71,7 +73,7 @@ export default async function ReleasesPage() {
     if (!groupMap.has(key)) {
       groupMap.set(key, {
         key,
-        label: `${formatMonthName(d)} ${d.getFullYear()}`,
+        label: `${formatMonthName(d, localeTag)} ${d.getFullYear()}`,
         rows: [],
       });
     }
@@ -83,7 +85,6 @@ export default async function ReleasesPage() {
     (r) => r.releaseDate && r.releaseDate >= now
   ).length;
 
-  const t = await getT();
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       <div className="flex items-baseline justify-between flex-wrap gap-3">
