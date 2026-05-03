@@ -16,6 +16,7 @@ import {
   type NewCampaignSearchParams,
 } from "@/app/campaigns/new/_context";
 import { RouteModal } from "@/components/route-modal";
+import { getT } from "@/lib/i18n/server";
 
 export default async function NewCampaignModalPage({
   searchParams,
@@ -24,14 +25,15 @@ export default async function NewCampaignModalPage({
 }) {
   const params = await searchParams;
   const { groups, defaults, hint } = await loadNewCampaignContext(params);
+  const t = await getT();
 
   return (
-    <RouteModal title="Nová kampaň" subtitle={hint}>
+    <RouteModal title={t("form.new_campaign_title")} subtitle={hint}>
       <form action={createCampaign} className="space-y-6">
         <CampaignFormBody
           groups={groups}
           defaults={defaults}
-          submitLabel="Vytvořit kampaň"
+          submitLabel={t("form.submit_create")}
           cancelHref="/"
           showRecurring
         />

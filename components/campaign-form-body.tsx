@@ -7,6 +7,8 @@ import { CAMPAIGN_COLORS, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
 import { PRODUCT_KINDS, DEFAULT_PRODUCT_KIND } from "@/lib/products";
 import { COMMUNICATION_TYPES } from "@/lib/communication";
 import { ChannelsPicker } from "./channels-picker";
+import { getT } from "@/lib/i18n/server";
+import { localizedCountryName } from "@/lib/i18n/country";
 
 export type CampaignFormDefaults = {
   name?: string;
@@ -49,13 +51,14 @@ type Props = {
   showRecurring?: boolean;
 };
 
-export function CampaignFormBody({
+export async function CampaignFormBody({
   defaults,
   groups,
   submitLabel,
   cancelHref,
   showRecurring,
 }: Props) {
+  const t = await getT();
   const today = new Date();
   const twoWeeks = new Date();
   twoWeeks.setDate(today.getDate() + 14);
@@ -69,18 +72,18 @@ export function CampaignFormBody({
 
   return (
     <>
-      <Section title="Základní údaje">
-        <Field label="Název kampaně" required>
+      <Section title={t("form.section.basic")}>
+        <Field label={t("form.field.name")} required>
           <input
             name="name"
             required
             defaultValue={defaults?.name}
-            placeholder="např. Saros — launch trailer"
+            placeholder={t("form.field.name_placeholder")}
             className={inputClass}
           />
         </Field>
 
-        <Field label="Klient">
+        <Field label={t("form.field.client")}>
           <input
             name="client"
             defaultValue={defaults?.client ?? "Sony Interactive Entertainment"}
@@ -90,36 +93,36 @@ export function CampaignFormBody({
 
         <div className="grid grid-cols-2 gap-3">
           <Field
-            label="Typ komunikace"
-            hint="Co přesně tahle kampaň dělá vůči releasu produktu"
+            label={t("form.field.comm_type")}
+            hint={t("form.field.comm_type_hint")}
           >
             <select
               name="communicationType"
               defaultValue={currentCommunicationType}
               className={inputClass}
             >
-              <option value="">— neuvedeno —</option>
-              {COMMUNICATION_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label} — {t.description}
+              <option value="">— —</option>
+              {COMMUNICATION_TYPES.map((ct) => (
+                <option key={ct.value} value={ct.value}>
+                  {ct.label} — {ct.description}
                 </option>
               ))}
             </select>
           </Field>
           <Field
-            label="Štítky"
-            hint='Odděl čárkou: "priorita, jaro, …"'
+            label={t("form.field.tags")}
+            hint={t("form.field.tags_hint")}
           >
             <input
               name="tags"
               defaultValue={currentTags.join(", ")}
-              placeholder="priorita, sezóna, …"
+              placeholder={t("form.field.tags_placeholder")}
               className={inputClass}
             />
           </Field>
         </div>
 
-        <Field label="Barva v timeline">
+        <Field label={t("form.field.color")}>
           <div className="flex flex-wrap gap-3">
             {CAMPAIGN_COLORS.map((c) => (
               <label
@@ -151,19 +154,19 @@ export function CampaignFormBody({
       </Section>
 
       <Section
-        title="Produkt"
-        hint="Co kampaň propaguje — hra, konzole, ovladač, příslušenství… Volitelné, ale pomáhá při třídění."
+        title={t("form.section.product")}
+        hint={t("form.section.product_hint")}
       >
         <div className="grid grid-cols-[1fr_auto] gap-3">
-          <Field label="Název produktu">
+          <Field label={t("form.field.product_name")}>
             <input
               name="productName"
               defaultValue={defaults?.product?.name ?? ""}
-              placeholder="např. Saros, PS5 Slim, DualSense Edge…"
+              placeholder={t("form.field.product_name_placeholder")}
               className={inputClass}
             />
           </Field>
-          <Field label="Druh">
+          <Field label={t("form.field.product_kind")}>
             <select
               name="productKind"
               defaultValue={defaults?.product?.kind ?? DEFAULT_PRODUCT_KIND}
@@ -179,7 +182,10 @@ export function CampaignFormBody({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Datum vydání" hint="Volitelné, hodí se pro launchy">
+          <Field
+            label={t("form.field.product_release_date")}
+            hint={t("form.field.product_release_date_hint")}
+          >
             <input
               name="productReleaseDate"
               type="date"
@@ -191,7 +197,10 @@ export function CampaignFormBody({
               className={inputClass}
             />
           </Field>
-          <Field label="Obrázek (URL)" hint="Cover, packshot, render…">
+          <Field
+            label={t("form.field.product_cover_url")}
+            hint={t("form.field.product_cover_url_hint")}
+          >
             <input
               name="productCoverUrl"
               type="url"
@@ -202,20 +211,20 @@ export function CampaignFormBody({
           </Field>
         </div>
 
-        <Field label="Stručný popis">
+        <Field label={t("form.field.product_summary")}>
           <textarea
             name="productSummary"
             rows={2}
             defaultValue={defaults?.product?.summary ?? ""}
-            placeholder="krátká věta o produktu"
+            placeholder={t("form.field.product_summary_placeholder")}
             className={`${inputClass} resize-y`}
           />
         </Field>
       </Section>
 
       <Section
-        title="Video (jazyková mutace pro každou zemi)"
-        hint="Každá země běží vlastní jazykovou verzi spotu. Nech prázdné, pokud pro tu zemi spot zatím nemáš."
+        title={t("form.section.video")}
+        hint={t("form.section.video_hint")}
       >
         <div className="space-y-2">
           {groups.map((g) => (
@@ -224,13 +233,18 @@ export function CampaignFormBody({
                 <span className="text-base leading-none" aria-hidden>
                   {g.flag}
                 </span>
-                <span className="font-mono text-xs uppercase">{g.code}</span>
+                <span
+                  className="font-mono text-xs uppercase"
+                  title={localizedCountryName(g.code, g.name, t.locale)}
+                >
+                  {g.code}
+                </span>
               </span>
               <input
                 name={`videoUrl_${g.id}`}
                 type="url"
                 defaultValue={defaults?.videosByCountry?.[g.id] ?? ""}
-                placeholder="YouTube / Vimeo / přímý mp4 odkaz"
+                placeholder={t("form.video.placeholder")}
                 className={inputClass}
               />
             </div>
@@ -238,9 +252,9 @@ export function CampaignFormBody({
         </div>
       </Section>
 
-      <Section title="Termín">
+      <Section title={t("form.section.term")}>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Začátek" required>
+          <Field label={t("form.field.starts_at")} required>
             <input
               name="startsAt"
               type="date"
@@ -249,7 +263,7 @@ export function CampaignFormBody({
               className={inputClass}
             />
           </Field>
-          <Field label="Konec" required>
+          <Field label={t("form.field.ends_at")} required>
             <input
               name="endsAt"
               type="date"
@@ -262,8 +276,8 @@ export function CampaignFormBody({
       </Section>
 
       <Section
-        title="Kanály"
-        hint="Vyber kombinace stát × řetězec, kde má kampaň běžet. Hromadný výběr přes tlačítka, jednotlivé pak jen klikni."
+        title={t("form.section.channels")}
+        hint={t("form.section.channels_hint")}
       >
         <ChannelsPicker
           groups={groups}
@@ -271,22 +285,33 @@ export function CampaignFormBody({
         />
       </Section>
 
-      <Section title="Poznámky">
+      <Section title={t("form.section.notes")}>
         <textarea
           name="notes"
           rows={3}
           defaultValue={defaults?.notes ?? ""}
-          placeholder="cokoli užitečného (interní info, briefing…)"
+          placeholder={t("form.field.notes_placeholder")}
           className={`${inputClass} resize-y`}
         />
       </Section>
 
       {showRecurring && (
         <Section
-          title="Opakovat (volitelné)"
-          hint="Vytvoří víc kampaní najednou s posunutými termíny. Vhodné pro pravidelné spoty."
+          title={t("form.section.recurring")}
+          hint={t("form.section.recurring_hint")}
         >
-          <RecurringFields />
+          <RecurringFields
+            labels={{
+              toggle: t("form.recurring.toggle"),
+              frequency: t("form.recurring.frequency"),
+              freqDaily: t("form.recurring.freq_daily"),
+              freqWeekly: t("form.recurring.freq_weekly"),
+              freqBiweekly: t("form.recurring.freq_biweekly"),
+              freqMonthly: t("form.recurring.freq_monthly"),
+              count: t("form.recurring.count"),
+              note: t("form.recurring.note"),
+            }}
+          />
         </Section>
       )}
 
@@ -295,7 +320,7 @@ export function CampaignFormBody({
           href={cancelHref}
           className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
         >
-          Zrušit
+          {t("form.cancel")}
         </a>
         <button
           type="submit"
@@ -313,32 +338,45 @@ export function CampaignFormBody({
  * follow-up fields are submitted with the campaign form; the server action
  * splits them into N campaigns post-validation.
  */
-function RecurringFields() {
+function RecurringFields({
+  labels,
+}: {
+  labels: {
+    toggle: string;
+    frequency: string;
+    freqDaily: string;
+    freqWeekly: string;
+    freqBiweekly: string;
+    freqMonthly: string;
+    count: string;
+    note: string;
+  };
+}) {
   return (
     <div>
       <label className="inline-flex items-center gap-2 text-sm cursor-pointer mb-2">
         <input type="checkbox" name="recurring" value="1" className="rounded" />
-        <span>Vytvořit sérii kampaní</span>
+        <span>{labels.toggle}</span>
       </label>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium mb-1 text-zinc-600 dark:text-zinc-400">
-            Frekvence
+            {labels.frequency}
           </label>
           <select
             name="recurringStep"
             defaultValue="7"
             className={inputClass}
           >
-            <option value="1">každý den</option>
-            <option value="7">každý týden</option>
-            <option value="14">každé 2 týdny</option>
-            <option value="28">každé 4 týdny</option>
+            <option value="1">{labels.freqDaily}</option>
+            <option value="7">{labels.freqWeekly}</option>
+            <option value="14">{labels.freqBiweekly}</option>
+            <option value="28">{labels.freqMonthly}</option>
           </select>
         </div>
         <div>
           <label className="block text-xs font-medium mb-1 text-zinc-600 dark:text-zinc-400">
-            Počet kampaní
+            {labels.count}
           </label>
           <input
             type="number"
@@ -350,10 +388,7 @@ function RecurringFields() {
           />
         </div>
       </div>
-      <p className="text-xs text-zinc-500 mt-2">
-        Každá další kampaň bude pojmenovaná „Název (n/N)". Výběr kanálů a hra
-        se zachovají u všech.
-      </p>
+      <p className="text-xs text-zinc-500 mt-2">{labels.note}</p>
     </div>
   );
 }

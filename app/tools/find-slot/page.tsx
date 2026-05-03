@@ -19,9 +19,10 @@ import {
 import {
   addDays,
   formatDate,
-  pluralCs,
   toDateInputValue,
 } from "@/lib/utils";
+import { getT } from "@/lib/i18n/server";
+import { localizedCountryName } from "@/lib/i18n/country";
 
 const ONE_DAY_MS = 86_400_000;
 const HORIZON_DAYS = 365;
@@ -137,6 +138,7 @@ export default async function FindSlotPage({
     .select({
       channelId: channels.id,
       countryId: countries.id,
+      countryCode: countries.code,
       countryName: countries.name,
       countryFlag: countries.flagEmoji,
       chainName: chains.name,
@@ -153,6 +155,7 @@ export default async function FindSlotPage({
 
   type Group = {
     id: number;
+    code: string;
     name: string;
     flag: string | null;
     items: { id: number; name: string }[];
@@ -162,6 +165,7 @@ export default async function FindSlotPage({
     if (!groupMap.has(r.countryId)) {
       groupMap.set(r.countryId, {
         id: r.countryId,
+        code: r.countryCode,
         name: r.countryName,
         flag: r.countryFlag,
         items: [],
@@ -173,6 +177,7 @@ export default async function FindSlotPage({
     });
   }
   const groups = Array.from(groupMap.values());
+  const t = await getT();
 
   // Find slots.
   let slots: Slot[] = [];
@@ -209,15 +214,13 @@ export default async function FindSlotPage({
           href="/"
           className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
         >
-          ← Timeline
+          {t("detail.back_to_timeline")}
         </Link>
         <h1 className="text-3xl font-semibold tracking-tight mt-1">
-          Najít volný termín
+          {t("findslot.heading")}
         </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-          Vyber kanály a požadovanou délku — najdu nejbližší volné období,
-          kde se na žádném vybraném kanálu nepřekrývá schválená kampaň.
-          Hledá se {HORIZON_DAYS} dní dopředu od zadaného data.
+          {t("findslot.subtitle", { days: HORIZON_DAYS })}
         </p>
       </div>
 
@@ -228,7 +231,7 @@ export default async function FindSlotPage({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium mb-1 text-zinc-600 dark:text-zinc-400">
-              Délka kampaně (dní)
+              {t("findslot.field.duration")}
             </label>
             <input
               name="duration"
@@ -241,7 +244,7 @@ export default async function FindSlotPage({
           </div>
           <div>
             <label className="block text-xs font-medium mb-1 text-zinc-600 dark:text-zinc-400">
-              Hledat od
+              {t("findslot.field.from")}
             </label>
             <input
               name="from"
@@ -253,7 +256,9 @@ export default async function FindSlotPage({
         </div>
 
         <div>
-          <div className="text-sm font-medium mb-2">Kanály</div>
+          <div className="text-sm font-medium mb-2">
+            {t("findslot.field.channels")}
+          </div>
           <div className="space-y-2">
             {groups.map((g) => (
               <fieldset
@@ -262,7 +267,7 @@ export default async function FindSlotPage({
               >
                 <legend className="text-xs font-semibold px-1">
                   <span className="mr-1">{g.flag}</span>
-                  {g.name}
+                  {localizedCountryName(g.code, g.name, t.locale)}
                 </legend>
                 <div className="flex flex-wrap gap-2">
                   {g.items.map((ch) => (
@@ -291,7 +296,7 @@ export default async function FindSlotPage({
             type="submit"
             className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2"
           >
-            Najít volný termín
+            {t("findslot.find")}
           </button>
         </div>
       </form>
@@ -301,27 +306,22 @@ export default async function FindSlotPage({
           <div className="flex items-baseline justify-between mb-3">
             <h2 className="font-medium">
               {slots.length === 0
-                ? "Nenalezeno"
-                : `Výsledky (top ${slots.length})`}
+                ? t("findslot.results.none_found")
+                : t("findslot.results.heading", { n: slots.length })}
             </h2>
             <span className="text-xs text-zinc-500">
               {channelIds.length}{" "}
-              {pluralCs(channelIds.length, "kanál", "kanály", "kanálů")} ·{" "}
-              {busyCount}{" "}
-              {pluralCs(
-                busyCount,
-                "obsazený interval",
-                "obsazené intervaly",
-                "obsazených intervalů"
-              )}
+              {t.plural(channelIds.length, "unit.channel")} ·{" "}
+              {t("findslot.busy_intervals", { n: busyCount })}
             </span>
           </div>
 
           {slots.length === 0 ? (
             <p className="text-sm text-zinc-500">
-              V příštích {HORIZON_DAYS} dnech není volný{" "}
-              {duration}denní úsek napříč všemi vybranými kanály. Zkus
-              kratší dobu nebo méně kanálů.
+              {t("findslot.results.empty", {
+                days: HORIZON_DAYS,
+                duration: duration,
+              })}
             </p>
           ) : (
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -344,17 +344,16 @@ export default async function FindSlotPage({
                         {formatDate(s.start)} – {formatDate(dispEnd)}
                       </div>
                       <div className="text-xs text-zinc-500">
-                        {duration}{" "}
-                        {pluralCs(duration, "den", "dny", "dní")}
+                        {duration} {t.plural(duration, "unit.day")}
                         {daysFromNow > 0 &&
-                          ` · za ${daysFromNow} ${pluralCs(daysFromNow, "den", "dny", "dní")}`}
+                          ` · ${t("findslot.in_n_days", { n: daysFromNow, unit: t.plural(daysFromNow, "unit.day") })}`}
                       </div>
                     </div>
                     <Link
                       href={createUrl}
                       className="text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
                     >
-                      Vytvořit zde →
+                      {t("findslot.create_here")}
                     </Link>
                   </li>
                 );

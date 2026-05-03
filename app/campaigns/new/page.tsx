@@ -9,6 +9,7 @@ import {
   loadNewCampaignContext,
   type NewCampaignSearchParams,
 } from "./_context";
+import { getT } from "@/lib/i18n/server";
 
 export default async function NewCampaignPage({
   searchParams,
@@ -17,11 +18,12 @@ export default async function NewCampaignPage({
 }) {
   const params = await searchParams;
   const { groups, defaults, hint } = await loadNewCampaignContext(params);
+  const t = await getT();
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
       <h1 className="text-3xl font-semibold tracking-tight mb-1">
-        Nová kampaň
+        {t("form.new_campaign_title")}
       </h1>
       <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">{hint}</p>
 
@@ -29,7 +31,7 @@ export default async function NewCampaignPage({
         <CampaignFormBody
           groups={groups}
           defaults={defaults}
-          submitLabel="Vytvořit kampaň"
+          submitLabel={t("form.submit_create")}
           cancelHref="/"
           showRecurring
         />

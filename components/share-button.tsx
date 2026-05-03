@@ -5,12 +5,14 @@
 
 import { useState, useTransition } from "react";
 import { createCampaignShareLink } from "@/app/campaigns/[id]/actions";
+import { useT } from "@/lib/i18n/client";
 
 export function ShareButton({ campaignId }: { campaignId: number }) {
   const [url, setUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   function generate() {
     setError(null);
@@ -52,7 +54,7 @@ export function ShareButton({ campaignId }: { campaignId: number }) {
         disabled={isPending}
         className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900 disabled:opacity-50"
       >
-        {isPending ? "Generuji…" : "Sdílet"}
+        {isPending ? t("share_button.generating") : t("share_button.label")}
       </button>
     );
   }
@@ -71,12 +73,10 @@ export function ShareButton({ campaignId }: { campaignId: number }) {
           onClick={copy}
           className="text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
         >
-          {copied ? "✓ Zkopírováno" : "Kopírovat"}
+          {copied ? t("share_button.copied") : t("share_button.copy")}
         </button>
       </div>
-      <p className="text-[10px] text-zinc-500">
-        Platnost 30 dní. Kdokoli s odkazem uvidí kampaň bez přihlášení.
-      </p>
+      <p className="text-[10px] text-zinc-500">{t("share_button.note")}</p>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );

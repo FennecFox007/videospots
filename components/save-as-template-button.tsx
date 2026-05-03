@@ -5,6 +5,7 @@
 
 import { useState, useTransition } from "react";
 import { saveCampaignAsTemplate } from "@/app/admin/templates/actions";
+import { useT } from "@/lib/i18n/client";
 
 export function SaveAsTemplateButton({
   campaignId,
@@ -18,6 +19,7 @@ export function SaveAsTemplateButton({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,7 +47,7 @@ export function SaveAsTemplateButton({
         onClick={() => setOpen(true)}
         className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900"
       >
-        Uložit jako šablonu
+        {t("save_template.label")}
       </button>
     );
   }
@@ -57,7 +59,7 @@ export function SaveAsTemplateButton({
         value={name}
         onChange={(e) => setName(e.target.value)}
         maxLength={80}
-        placeholder="Název šablony"
+        placeholder={t("save_template.placeholder")}
         className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2 py-1 text-sm w-48"
       />
       <button
@@ -65,14 +67,18 @@ export function SaveAsTemplateButton({
         disabled={isPending || !name.trim()}
         className="text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium disabled:opacity-50"
       >
-        {done ? "✓ Uloženo" : isPending ? "Ukládám…" : "Uložit"}
+        {done
+          ? "✓ " + t("save_template.success")
+          : isPending
+            ? t("share_button.generating")
+            : t("save_template.confirm")}
       </button>
       <button
         type="button"
         onClick={() => setOpen(false)}
         className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-2"
       >
-        Zrušit
+        {t("common.cancel")}
       </button>
       {error && <span className="text-xs text-red-600 ml-1">{error}</span>}
     </form>

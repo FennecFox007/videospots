@@ -6,6 +6,7 @@
 
 import { useState, useTransition } from "react";
 import { renameCampaign } from "@/app/campaigns/[id]/actions";
+import { useT } from "@/lib/i18n/client";
 
 export function EditableCampaignTitle({
   campaignId,
@@ -20,13 +21,14 @@ export function EditableCampaignTitle({
   const [optimistic, setOptimistic] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   const display = optimistic ?? initialName;
 
   async function save() {
     const trimmed = value.trim();
     if (!trimmed) {
-      setError("Název nesmí být prázdný");
+      setError(t("editable_title.empty_error"));
       return;
     }
     if (trimmed === display) {
@@ -78,14 +80,14 @@ export function EditableCampaignTitle({
           onClick={save}
           className="text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
         >
-          Uložit
+          {t("editable_title.save")}
         </button>
         <button
           type="button"
           onClick={cancel}
           className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
         >
-          Zrušit
+          {t("editable_title.cancel")}
         </button>
         {error && (
           <span className="text-xs text-red-600 ml-1">{error}</span>
@@ -99,12 +101,12 @@ export function EditableCampaignTitle({
       <h1
         className="text-2xl font-semibold tracking-tight cursor-text"
         onDoubleClick={() => setEditing(true)}
-        title="Dvojklik pro přejmenování"
+        title={t("editable_title.tooltip")}
       >
         {display}
         {isPending && (
           <span className="text-xs text-zinc-400 font-normal ml-2">
-            ukládám…
+            {t("editable_title.saving")}
           </span>
         )}
       </h1>
@@ -115,8 +117,8 @@ export function EditableCampaignTitle({
           setEditing(true);
         }}
         className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-opacity"
-        title="Přejmenovat"
-        aria-label="Přejmenovat"
+        title={t("editable_title.rename")}
+        aria-label={t("editable_title.rename")}
       >
         ✎
       </button>

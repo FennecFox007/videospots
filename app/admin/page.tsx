@@ -1,52 +1,54 @@
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 
-export default function AdminIndexPage() {
+export default async function AdminIndexPage() {
+  const t = await getT();
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <AdminCard
         href="/admin/countries"
-        title="Státy"
-        description="Trhy, kde provozujeme kampaně. CZ, SK, HU, PL — přidat lze libovolný."
+        title={t("admin.tab.countries")}
+        description={t("admin.card.countries.desc")}
       />
       <AdminCard
         href="/admin/chains"
-        title="Řetězce"
-        description="Maloobchodní brandy s našimi zobrazovači — Datart, Alza, MediaMarkt…"
+        title={t("admin.tab.chains")}
+        description={t("admin.card.chains.desc")}
       />
       <AdminCard
         href="/admin/channels"
-        title="Kanály"
-        description="Matice Stát × Řetězec. Označ které kombinace skutečně existují."
+        title={t("admin.tab.channels")}
+        description={t("admin.card.channels.desc")}
       />
       <AdminCard
         href="/admin/products"
-        title="Produkty"
-        description="Hry, konzole, ovladače, příslušenství… s daty vydání a covery. Kampaně se na ně mapují."
+        title={t("admin.tab.products")}
+        description={t("admin.card.products.desc")}
       />
       <AdminCard
         href="/admin/users"
-        title="Uživatelé"
-        description="Přidávej, mažeš, nastavuješ hesla členům týmu."
+        title={t("admin.tab.users")}
+        description={t("admin.card.users.desc")}
       />
       <AdminCard
         href="/admin/templates"
-        title="Šablony"
-        description="Uložené konfigurace kampaní (klient, barva, kanály, štítky, délka) pro rychlé opakování."
+        title={t("admin.tab.templates")}
+        description={t("admin.card.templates.desc")}
       />
       <AdminCard
         href="/admin/import"
-        title="Import CSV"
-        description="Hromadný import kampaní z CSV (migrace z Excelu)."
+        title={t("admin.tab.import")}
+        description={t("admin.card.import.desc")}
       />
       <AdminCard
         href="/admin/archive"
-        title="Archiv"
-        description="Archivované kampaně. Lze obnovit zpět, nebo definitivně smazat."
+        title={t("admin.tab.archive")}
+        description={t("admin.card.archive.desc")}
       />
       <AdminCard
         href="/admin/audit"
-        title="Audit log"
-        description="Co kdo kdy udělal — kompletní historie akcí."
+        title={t("admin.tab.audit")}
+        description={t("admin.card.audit.desc")}
       />
     </div>
   );

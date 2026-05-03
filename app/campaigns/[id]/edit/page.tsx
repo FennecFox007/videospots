@@ -10,6 +10,7 @@ import {
 import { CampaignFormBody } from "@/components/campaign-form-body";
 import { getChannelGroups } from "@/lib/db/queries";
 import { updateCampaign } from "./actions";
+import { getT } from "@/lib/i18n/server";
 
 export default async function EditCampaignPage({
   params,
@@ -45,13 +46,14 @@ export default async function EditCampaignPage({
   for (const v of videoRows) videosByCountry[v.countryId] = v.videoUrl;
 
   const groups = await getChannelGroups();
+  const t = await getT();
 
   const action = updateCampaign.bind(null, campaignId);
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
       <h1 className="text-3xl font-semibold tracking-tight mb-1">
-        Upravit kampaň
+        {t("form.edit_campaign_title")}
       </h1>
       <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
         {row.campaign.name}
@@ -82,7 +84,7 @@ export default async function EditCampaignPage({
               : null,
             channelIds: new Set(channelRows.map((r) => r.channelId)),
           }}
-          submitLabel="Uložit změny"
+          submitLabel={t("form.submit_save")}
           cancelHref={`/campaigns/${campaignId}`}
         />
       </form>

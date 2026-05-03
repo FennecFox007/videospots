@@ -330,26 +330,34 @@ export function Timeline({
     const baseUrl = (channelIds: number[]) =>
       `/campaigns/new?channels=${channelIds.join(",")}&from=${toDateInputValue(start)}&to=${toDateInputValue(end)}`;
     const allCountryChannels = country.channels.map((c) => c.id);
+    const countryLabel = localizedCountryName(
+      country.code,
+      country.name,
+      t.locale
+    );
     return [
       {
         kind: "link",
-        label: `+ Vytvořit kampaň zde (${channel.chainName}, od ${formatDateShort(start)})`,
+        label: t("ctx.create_here", {
+          chain: channel.chainName,
+          date: formatDateShort(start),
+        }),
         href: baseUrl([channel.id]),
       },
       {
         kind: "link",
-        label: `+ Kampaň pro celé ${country.name}`,
+        label: t("ctx.create_for_country", { country: countryLabel }),
         href: baseUrl(allCountryChannels),
       },
       { kind: "separator" },
       {
         kind: "link",
-        label: `Filtrovat na ${channel.chainName}`,
+        label: t("ctx.filter_chain", { chain: channel.chainName }),
         href: `?chain=${encodeURIComponent(channel.chainCode)}`,
       },
       {
         kind: "link",
-        label: `Filtrovat na ${country.name}`,
+        label: t("ctx.filter_country", { country: countryLabel }),
         href: `?country=${encodeURIComponent(country.code)}`,
       },
     ];
@@ -360,34 +368,34 @@ export function Timeline({
     return [
       {
         kind: "link",
-        label: "Otevřít detail",
+        label: t("ctx.open_detail"),
         href: `/campaigns/${bar.campaignId}`,
       },
       {
         kind: "link",
-        label: "Upravit",
+        label: t("ctx.edit"),
         href: `/campaigns/${bar.campaignId}/edit`,
       },
       { kind: "separator" },
       {
         kind: "action",
-        label: "Posunout o týden ←",
+        label: t("ctx.shift_week_back"),
         onClick: () => shiftBar(bar, -7),
       },
       {
         kind: "action",
-        label: "Posunout o týden →",
+        label: t("ctx.shift_week_forward"),
         onClick: () => shiftBar(bar, 7),
       },
       { kind: "separator" },
       {
         kind: "action",
-        label: "Klonovat",
+        label: t("ctx.clone"),
         onClick: () => cloneCampaign(bar.campaignId),
       },
       {
         kind: "action",
-        label: isCancelled ? "Obnovit" : "Zrušit (historicky)",
+        label: isCancelled ? t("ctx.reactivate") : t("ctx.cancel_historic"),
         onClick: () =>
           isCancelled
             ? reactivateCampaign(bar.campaignId)
@@ -396,7 +404,7 @@ export function Timeline({
       { kind: "separator" },
       {
         kind: "action",
-        label: "Archivovat",
+        label: t("ctx.archive"),
         destructive: true,
         onClick: () => archiveCampaign(bar.campaignId),
       },
@@ -407,21 +415,26 @@ export function Timeline({
     channel: TimelineChannel,
     country: TimelineCountryGroup
   ): ContextMenuItem[] {
+    const countryLabel = localizedCountryName(
+      country.code,
+      country.name,
+      t.locale
+    );
     return [
       {
         kind: "link",
-        label: `+ Nová kampaň pro ${channel.chainName}`,
+        label: t("ctx.create_for_chain", { chain: channel.chainName }),
         href: `/campaigns/new?channels=${channel.id}`,
       },
       {
         kind: "link",
-        label: `+ Kampaň pro celé ${country.name}`,
+        label: t("ctx.create_for_country", { country: countryLabel }),
         href: `/campaigns/new?channels=${country.channels.map((c) => c.id).join(",")}`,
       },
       { kind: "separator" },
       {
         kind: "link",
-        label: `Filtrovat na ${channel.chainName}`,
+        label: t("ctx.filter_chain", { chain: channel.chainName }),
         href: `?chain=${encodeURIComponent(channel.chainCode)}`,
       },
     ];
@@ -431,27 +444,32 @@ export function Timeline({
     country: TimelineCountryGroup
   ): ContextMenuItem[] {
     const isCollapsed = collapsedCountries.has(country.code);
+    const countryLabel = localizedCountryName(
+      country.code,
+      country.name,
+      t.locale
+    );
     return [
       {
         kind: "action",
-        label: isCollapsed ? "Rozbalit" : "Sbalit",
+        label: isCollapsed ? t("ctx.expand") : t("ctx.collapse"),
         onClick: () => toggleCountryCollapsed(country.code),
       },
       {
         kind: "action",
-        label: "Sbalit ostatní (zaměřit na tuto)",
+        label: t("ctx.focus_country"),
         onClick: () => collapseAllExcept(country.code),
       },
       { kind: "separator" },
       {
         kind: "link",
-        label: `+ Kampaň pro celé ${country.name}`,
+        label: t("ctx.create_for_country", { country: countryLabel }),
         href: `/campaigns/new?channels=${country.channels.map((c) => c.id).join(",")}`,
       },
       { kind: "separator" },
       {
         kind: "link",
-        label: `Filtrovat na ${country.name}`,
+        label: t("ctx.filter_country", { country: countryLabel }),
         href: `?country=${encodeURIComponent(country.code)}`,
       },
     ];

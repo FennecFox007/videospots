@@ -13,6 +13,8 @@
 
 import { useState } from "react";
 import type { CountryGroup } from "./campaign-form-body";
+import { useT } from "@/lib/i18n/client";
+import { localizedCountryName } from "@/lib/i18n/country";
 
 type Props = {
   groups: CountryGroup[];
@@ -20,6 +22,7 @@ type Props = {
 };
 
 export function ChannelsPicker({ groups, defaultSelected }: Props) {
+  const t = useT();
   const [selected, setSelected] = useState<Set<number>>(
     () => new Set(defaultSelected ?? [])
   );
@@ -57,9 +60,9 @@ export function ChannelsPicker({ groups, defaultSelected }: Props) {
   if (groups.length === 0) {
     return (
       <p className="text-sm text-zinc-500">
-        Žádné kanály. Nejprve je nastav v{" "}
+        {t("timeline.no_channels")}{" "}
         <a className="underline" href="/admin/channels">
-          administraci
+          {t("timeline.no_channels_link")}
         </a>
         .
       </p>
@@ -71,16 +74,22 @@ export function ChannelsPicker({ groups, defaultSelected }: Props) {
       {/* Master toggle bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-zinc-50 dark:bg-zinc-950 px-3 py-2 border border-zinc-200 dark:border-zinc-800">
         <div className="text-sm">
-          Vybráno:{" "}
+          {t("picker.selected")}:{" "}
           <span className="font-semibold text-blue-600 dark:text-blue-400">
             {selectedCount}
           </span>{" "}
           / {total}
         </div>
         <div className="flex gap-1">
-          <ToolBtn onClick={() => setMany(allIds, true)}>Vše</ToolBtn>
-          <ToolBtn onClick={() => setMany(allIds, false)}>Žádné</ToolBtn>
-          <ToolBtn onClick={invert}>Inverze</ToolBtn>
+          <ToolBtn onClick={() => setMany(allIds, true)}>
+            {t.locale === "en" ? "All" : "Vše"}
+          </ToolBtn>
+          <ToolBtn onClick={() => setMany(allIds, false)}>
+            {t.locale === "en" ? "None" : "Žádné"}
+          </ToolBtn>
+          <ToolBtn onClick={invert}>
+            {t.locale === "en" ? "Invert" : "Inverze"}
+          </ToolBtn>
         </div>
       </div>
 
@@ -104,13 +113,13 @@ export function ChannelsPicker({ groups, defaultSelected }: Props) {
               <div className="font-medium text-sm flex items-center gap-2">
                 <TriCheckbox state={allOn ? "all" : someOn ? "some" : "none"} />
                 <span className="mr-0.5">{g.flag}</span>
-                <span>{g.name}</span>
+                <span>{localizedCountryName(g.code, g.name, t.locale)}</span>
                 <span className="text-xs text-zinc-500 font-normal">
                   ({inGroup}/{ids.length})
                 </span>
               </div>
               <span className="text-xs text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300">
-                {allOn ? "Odznačit vše" : "Vybrat vše"}
+                {allOn ? t("picker.deselect_all") : t("picker.select_all")}
               </span>
             </button>
 

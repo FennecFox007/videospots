@@ -1,27 +1,31 @@
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = await getT();
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
       <div className="flex items-baseline justify-between mb-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Administrace</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          {t("admin.heading")}
+        </h1>
       </div>
 
       <div className="border-b border-zinc-200 dark:border-zinc-800 mb-6">
         <div className="flex gap-1 -mb-px">
-          <SubLink href="/admin/countries">Státy</SubLink>
-          <SubLink href="/admin/chains">Řetězce</SubLink>
-          <SubLink href="/admin/channels">Kanály (matice)</SubLink>
-          <SubLink href="/admin/products">Produkty</SubLink>
-          <SubLink href="/admin/users">Uživatelé</SubLink>
-          <SubLink href="/admin/templates">Šablony</SubLink>
-          <SubLink href="/admin/import">Import CSV</SubLink>
-          <SubLink href="/admin/archive">Archiv</SubLink>
-          <SubLink href="/admin/audit">Audit log</SubLink>
+          <SubLink href="/admin/countries">{t("admin.tab.countries")}</SubLink>
+          <SubLink href="/admin/chains">{t("admin.tab.chains")}</SubLink>
+          <SubLink href="/admin/channels">{t("admin.tab.channels")}</SubLink>
+          <SubLink href="/admin/products">{t("admin.tab.products")}</SubLink>
+          <SubLink href="/admin/users">{t("admin.tab.users")}</SubLink>
+          <SubLink href="/admin/templates">{t("admin.tab.templates")}</SubLink>
+          <SubLink href="/admin/import">{t("admin.tab.import")}</SubLink>
+          <SubLink href="/admin/archive">{t("admin.tab.archive")}</SubLink>
+          <SubLink href="/admin/audit">{t("admin.tab.audit")}</SubLink>
         </div>
       </div>
 

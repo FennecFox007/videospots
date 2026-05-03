@@ -8,6 +8,7 @@ import { addDays } from "@/lib/utils";
 import { getChannelGroups } from "@/lib/db/queries";
 import type { CampaignFormBody } from "@/components/campaign-form-body";
 import type { TemplatePayload } from "@/app/admin/templates/actions";
+import { getT } from "@/lib/i18n/server";
 
 export type NewCampaignSearchParams = {
   template?: string;
@@ -125,24 +126,14 @@ export async function loadNewCampaignContext(
   }
 
   // Hint text that makes it clear what got pre-filled.
-  let hint: React.ReactNode =
-    "Naplánuj video spot na vybrané kanály v zadaném období.";
+  const tt = await getT();
+  let hint: React.ReactNode = tt("form.hint_default");
   if (templateName) {
-    hint = (
-      <>
-        Předvyplněno ze šablony{" "}
-        <span className="font-medium">„{templateName}"</span>.
-      </>
-    );
+    hint = tt("form.hint_template", { name: templateName });
   } else if (productNameParam) {
-    hint = (
-      <>
-        Předvyplněno z release kalendáře pro produkt{" "}
-        <span className="font-medium">„{productNameParam}"</span>.
-      </>
-    );
+    hint = tt("form.hint_release", { name: productNameParam });
   } else if (explicitChannels.length > 0 || explicitFrom) {
-    hint = "Předvyplněno z timeline (kanály a termín).";
+    hint = tt("form.hint_timeline");
   }
 
   return { groups, defaults, hint, templateName };

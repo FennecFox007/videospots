@@ -7,6 +7,7 @@
 import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { createTimelineShareLink } from "@/app/campaigns/[id]/actions";
+import { useT } from "@/lib/i18n/client";
 
 export function TimelineShareButton() {
   const params = useSearchParams();
@@ -14,6 +15,7 @@ export function TimelineShareButton() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const t = useT();
 
   function generate() {
     setError(null);
@@ -59,10 +61,10 @@ export function TimelineShareButton() {
         type="button"
         onClick={generate}
         disabled={isPending}
-        title="Vytvořit veřejný odkaz na aktuálně viditelnou timeline"
+        title={t("timeline_share.title")}
         className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900 disabled:opacity-50"
       >
-        {isPending ? "Generuji…" : "Sdílet timeline"}
+        {isPending ? t("share_button.generating") : t("timeline_share.label")}
       </button>
     );
   }
@@ -81,21 +83,18 @@ export function TimelineShareButton() {
           onClick={copy}
           className="text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
         >
-          {copied ? "✓ Zkopírováno" : "Kopírovat"}
+          {copied ? t("share_button.copied") : t("share_button.copy")}
         </button>
         <button
           type="button"
           onClick={() => setUrl(null)}
           className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-1"
-          title="Zavřít"
+          title={t("common.close")}
         >
           ✕
         </button>
       </div>
-      <p className="text-[10px] text-zinc-500">
-        Platnost 30 dní. Klient uvidí celou timeline ve stejném rozsahu a
-        s aplikovanými filtry, bez přihlášení a bez editačních tlačítek.
-      </p>
+      <p className="text-[10px] text-zinc-500">{t("timeline_share.note")}</p>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );
