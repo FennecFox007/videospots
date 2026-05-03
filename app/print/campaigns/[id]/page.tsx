@@ -223,7 +223,7 @@ export default async function PrintCampaignPage({
                 {t.locale === "en" ? "Country" : "Stát"}
               </th>
               <th className="text-left py-1.5 font-medium">
-                {t.locale === "en" ? "Chain" : "Řetězec"}
+                {t.locale === "en" ? "Retailer" : "Řetězec"}
               </th>
             </tr>
           </thead>

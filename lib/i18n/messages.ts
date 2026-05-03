@@ -381,7 +381,7 @@ const en: Record<keyof typeof cs, string> = {
   // Filter bar
   "filter.search_placeholder": "Search (name, client, product)…",
   "filter.all_countries": "All countries",
-  "filter.all_chains": "All chains",
+  "filter.all_chains": "All retailers",
   "filter.all_states": "All states",
   "filter.all_clients": "All clients",
   "filter.all_tags": "All tags",
