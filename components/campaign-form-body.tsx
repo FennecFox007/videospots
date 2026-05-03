@@ -215,7 +215,7 @@ export function CampaignFormBody({
 
       <Section
         title="Video (jazyková mutace pro každou zemi)"
-        hint="Každá země běží vlastní jazykovou verzi spotu. Nech prázdné, pokud pro tu zemi spot zatím nemáte."
+        hint="Každá země běží vlastní jazykovou verzi spotu. Nech prázdné, pokud pro tu zemi spot zatím nemáš."
       >
         <div className="space-y-2">
           {groups.map((g) => (
@@ -284,7 +284,7 @@ export function CampaignFormBody({
       {showRecurring && (
         <Section
           title="Opakovat (volitelné)"
-          hint="Vytvoří víc kampaní najednou s posunutými datumy. Vhodné pro pravidelné spoty."
+          hint="Vytvoří víc kampaní najednou s posunutými termíny. Vhodné pro pravidelné spoty."
         >
           <RecurringFields />
         </Section>

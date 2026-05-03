@@ -16,7 +16,6 @@ import { CAMPAIGN_COLORS } from "@/lib/colors";
 import {
   formatDate,
   daysBetween,
-  pluralCs,
   computedRunState,
 } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
@@ -26,6 +25,7 @@ import {
   useDialog,
   type ConfirmOptions,
 } from "@/components/dialog/dialog-provider";
+import { useT } from "@/lib/i18n/client";
 
 export type CampaignsTableRow = {
   id: number;
@@ -57,6 +57,7 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { confirm, toast } = useDialog();
+  const t = useT();
 
   const allIds = rows.map((r) => r.id);
   const allSelected =
@@ -122,14 +123,14 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
                 />
               </th>
               <th className="px-3 py-2 font-medium w-6"></th>
-              <SortHeader label="Kampaň" sortKey="name" sort={sort} order={order} params={params} />
-              <SortHeader label="Klient" sortKey="client" sort={sort} order={order} params={params} />
-              <th className="px-3 py-2 font-medium">Produkt</th>
-              <SortHeader label="Začátek" sortKey="starts" sort={sort} order={order} params={params} />
-              <SortHeader label="Délka" sortKey="duration" sort={sort} order={order} params={params} />
-              <th className="px-3 py-2 font-medium text-right">Kanály</th>
-              <SortHeader label="Stav" sortKey="status" sort={sort} order={order} params={params} />
-              <th className="px-3 py-2 font-medium">Štítky</th>
+              <SortHeader label={t("list.col.campaign")} sortKey="name" sort={sort} order={order} params={params} />
+              <SortHeader label={t("list.col.client")} sortKey="client" sort={sort} order={order} params={params} />
+              <th className="px-3 py-2 font-medium">{t("list.col.product")}</th>
+              <SortHeader label={t("list.col.start")} sortKey="starts" sort={sort} order={order} params={params} />
+              <SortHeader label={t("list.col.duration")} sortKey="duration" sort={sort} order={order} params={params} />
+              <th className="px-3 py-2 font-medium text-right">{t("list.col.channels")}</th>
+              <SortHeader label={t("list.col.status")} sortKey="status" sort={sort} order={order} params={params} />
+              <th className="px-3 py-2 font-medium">{t("list.col.tags")}</th>
             </tr>
           </thead>
           <tbody>
@@ -187,7 +188,7 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
                     {formatDate(r.startsAt)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
-                    {dur} {pluralCs(dur, "den", "dny", "dní")}
+                    {dur} {t.plural(dur, "unit.day")}
                   </td>
                   <td className="px-3 py-2 text-right text-zinc-600 dark:text-zinc-400">
                     {r.channelCount}
@@ -224,21 +225,21 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
                     ∅
                   </div>
                   <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
-                    Žádné kampaně neodpovídají filtrům.
+                    {t("list.empty.title")}
                   </div>
                   <div className="flex items-center justify-center gap-3 text-sm">
                     <Link
                       href="/campaigns"
                       className="text-zinc-700 dark:text-zinc-300 hover:underline"
                     >
-                      Vyčistit filtry
+                      {t("list.empty.clear")}
                     </Link>
                     <span className="text-zinc-300 dark:text-zinc-700">·</span>
                     <Link
                       href="/campaigns/new"
                       className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
                     >
-                      + Nová kampaň
+                      {t("timeline.new_campaign")}
                     </Link>
                   </div>
                 </td>
@@ -252,7 +253,7 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
       {count > 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 flex items-center gap-2 text-sm">
           <span className="font-medium">
-            {count} {pluralCs(count, "vybraná", "vybrané", "vybraných")}
+            {count} {t("list.bulk.selected")}
           </span>
           <span className="text-zinc-300 dark:text-zinc-700">·</span>
 
@@ -263,18 +264,15 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
               runBulk(
                 () => bulkCancelCampaigns(ids),
                 {
-                  title: `Zrušit ${count} ${pluralCs(count, "kampaň", "kampaně", "kampaní")}?`,
-                  message:
-                    "Kampaně zůstanou v historii s označením jako zrušené.",
-                  confirmLabel: "Zrušit historicky",
+                  title: `${t("list.bulk.cancel")} (${count})?`,
+                  confirmLabel: t("list.bulk.cancel"),
                   destructive: true,
-                },
-                `${count} ${pluralCs(count, "kampaň zrušena", "kampaně zrušeny", "kampaní zrušeno")}`
+                }
               )
             }
             className="text-xs px-2 py-1 rounded border border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 disabled:opacity-50"
           >
-            Zrušit (historicky)
+            {t("list.bulk.cancel")}
           </button>
 
           <div className="relative">
@@ -284,7 +282,7 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
               disabled={isPending}
               className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
             >
-              Barva ▾
+              {t("list.bulk.color")} ▾
             </button>
             {colorPickerOpen && (
               <div className="absolute bottom-full left-0 mb-1 rounded-md bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-lg p-2 flex gap-1">
@@ -315,17 +313,15 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
               runBulk(
                 () => bulkArchiveCampaigns(ids),
                 {
-                  title: `Archivovat ${count} ${pluralCs(count, "kampaň", "kampaně", "kampaní")}?`,
-                  message: "Půjde obnovit z /admin/archive.",
-                  confirmLabel: "Archivovat",
+                  title: `${t("list.bulk.archive")} (${count})?`,
+                  confirmLabel: t("list.bulk.archive"),
                   destructive: true,
-                },
-                `${count} ${pluralCs(count, "kampaň archivována", "kampaně archivovány", "kampaní archivováno")}`
+                }
               )
             }
             className="text-xs px-2 py-1 rounded border border-red-300 text-red-700 dark:border-red-900 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50"
           >
-            Archivovat
+            {t("list.bulk.archive")}
           </button>
 
           <span className="text-zinc-300 dark:text-zinc-700 ml-1">·</span>

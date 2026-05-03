@@ -142,7 +142,7 @@ export async function loadNewCampaignContext(
       </>
     );
   } else if (explicitChannels.length > 0 || explicitFrom) {
-    hint = "Předvyplněno z timeline (kanály a/nebo datumy).";
+    hint = "Předvyplněno z timeline (kanály a termín).";
   }
 
   return { groups, defaults, hint, templateName };

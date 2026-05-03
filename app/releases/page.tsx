@@ -9,11 +9,11 @@ import { db, products, campaigns } from "@/lib/db/client";
 import {
   formatDate,
   formatMonthName,
-  pluralCs,
   toDateInputValue,
   addDays,
 } from "@/lib/utils";
 import { kindEmoji, kindLabel } from "@/lib/products";
+import { getT, makeT } from "@/lib/i18n/server";
 
 const ONE_DAY_MS = 86_400_000;
 // Look back this far so a release that just happened still appears at the top
@@ -83,16 +83,17 @@ export default async function ReleasesPage() {
     (r) => r.releaseDate && r.releaseDate >= now
   ).length;
 
+  const t = await getT();
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       <div className="flex items-baseline justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
-            Release kalendář
+            {t("releases.heading")}
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
             {totalUpcoming}{" "}
-            {pluralCs(totalUpcoming, "produkt v pipeline", "produkty v pipeline", "produktů v pipeline")}
+            {t.plural(totalUpcoming, "unit.product")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -100,22 +101,22 @@ export default async function ReleasesPage() {
             href="/"
             className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
           >
-            Timeline
+            {t("releases.timeline")}
           </Link>
           <Link
             href="/admin/products"
             className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
           >
-            Spravovat produkty
+            {t("releases.manage_products")}
           </Link>
         </div>
       </div>
 
       {groups.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-8 text-center text-sm text-zinc-500">
-          Žádné nadcházející releasy.{" "}
+          {t("releases.empty")}{" "}
           <Link href="/admin/products" className="underline">
-            Přidej produkt s datem vydání
+            {t("releases.empty_link")}
           </Link>
           .
         </div>
@@ -130,7 +131,10 @@ export default async function ReleasesPage() {
                 {g.label}{" "}
                 <span className="text-xs text-zinc-500 font-normal ml-2">
                   {g.rows.length}{" "}
-                  {pluralCs(g.rows.length, "produkt", "produkty", "produktů")}
+                  {t.plural(g.rows.length, "unit.product").replace(
+                    /\sv\spipeline$/,
+                    ""
+                  )}
                 </span>
               </div>
               <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -140,7 +144,7 @@ export default async function ReleasesPage() {
                   const daysUntil = Math.ceil(
                     (release.getTime() - now.getTime()) / ONE_DAY_MS
                   );
-                  const status = describeReleaseStatus(daysUntil);
+                  const status = describeReleaseStatus(daysUntil, t);
                   return (
                     <li
                       key={r.id}
@@ -180,7 +184,9 @@ export default async function ReleasesPage() {
                           </span>
                         </div>
                         <div className="text-xs text-zinc-500 mt-0.5">
-                          Vydání {formatDate(release)}
+                          {t("releases.released_on", {
+                            date: formatDate(release),
+                          })}
                         </div>
                         {r.summary && (
                           <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 line-clamp-2 max-w-2xl">
@@ -202,15 +208,14 @@ export default async function ReleasesPage() {
                               : "text-zinc-400")
                           }
                         >
-                          {cnt}{" "}
-                          {pluralCs(cnt, "kampaň", "kampaně", "kampaní")}
+                          {cnt} {t.plural(cnt, "unit.campaign")}
                         </Link>
                         <Link
                           href={launchCampaignHref(r.name, release)}
                           className="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900 whitespace-nowrap"
-                          title="Předvyplní formulář s tímhle produktem a launch oknem ±7 dní"
+                          title={t("releases.launch_campaign_tooltip")}
                         >
-                          + Launch kampaň
+                          {t("releases.launch_campaign")}
                         </Link>
                       </div>
                     </li>
@@ -225,40 +230,55 @@ export default async function ReleasesPage() {
   );
 }
 
-function describeReleaseStatus(daysUntil: number): {
+function describeReleaseStatus(
+  daysUntil: number,
+  t: ReturnType<typeof makeT>
+): {
   label: string;
   classes: string;
 } {
   if (daysUntil < 0) {
     return {
-      label: `Vyšlo před ${-daysUntil} ${pluralCs(-daysUntil, "dnem", "dny", "dny")}`,
+      label: t("releases.status.released_days_ago", {
+        n: -daysUntil,
+        unit: t.plural(-daysUntil, "unit.day"),
+      }),
       classes:
         "bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-900",
     };
   }
   if (daysUntil === 0) {
     return {
-      label: "Dnes!",
+      label: t("releases.status.today"),
       classes:
         "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 ring-1 ring-emerald-300 dark:ring-emerald-800",
     };
   }
   if (daysUntil <= 7) {
     return {
-      label: `Za ${daysUntil} ${pluralCs(daysUntil, "den", "dny", "dní")}`,
+      label: t("releases.status.in_days", {
+        n: daysUntil,
+        unit: t.plural(daysUntil, "unit.day"),
+      }),
       classes:
         "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-900",
     };
   }
   if (daysUntil <= 30) {
     return {
-      label: `Za ${daysUntil} dní`,
+      label: t("releases.status.in_days", {
+        n: daysUntil,
+        unit: t.plural(daysUntil, "unit.day"),
+      }),
       classes:
         "bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-900",
     };
   }
   return {
-    label: `Za ${daysUntil} dní`,
+    label: t("releases.status.in_days", {
+      n: daysUntil,
+      unit: t.plural(daysUntil, "unit.day"),
+    }),
     classes:
       "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 ring-1 ring-zinc-200 dark:ring-zinc-700",
   };

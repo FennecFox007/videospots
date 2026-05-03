@@ -13,6 +13,7 @@ import { daysBetween, pluralCs } from "@/lib/utils";
 import { findCampaignIds, getFilterOptions } from "@/lib/db/queries";
 import { listSavedViews } from "@/app/saved-views/actions";
 import { auth } from "@/auth";
+import { getT } from "@/lib/i18n/server";
 
 type SearchParams = {
   q?: string;
@@ -115,16 +116,18 @@ export default async function CampaignsListPage({
     ? await listSavedViews("campaigns")
     : [];
 
+  const t = await getT();
+
   return (
     <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6 space-y-4 pb-20">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
-            Seznam kampaní
+            {t("list.heading")}
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
             {rows.length}{" "}
-            {pluralCs(rows.length, "kampaň", "kampaně", "kampaní")}
+            {t.plural(rows.length, "unit.campaign")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -132,14 +135,14 @@ export default async function CampaignsListPage({
             href="/"
             className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
           >
-            Timeline
+            {t("nav.timeline")}
           </Link>
-          <ExportCsvLink params={params} />
+          <ExportCsvLink params={params} label={t("list.export_csv")} />
           <Link
             href="/campaigns/new"
             className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2"
           >
-            + Nová kampaň
+            {t("timeline.new_campaign")}
           </Link>
         </div>
       </div>
@@ -157,8 +160,8 @@ export default async function CampaignsListPage({
       />
 
       <p className="text-xs text-zinc-500">
-        Vyber kampaně levým checkboxem; spodní lišta nabídne hromadné akce
-        (smazat / zrušit / změnit barvu).
+        <span className="font-medium">{t("common.tip")}:</span>{" "}
+        {t("list.tip")}
       </p>
 
       <CampaignsTable
@@ -171,7 +174,13 @@ export default async function CampaignsListPage({
   );
 }
 
-function ExportCsvLink({ params }: { params: SearchParams }) {
+function ExportCsvLink({
+  params,
+  label,
+}: {
+  params: SearchParams;
+  label: string;
+}) {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (k === "sort" || k === "order") continue;
@@ -184,9 +193,9 @@ function ExportCsvLink({ params }: { params: SearchParams }) {
       href={href}
       download
       className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
-      title="Stáhnout filtrovaný seznam jako CSV"
+      title={label}
     >
-      Export CSV
+      {label}
     </a>
   );
 }

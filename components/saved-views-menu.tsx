@@ -14,6 +14,7 @@ import {
   deleteSavedView,
 } from "@/app/saved-views/actions";
 import { useDialog } from "@/components/dialog/dialog-provider";
+import { useT } from "@/lib/i18n/client";
 
 export type SavedView = {
   id: number;
@@ -36,6 +37,7 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
   const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
   const { confirm, prompt, toast } = useDialog();
+  const t = useT();
 
   // Close on outside click / Escape.
   useEffect(() => {
@@ -139,10 +141,10 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
         }
         aria-haspopup="menu"
         aria-expanded={open}
-        title="Uložené pohledy filtrů"
+        title={t("filter.saved_views")}
       >
         <span className="text-xs">★</span>
-        Pohledy
+        {t("filter.saved_views")}
         {views.length > 0 && (
           <span className="text-xs text-zinc-500 ml-1">({views.length})</span>
         )}
@@ -201,7 +203,7 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
               disabled={isPending}
               className="w-full text-left px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 disabled:opacity-50"
             >
-              + Uložit aktuální…
+              {t("filter.save_current")}
             </button>
           </div>
         </div>

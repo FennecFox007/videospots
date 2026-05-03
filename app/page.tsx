@@ -27,7 +27,6 @@ import { FilterBar } from "@/components/filter-bar";
 import { TimelineShareButton } from "@/components/timeline-share-button";
 import {
   formatDate,
-  pluralCs,
   addDays,
   snapToMondayStart,
   toDateInputValue,
@@ -39,6 +38,7 @@ import {
 } from "@/lib/db/queries";
 import { listSavedViews } from "@/app/saved-views/actions";
 import { auth } from "@/auth";
+import { getT } from "@/lib/i18n/server";
 
 const ONE_DAY_MS = 86_400_000;
 const DEFAULT_OFFSET_DAYS = -7;
@@ -264,6 +264,7 @@ export default async function Dashboard({
     ? await listSavedViews("timeline")
     : [];
 
+  const t = await getT();
   const todayMondayStart = snapToMondayStart(new Date());
   const queryParamsForward = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -277,12 +278,15 @@ export default async function Dashboard({
     <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Timeline</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            {t("timeline.heading")}
+          </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
             {formatDate(rangeStart)} – {formatDate(addDays(rangeEnd, -1))} ·{" "}
             {distinctCampaignCount}{" "}
-            {pluralCs(distinctCampaignCount, "kampaň", "kampaně", "kampaní")} ·{" "}
-            {channelRows.length} kanálů
+            {t.plural(distinctCampaignCount, "unit.campaign")} ·{" "}
+            {channelRows.length}{" "}
+            {t.plural(channelRows.length, "unit.channel")}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -292,21 +296,21 @@ export default async function Dashboard({
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
-            title="Tisková podoba aktuální timeline"
+            title={t("timeline.print")}
           >
-            Tisk / PDF
+            {t("timeline.print")}
           </a>
           <Link
             href="/campaigns"
             className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
           >
-            Seznam kampaní
+            {t("timeline.list_link")}
           </Link>
           <Link
             href="/campaigns/new"
             className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2"
           >
-            + Nová kampaň
+            {t("timeline.new_campaign")}
           </Link>
         </div>
       </div>
@@ -475,9 +479,8 @@ export default async function Dashboard({
       />
 
       <p className="text-xs text-zinc-500">
-        Tip: táhni za střed = posun, za okraj = délka, klik = otevřít detail,
-        ▶ na baru = přehrát spot. Hlavičku s dny chytni a táhni pro posun
-        v čase, shift+táhnout = snap na pondělí, dvojklik = skok na dnešek.
+        <span className="font-medium">{t("common.tip")}:</span>{" "}
+        {t("timeline.tip")}
       </p>
 
       <Timeline
@@ -494,7 +497,7 @@ export default async function Dashboard({
   );
 }
 
-function LiveRunningCard({
+async function LiveRunningCard({
   running,
   channelCount,
   channelCountByCampaign,
@@ -509,16 +512,19 @@ function LiveRunningCard({
   channelCount: number;
   channelCountByCampaign: Map<number, number>;
 }) {
+  const t = await getT();
   if (running.length === 0) {
     return (
       <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-4 py-3">
         <div className="flex items-center gap-2 mb-1">
           <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
           <span className="font-medium text-sm text-zinc-500">
-            Právě teď nic neběží
+            {t("dashboard.running.empty_title")}
           </span>
         </div>
-        <p className="text-xs text-zinc-500">Žádná kampaň se status „aktivní" se právě teď nepřehrává.</p>
+        <p className="text-xs text-zinc-500">
+          {t("dashboard.running.empty_desc")}
+        </p>
       </div>
     );
   }
@@ -531,9 +537,14 @@ function LiveRunningCard({
           <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-emerald-500" />
         </span>
         <span className="font-medium text-sm text-emerald-900 dark:text-emerald-200">
-          Právě běží: {running.length}{" "}
-          {pluralCs(running.length, "kampaň", "kampaně", "kampaní")} na{" "}
-          {channelCount} {pluralCs(channelCount, "kanálu", "kanálech", "kanálech")}
+          {t("dashboard.running.title")}: {running.length}{" "}
+          {t.plural(running.length, "unit.campaign")}
+          {channelCount > 0 && (
+            <>
+              {" · "}
+              {channelCount} {t.plural(channelCount, "unit.channel")}
+            </>
+          )}
         </span>
       </div>
       <ul className="divide-y divide-emerald-200/60 dark:divide-emerald-900/40">
@@ -549,7 +560,9 @@ function LiveRunningCard({
               />
               <span className="font-medium truncate flex-1">{r.name}</span>
               <span className="text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                {channelCountByCampaign.get(r.id) ?? 0}× kanál · do {formatDate(r.endsAt)}
+                {channelCountByCampaign.get(r.id) ?? 0}×{" "}
+                {t("common.channels").toLowerCase()} ·{" "}
+                {t("dashboard.until", { date: formatDate(r.endsAt) })}
               </span>
             </Link>
           </li>
@@ -559,7 +572,7 @@ function LiveRunningCard({
   );
 }
 
-function UpcomingCard({
+async function UpcomingCard({
   upcoming,
   windowDays,
   channelCountByCampaign,
@@ -574,17 +587,18 @@ function UpcomingCard({
   windowDays: number;
   channelCountByCampaign: Map<number, number>;
 }) {
+  const t = await getT();
   if (upcoming.length === 0) {
     return (
       <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-4 py-3">
         <div className="flex items-center gap-2 mb-1">
           <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
           <span className="font-medium text-sm text-zinc-500">
-            Žádné naplánované
+            {t("dashboard.upcoming.empty_title")}
           </span>
         </div>
         <p className="text-xs text-zinc-500">
-          V příštích {windowDays} dnech není naplánovaná žádná schválená kampaň.
+          {t("dashboard.upcoming.empty_desc", { days: windowDays })}
         </p>
       </div>
     );
@@ -595,8 +609,8 @@ function UpcomingCard({
       <div className="flex items-center gap-2 mb-2">
         <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
         <span className="font-medium text-sm text-blue-900 dark:text-blue-200">
-          Naplánováno na příštích {windowDays} dní: {upcoming.length}{" "}
-          {pluralCs(upcoming.length, "kampaň", "kampaně", "kampaní")}
+          {t("dashboard.upcoming.title", { days: windowDays })}: {upcoming.length}{" "}
+          {t.plural(upcoming.length, "unit.campaign")}
         </span>
       </div>
       <ul className="divide-y divide-blue-200/60 dark:divide-blue-900/40">
@@ -619,8 +633,12 @@ function UpcomingCard({
                 />
                 <span className="font-medium truncate flex-1">{u.name}</span>
                 <span className="text-blue-700 dark:text-blue-400 whitespace-nowrap">
-                  {channelCountByCampaign.get(u.id) ?? 0}× kanál · za {daysUntil}{" "}
-                  {pluralCs(daysUntil, "den", "dny", "dní")}
+                  {channelCountByCampaign.get(u.id) ?? 0}×{" "}
+                  {t("common.channels").toLowerCase()} ·{" "}
+                  {t("dashboard.in_days", {
+                    n: daysUntil,
+                    unit: t.plural(daysUntil, "unit.day"),
+                  })}
                 </span>
               </Link>
             </li>
@@ -631,7 +649,7 @@ function UpcomingCard({
   );
 }
 
-function EndingSoonCard({
+async function EndingSoonCard({
   ending,
   windowDays,
   channelCountByCampaign,
@@ -646,17 +664,18 @@ function EndingSoonCard({
   windowDays: number;
   channelCountByCampaign: Map<number, number>;
 }) {
+  const t = await getT();
   if (ending.length === 0) {
     return (
       <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-4 py-3">
         <div className="flex items-center gap-2 mb-1">
           <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
           <span className="font-medium text-sm text-zinc-500">
-            Žádná kampaň brzy nekončí
+            {t("dashboard.ending.empty_title")}
           </span>
         </div>
         <p className="text-xs text-zinc-500">
-          V příštích {windowDays} dnech nekončí žádná aktivně běžící kampaň.
+          {t("dashboard.ending.empty_desc", { days: windowDays })}
         </p>
       </div>
     );
@@ -667,8 +686,8 @@ function EndingSoonCard({
       <div className="flex items-center gap-2 mb-2">
         <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
         <span className="font-medium text-sm text-amber-900 dark:text-amber-200">
-          Konec do {windowDays} dnů: {ending.length}{" "}
-          {pluralCs(ending.length, "kampaň", "kampaně", "kampaní")}
+          {t("dashboard.ending.title", { days: windowDays })}: {ending.length}{" "}
+          {t.plural(ending.length, "unit.campaign")}
         </span>
       </div>
       <ul className="divide-y divide-amber-200/60 dark:divide-amber-900/40">
@@ -691,10 +710,14 @@ function EndingSoonCard({
                 />
                 <span className="font-medium truncate flex-1">{e.name}</span>
                 <span className="text-amber-700 dark:text-amber-400 whitespace-nowrap">
-                  {channelCountByCampaign.get(e.id) ?? 0}× kanál ·{" "}
+                  {channelCountByCampaign.get(e.id) ?? 0}×{" "}
+                  {t("common.channels").toLowerCase()} ·{" "}
                   {daysLeft === 0
-                    ? "dnes"
-                    : `za ${daysLeft} ${pluralCs(daysLeft, "den", "dny", "dní")}`}
+                    ? t("dashboard.today")
+                    : t("dashboard.in_days", {
+                        n: daysLeft,
+                        unit: t.plural(daysLeft, "unit.day"),
+                      })}
                 </span>
               </Link>
             </li>
@@ -810,28 +833,39 @@ async function DashboardStats() {
     }
   }
 
+  const t = await getT();
+  const localeTag = t.locale === "en" ? "en-US" : "cs-CZ";
+  const monthName = monthStart.toLocaleDateString(localeTag, { month: "long" });
   return (
     <div className="grid gap-3 grid-cols-2 md:grid-cols-4 mt-2">
       <StatCard
-        label="Celkem kampaní"
+        label={t("dashboard.stats.total_campaigns")}
         value={totalCount[0].c}
-        sub={`${thisMonthCount[0].c} běží/poběží v ${monthStart.toLocaleDateString("cs-CZ", { month: "long" })}`}
+        sub={`${thisMonthCount[0].c} ${t("dashboard.stats.this_month", { month: monthName })}`}
       />
       <StatCard
-        label="Screen-days tento měsíc"
+        label={t("dashboard.stats.screen_days")}
         value={screenDays}
-        sub="aktivních × dní × kanálů"
+        sub={t("dashboard.stats.screen_days_sub")}
       />
       <StatCard
-        label="Top klient"
+        label={t("dashboard.stats.top_client")}
         value={topClients[0]?.client ?? "—"}
-        sub={topClients[0] ? `${topClients[0].c} kampaní` : "zatím žádný"}
+        sub={
+          topClients[0]
+            ? `${topClients[0].c} ${t.plural(topClients[0].c, "unit.campaign")}`
+            : t("dashboard.stats.no_yet")
+        }
         small
       />
       <StatCard
-        label="Top hra"
+        label={t("dashboard.stats.top_product")}
         value={topGames[0]?.name ?? "—"}
-        sub={topGames[0] ? `${topGames[0].c} kampaní` : "zatím žádná"}
+        sub={
+          topGames[0]
+            ? `${topGames[0].c} ${t.plural(topGames[0].c, "unit.campaign")}`
+            : t("dashboard.stats.no_yet")
+        }
         small
       />
     </div>

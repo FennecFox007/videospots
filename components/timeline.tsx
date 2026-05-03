@@ -29,6 +29,7 @@ import {
   communicationTypeClasses,
   communicationTypeLabel,
 } from "@/lib/communication";
+import { useT } from "@/lib/i18n/client";
 
 export type TimelineChannel = {
   id: number;
@@ -109,6 +110,7 @@ export function Timeline({
   rangeEnd,
   now,
 }: Props) {
+  const t = useT();
   // Right-click menu state. Single shared instance; only one menu is open at
   // a time. Position is in viewport (clientX/Y) since the menu is `fixed`.
   const [menu, setMenu] = useState<{
@@ -554,7 +556,7 @@ export function Timeline({
           <div
             className={`w-32 sm:w-48 shrink-0 px-4 text-xs font-medium text-zinc-500 border-r border-zinc-200 dark:border-zinc-800 sticky left-0 z-10 ${ROW_BG} flex flex-col justify-end pb-2`}
           >
-            Kanál
+            {t("timeline.channel_col")}
           </div>
           <div
             className="flex-1 relative select-none"
@@ -563,7 +565,7 @@ export function Timeline({
               cursor: panDrag ? "grabbing" : "grab",
               touchAction: "none",
             }}
-            title="Táhni vlevo/vpravo pro posun v čase. Shift+táhnout = snap na pondělí. Dvojklik = skok na dnešek."
+            title={t("timeline.tip")}
             onPointerDown={onHeaderPointerDown}
             onPointerMove={onHeaderPointerMove}
             onPointerUp={onHeaderPointerUp}
@@ -642,7 +644,7 @@ export function Timeline({
                     className="absolute -translate-x-1/2 px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold tracking-wide rounded shadow z-20 pointer-events-none"
                     style={{ left: `${todayPct}%`, top: "-22px" }}
                   >
-                    DNES
+                    {t("timeline.now_marker")}
                   </div>
                 </>
               )}
@@ -889,9 +891,9 @@ export function Timeline({
 
         {isEmpty && (
           <div className="px-4 py-12 text-center text-sm text-zinc-500">
-            Žádné kanály. Nastav matici v{" "}
+            {t("timeline.no_channels")}{" "}
             <Link className="underline" href="/admin/channels">
-              administraci
+              {t("timeline.no_channels_link")}
             </Link>
             .
           </div>
@@ -899,9 +901,9 @@ export function Timeline({
 
         {!isEmpty && hasNoCampaigns && (
           <div className="px-4 py-12 text-center text-sm text-zinc-500 border-t border-zinc-100 dark:border-zinc-800">
-            Zatím žádné kampaně v tomto rozsahu.{" "}
+            {t("timeline.no_campaigns_in_range")}{" "}
             <Link className="underline" href="/campaigns/new">
-              Vytvoř první
+              {t("timeline.create_first")}
             </Link>
             .
           </div>
@@ -938,7 +940,9 @@ export function Timeline({
             {formatDateShort(panPreview.start)} –{" "}
             {formatDateShort(addDays(panPreview.end, -1))}
             {panPreview.snapped && (
-              <span className="ml-1.5 text-[10px] opacity-70">↦ Po</span>
+              <span className="ml-1.5 text-[10px] opacity-70">
+                {t("timeline.preview_snap_monday")}
+              </span>
             )}
           </div>
         </div>
@@ -1065,6 +1069,7 @@ function DraggableBar({
   onHoverHide?: () => void;
 }) {
   const router = useRouter();
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -1366,8 +1371,8 @@ function DraggableBar({
           href={bar.videoUrl}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Přehrát spot ${bar.name}`}
-          title="Přehrát spot v novém panelu"
+          aria-label={bar.name}
+          title={t("timeline.bar_play")}
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}

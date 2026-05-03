@@ -4,9 +4,12 @@ import { auth, signOut } from "@/auth";
 import { db, auditLog, users, campaigns } from "@/lib/db/client";
 import { ActivityFeed } from "./activity-feed";
 import { DarkModeToggle } from "./dark-mode-toggle";
+import { LocaleSwitcher } from "./locale-switcher";
+import { getT } from "@/lib/i18n/server";
 
 export async function Nav() {
   const session = await auth();
+  const t = await getT();
 
   // Last 10 audit entries for the activity dropdown. Cheap to fetch on every
   // request; we render the layout per-request anyway.
@@ -40,17 +43,17 @@ export async function Nav() {
             videospots
           </Link>
           <div className="flex items-center gap-0.5 text-sm overflow-x-auto -mx-1 px-1">
-            <NavLink href="/">Timeline</NavLink>
-            <NavLink href="/releases">Releasy</NavLink>
-            <NavLink href="/campaigns">Seznam</NavLink>
-            <NavLink href="/campaigns/new">+ Nová</NavLink>
+            <NavLink href="/">{t("nav.timeline")}</NavLink>
+            <NavLink href="/releases">{t("nav.releases")}</NavLink>
+            <NavLink href="/campaigns">{t("nav.list")}</NavLink>
+            <NavLink href="/campaigns/new">{t("nav.new")}</NavLink>
             <NavLink href="/tools/find-slot" className="hidden md:inline-flex">
-              Volný termín
+              {t("nav.find_slot")}
             </NavLink>
             <NavLink href="/admin/templates" className="hidden md:inline-flex">
-              Šablony
+              {t("nav.templates")}
             </NavLink>
-            <NavLink href="/admin">Admin</NavLink>
+            <NavLink href="/admin">{t("nav.admin")}</NavLink>
           </div>
         </div>
 
@@ -63,6 +66,7 @@ export async function Nav() {
               🔍 <kbd className="font-mono">⌘K</kbd>
             </span>
             <ActivityFeed entries={recentActivity} />
+            <LocaleSwitcher />
             <DarkModeToggle />
             <span className="hidden md:inline text-zinc-500 px-2">
               {session.user.email}
@@ -76,9 +80,9 @@ export async function Nav() {
               <button
                 type="submit"
                 className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 px-1"
-                title="Odhlásit"
+                title={t("nav.signout")}
               >
-                <span className="hidden sm:inline">Odhlásit</span>
+                <span className="hidden sm:inline">{t("nav.signout")}</span>
                 <span className="sm:hidden" aria-hidden>
                   ⏻
                 </span>

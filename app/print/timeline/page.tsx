@@ -14,7 +14,6 @@ import {
 import {
   addDays,
   formatDate,
-  pluralCs,
   snapToMondayStart,
   toDateInputValue,
 } from "@/lib/utils";
@@ -23,6 +22,7 @@ import {
   fetchTimelineCampaigns,
 } from "@/lib/db/queries";
 import { AutoPrint } from "@/components/auto-print";
+import { getT } from "@/lib/i18n/server";
 
 const ONE_DAY_MS = 86_400_000;
 const DEFAULT_RANGE_DAYS = 35;
@@ -143,6 +143,7 @@ export default async function PrintTimelinePage({
 
   const distinctCount = new Set(campaignRows.map((c) => c.campaignId)).size;
   const totalDays = Math.round(totalMs / ONE_DAY_MS);
+  const t = await getT();
 
   return (
     <div className="bg-white text-black mx-auto max-w-[1100px] px-6 py-8 print-clean">
@@ -151,19 +152,19 @@ export default async function PrintTimelinePage({
       <div className="border-b-2 border-black pb-3 mb-4 flex items-baseline justify-between gap-4">
         <div>
           <div className="text-xs uppercase tracking-widest text-zinc-500">
-            videospots · rozpis kampaní
+            videospots · {t("print.subheading_timeline")}
           </div>
           <div className="text-base font-bold mt-0.5">
             {formatDate(rangeStart)} – {formatDate(addDays(rangeEnd, -1))}
           </div>
           <div className="text-xs text-zinc-600 mt-0.5">
-            {distinctCount}{" "}
-            {pluralCs(distinctCount, "kampaň", "kampaně", "kampaní")} ·{" "}
-            {channelRows.length} kanálů · {totalDays} dní
+            {distinctCount} {t.plural(distinctCount, "unit.campaign")} ·{" "}
+            {channelRows.length} {t.plural(channelRows.length, "unit.channel")}{" "}
+            · {totalDays} {t.plural(totalDays, "unit.day")}
           </div>
         </div>
         <span className="text-xs text-zinc-500">
-          Generováno {formatDate(new Date())}
+          {t("print.generated", { date: formatDate(new Date()) })}
         </span>
       </div>
 
@@ -231,8 +232,7 @@ export default async function PrintTimelinePage({
       </div>
 
       <p className="text-[10px] text-zinc-400 mt-6 text-center">
-        Tip: pro plné barvy v PDF v Chrome zatrhni „Background graphics"
-        v print dialogu.
+        {t("print.bg_tip")}
       </p>
     </div>
   );

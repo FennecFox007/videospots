@@ -1,19 +1,23 @@
 import { signIn } from "@/auth";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
+import { getT } from "@/lib/i18n/server";
 
-export default function SignInPage({
+export default async function SignInPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  const t = await getT();
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">videospots</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {t("signin.title")}
+          </h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Plánování video kampaní pro PlayStation
+            {t("signin.subtitle")}
           </p>
         </div>
 
@@ -29,6 +33,7 @@ async function SignInForm({
   searchParams: Promise<{ error?: string }>;
 }) {
   const params = await searchParams;
+  const t = await getT();
 
   return (
     <form
@@ -38,7 +43,7 @@ async function SignInForm({
         const password = String(formData.get("password") ?? "");
         if (!email || !password) {
           redirect(
-            "/sign-in?error=" + encodeURIComponent("Vyplň oba údaje")
+            "/sign-in?error=" + encodeURIComponent("missing")
           );
         }
         try {
@@ -50,10 +55,7 @@ async function SignInForm({
         } catch (e) {
           // Auth.js throws AuthError on bad creds; let NEXT_REDIRECT bubble.
           if (e instanceof AuthError) {
-            redirect(
-              "/sign-in?error=" +
-                encodeURIComponent("Špatné přihlašovací údaje")
-            );
+            redirect("/sign-in?error=invalid");
           }
           throw e;
         }
@@ -65,7 +67,7 @@ async function SignInForm({
           htmlFor="email"
           className="block text-sm font-medium mb-1.5"
         >
-          E-mail / username
+          {t("signin.email")}
         </label>
         <input
           id="email"
@@ -84,7 +86,7 @@ async function SignInForm({
           htmlFor="password"
           className="block text-sm font-medium mb-1.5"
         >
-          Heslo
+          {t("signin.password")}
         </label>
         <input
           id="password"
@@ -101,19 +103,14 @@ async function SignInForm({
         type="submit"
         className="w-full rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 transition-colors"
       >
-        Přihlásit se
+        {t("signin.submit")}
       </button>
 
       {params.error && (
         <p className="text-sm text-red-600 dark:text-red-400 text-center">
-          {decodeURIComponent(params.error)}
+          {t("signin.invalid")}
         </p>
       )}
-
-      <p className="text-xs text-zinc-500 text-center">
-        Nemáš účet? Zeptej se admina, ať ti ho založí v{" "}
-        <span className="font-mono">/admin/users</span>.
-      </p>
     </form>
   );
 }

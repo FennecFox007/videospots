@@ -113,7 +113,7 @@ function ActivityRow({
   onNavigate: () => void;
 }) {
   const verb = ACTION_VERB[entry.action] ?? entry.action;
-  const who = entry.userName ?? entry.userEmail ?? "kdosi";
+  const who = entry.userName ?? entry.userEmail ?? "neznámý";
   const isCampaign = entry.entity === "campaign" && entry.entityId;
 
   const target =

@@ -280,7 +280,7 @@ export async function moveCampaign(
     !Number.isFinite(end.getTime()) ||
     end < start
   ) {
-    throw new Error("Neplatné datumy");
+    throw new Error("Neplatná data");
   }
 
   // Capture old dates so the audit log can render a diff.

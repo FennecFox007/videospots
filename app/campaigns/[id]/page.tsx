@@ -19,7 +19,6 @@ import { auth } from "@/auth";
 import {
   formatDate,
   daysBetween,
-  pluralCs,
   computedRunState,
   formatRelative,
 } from "@/lib/utils";
@@ -37,6 +36,7 @@ import { SaveAsTemplateButton } from "@/components/save-as-template-button";
 import { EditableCampaignTitle } from "@/components/editable-campaign-title";
 import { CommunicationBadge } from "@/components/communication-badge";
 import { VideoEmbed } from "@/components/video-embed";
+import { getT } from "@/lib/i18n/server";
 
 export default async function CampaignDetailPage({
   params,
@@ -129,6 +129,8 @@ export default async function CampaignDetailPage({
     .selectDistinct({ name: users.name, email: users.email })
     .from(users);
 
+  const t = await getT();
+
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -137,13 +139,13 @@ export default async function CampaignDetailPage({
             href="/"
             className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
           >
-            ← Timeline
+            {t("detail.back_to_timeline")}
           </Link>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <span
               className="inline-block w-4 h-4 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-800"
               style={{ background: c.color }}
-              aria-label="Barva v timeline"
+              aria-label={t("common.color")}
             />
             <EditableCampaignTitle
               campaignId={campaignId}
@@ -159,13 +161,13 @@ export default async function CampaignDetailPage({
           )}
           {c.tags && c.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {c.tags.map((t) => (
+              {c.tags.map((tg) => (
                 <Link
-                  key={t}
-                  href={`/campaigns?tag=${encodeURIComponent(t)}`}
+                  key={tg}
+                  href={`/campaigns?tag=${encodeURIComponent(tg)}`}
                   className="inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 px-2.5 py-0.5 text-xs text-zinc-700 dark:text-zinc-300"
                 >
-                  #{t}
+                  #{tg}
                 </Link>
               ))}
             </div>
@@ -188,7 +190,7 @@ export default async function CampaignDetailPage({
                 type="submit"
                 className="text-sm px-3 py-1.5 border border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400 rounded-md hover:bg-amber-50 dark:hover:bg-amber-950/30"
               >
-                Zrušit (historicky)
+                {t("detail.cancel_historic")}
               </button>
             </form>
           ) : (
@@ -202,7 +204,7 @@ export default async function CampaignDetailPage({
                 type="submit"
                 className="text-sm px-3 py-1.5 border border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400 rounded-md hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
               >
-                Obnovit
+                {t("detail.reactivate")}
               </button>
             </form>
           )}
@@ -210,7 +212,7 @@ export default async function CampaignDetailPage({
             href={`/campaigns/${campaignId}/edit`}
             className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900"
           >
-            Upravit
+            {t("detail.edit")}
           </Link>
           <form
             action={async () => {
@@ -222,7 +224,7 @@ export default async function CampaignDetailPage({
               type="submit"
               className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900"
             >
-              Klonovat
+              {t("detail.clone")}
             </button>
           </form>
           <ShareButton campaignId={campaignId} />
@@ -235,9 +237,9 @@ export default async function CampaignDetailPage({
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900"
-            title="Otevřít v tiskové podobě (Ctrl+P → uložit jako PDF)"
+            title={t("detail.print")}
           >
-            Tisk / PDF
+            {t("detail.print")}
           </a>
           <form
             action={async () => {
@@ -248,24 +250,24 @@ export default async function CampaignDetailPage({
             <button
               type="submit"
               className="text-sm text-red-600 hover:text-red-700 px-3 py-1.5 border border-red-200 dark:border-red-900/50 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30"
-              title="Přesunout do archivu (lze obnovit)"
+              title={t("detail.archive_tooltip")}
             >
-              Archivovat
+              {t("detail.archive")}
             </button>
           </form>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card label="Začátek">{formatDate(c.startsAt)}</Card>
-        <Card label="Konec">{formatDate(c.endsAt)}</Card>
-        <Card label="Délka">
+        <Card label={t("common.start")}>{formatDate(c.startsAt)}</Card>
+        <Card label={t("common.end")}>{formatDate(c.endsAt)}</Card>
+        <Card label={t("common.duration")}>
           {(() => {
             const d = daysBetween(c.startsAt, c.endsAt);
-            return `${d} ${pluralCs(d, "den", "dny", "dní")}`;
+            return `${d} ${t.plural(d, "unit.day")}`;
           })()}
         </Card>
-        <Card label="Total reach">
+        <Card label={t("detail.total_reach")}>
           {(() => {
             const d = daysBetween(c.startsAt, c.endsAt);
             const sd = d * channelRows.length;
@@ -273,8 +275,8 @@ export default async function CampaignDetailPage({
               <span>
                 {sd}{" "}
                 <span className="text-xs text-zinc-500 font-normal">
-                  screen-days · {channelRows.length} ×{" "}
-                  {pluralCs(d, "den", "dny", "dní")}
+                  {t("detail.screen_days")} · {channelRows.length} ×{" "}
+                  {t.plural(d, "unit.day")}
                 </span>
               </span>
             );
@@ -284,7 +286,7 @@ export default async function CampaignDetailPage({
 
       {product && (
         <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
-          <h2 className="font-medium mb-3">Produkt</h2>
+          <h2 className="font-medium mb-3">{t("detail.product_section")}</h2>
           <div className="flex items-start gap-4">
             {product.coverUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -304,7 +306,9 @@ export default async function CampaignDetailPage({
               </div>
               {product.releaseDate && (
                 <div className="text-sm text-zinc-500 mt-0.5">
-                  Vyšlo {formatDate(product.releaseDate)}
+                  {t("detail.product_released", {
+                    date: formatDate(product.releaseDate),
+                  })}
                 </div>
               )}
               {product.summary && (
@@ -320,7 +324,7 @@ export default async function CampaignDetailPage({
       {videoRows.length > 0 && (
         <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-5">
           <h2 className="font-medium">
-            Spoty podle země ({videoRows.length})
+            {t("detail.videos_section")} ({videoRows.length})
           </h2>
           {videoRows.map((v) => (
             <div key={v.countryCode}>
@@ -341,7 +345,7 @@ export default async function CampaignDetailPage({
 
       <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h2 className="font-medium mb-3">
-          Kanály ({channelRows.length})
+          {t("detail.channels_section")} ({channelRows.length})
         </h2>
         <div className="flex flex-wrap gap-2">
           {channelRows.map((ch, i) => (
@@ -356,14 +360,14 @@ export default async function CampaignDetailPage({
             </span>
           ))}
           {channelRows.length === 0 && (
-            <p className="text-sm text-zinc-500">Žádné kanály.</p>
+            <p className="text-sm text-zinc-500">{t("detail.no_channels")}</p>
           )}
         </div>
       </div>
 
       {c.notes && (
         <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
-          <h2 className="font-medium mb-2">Poznámky</h2>
+          <h2 className="font-medium mb-2">{t("detail.notes_section")}</h2>
           <p className="text-sm whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
             {c.notes}
           </p>
@@ -372,7 +376,7 @@ export default async function CampaignDetailPage({
 
       <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h2 className="font-medium mb-3">
-          Komentáře ({commentRows.length})
+          {t("detail.comments_section")} ({commentRows.length})
         </h2>
 
         {commentRows.length > 0 && (
@@ -384,7 +388,7 @@ export default async function CampaignDetailPage({
               >
                 <div className="flex items-baseline justify-between gap-2 mb-1">
                   <span className="text-sm font-medium">
-                    {cm.userName ?? cm.userEmail ?? "smazaný uživatel"}
+                    {cm.userName ?? cm.userEmail ?? t("detail.deleted_user")}
                   </span>
                   <span className="text-xs text-zinc-500">
                     {formatRelative(cm.createdAt)}
@@ -405,7 +409,7 @@ export default async function CampaignDetailPage({
                       type="submit"
                       className="text-xs text-zinc-500 hover:text-red-600"
                     >
-                      Smazat
+                      {t("common.delete")}
                     </button>
                   </form>
                 )}
@@ -420,7 +424,7 @@ export default async function CampaignDetailPage({
             required
             rows={2}
             maxLength={2000}
-            placeholder="Napsat komentář…  (zmíň kolegu přes @username)"
+            placeholder={t("detail.comments_placeholder")}
             className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
           />
           <div className="flex justify-end">
@@ -428,7 +432,7 @@ export default async function CampaignDetailPage({
               type="submit"
               className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5"
             >
-              Přidat komentář
+              {t("detail.comments_submit")}
             </button>
           </div>
         </form>
@@ -436,10 +440,10 @@ export default async function CampaignDetailPage({
 
       <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h2 className="font-medium mb-3">
-          Historie změn ({historyRows.length})
+          {t("detail.history_section")} ({historyRows.length})
         </h2>
         {historyRows.length === 0 ? (
-          <p className="text-sm text-zinc-500">Žádná historie.</p>
+          <p className="text-sm text-zinc-500">{t("detail.no_history")}</p>
         ) : (
           <ul className="space-y-1.5">
             {historyRows.map((h) => (

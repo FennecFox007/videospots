@@ -23,7 +23,6 @@ import { kindLabel, kindEmoji } from "@/lib/products";
 import {
   formatDate,
   daysBetween,
-  pluralCs,
   computedRunState,
   addDays,
   snapToMondayStart,
@@ -31,6 +30,7 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { CommunicationBadge } from "@/components/communication-badge";
 import { VideoEmbed } from "@/components/video-embed";
+import { getT } from "@/lib/i18n/server";
 import {
   PublicTimeline,
   type PublicCountryGroup,
@@ -103,6 +103,7 @@ async function CampaignSharePage({
   campaignId: number;
   link: { expiresAt: Date | null };
 }) {
+  const t = await getT();
   const [row] = await db
     .select({ campaign: campaigns, product: products })
     .from(campaigns)
@@ -143,7 +144,7 @@ async function CampaignSharePage({
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <PublicHeader subtitle="Veřejný náhled kampaně" />
+      <PublicHeader subtitle={t("share.preview_campaign")} />
 
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <div>
@@ -163,12 +164,12 @@ async function CampaignSharePage({
           )}
           {c.tags && c.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
-              {c.tags.map((t) => (
+              {c.tags.map((tg) => (
                 <span
-                  key={t}
+                  key={tg}
                   className="inline-flex items-center rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 text-xs text-zinc-700 dark:text-zinc-300"
                 >
-                  #{t}
+                  #{tg}
                 </span>
               ))}
             </div>
@@ -176,16 +177,16 @@ async function CampaignSharePage({
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <Card label="Začátek">{formatDate(c.startsAt)}</Card>
-          <Card label="Konec">{formatDate(c.endsAt)}</Card>
-          <Card label="Délka">
-            {dur} {pluralCs(dur, "den", "dny", "dní")}
+          <Card label={t("common.start")}>{formatDate(c.startsAt)}</Card>
+          <Card label={t("common.end")}>{formatDate(c.endsAt)}</Card>
+          <Card label={t("common.duration")}>
+            {dur} {t.plural(dur, "unit.day")}
           </Card>
         </div>
 
         {product && (
           <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
-            <h2 className="font-medium mb-3">Produkt</h2>
+            <h2 className="font-medium mb-3">{t("detail.product_section")}</h2>
             <div className="flex items-start gap-4">
               {product.coverUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -205,7 +206,9 @@ async function CampaignSharePage({
                 </div>
                 {product.releaseDate && (
                   <div className="text-sm text-zinc-500 mt-0.5">
-                    Vyšlo {formatDate(product.releaseDate)}
+                    {t("detail.product_released", {
+                      date: formatDate(product.releaseDate),
+                    })}
                   </div>
                 )}
                 {product.summary && (
@@ -221,7 +224,7 @@ async function CampaignSharePage({
         {videoRows.length > 0 && (
           <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-5">
             <h2 className="font-medium">
-              Spoty podle země ({videoRows.length})
+              {t("detail.videos_section")} ({videoRows.length})
             </h2>
             {videoRows.map((v) => (
               <div key={v.countryCode}>
@@ -241,7 +244,7 @@ async function CampaignSharePage({
         )}
 
         <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
-          <h2 className="font-medium mb-3">Kanály ({channelRows.length})</h2>
+          <h2 className="font-medium mb-3">{t("detail.channels_section")} ({channelRows.length})</h2>
           <div className="flex flex-wrap gap-2">
             {channelRows.map((ch, i) => (
               <span
@@ -257,7 +260,7 @@ async function CampaignSharePage({
           </div>
         </div>
 
-        <PublicFooter expiresAt={link.expiresAt} />
+        <PublicFooter expiresAt={link.expiresAt} t={t} />
       </div>
     </div>
   );
@@ -276,6 +279,7 @@ async function TimelineSharePage({
   link: { expiresAt: Date | null };
   now: Date;
 }) {
+  const t = await getT();
   const fromParam = parseDateParam(filters.from);
   const toParam = parseDateParam(filters.to);
   const rangeStart =
@@ -347,22 +351,21 @@ async function TimelineSharePage({
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <PublicHeader subtitle="Veřejný náhled timeline" />
+      <PublicHeader subtitle={t("share.preview_timeline")} />
 
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
-            Plán kampaní
+            {t("share.plan_heading")}
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
             {formatDate(rangeStart)} – {formatDate(addDays(rangeEnd, -1))} ·{" "}
-            {distinct}{" "}
-            {pluralCs(distinct, "kampaň", "kampaně", "kampaní")} ·{" "}
-            {channelRows.length} kanálů
+            {distinct} {t.plural(distinct, "unit.campaign")} ·{" "}
+            {channelRows.length} {t.plural(channelRows.length, "unit.channel")}
           </p>
           {activeFilters.length > 0 && (
             <p className="text-xs text-zinc-500 mt-1">
-              Filtr: {activeFilters.join(" · ")}
+              {t("common.filter")}: {activeFilters.join(" · ")}
             </p>
           )}
         </div>
@@ -375,7 +378,7 @@ async function TimelineSharePage({
           now={now}
         />
 
-        <PublicFooter expiresAt={link.expiresAt} />
+        <PublicFooter expiresAt={link.expiresAt} t={t} />
       </div>
     </div>
   );
@@ -409,12 +412,20 @@ function PublicHeader({ subtitle }: { subtitle: string }) {
   );
 }
 
-function PublicFooter({ expiresAt }: { expiresAt: Date | null }) {
+function PublicFooter({
+  expiresAt,
+  t,
+}: {
+  expiresAt: Date | null;
+  t: Awaited<ReturnType<typeof getT>>;
+}) {
   return (
     <p className="text-xs text-zinc-500 text-center pt-4">
-      Tento odkaz je platný do {expiresAt ? formatDate(expiresAt) : "—"}.{" "}
+      {t("share.expires", {
+        date: expiresAt ? formatDate(expiresAt) : "—",
+      })}{" "}
       <Link href="/" className="underline">
-        Otevřít aplikaci
+        {t("share.open_app")}
       </Link>
     </p>
   );

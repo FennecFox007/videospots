@@ -5,6 +5,8 @@ import "./globals.css";
 import { Nav } from "@/components/nav";
 import { CommandPalette } from "@/components/command-palette";
 import { DialogProvider } from "@/components/dialog/dialog-provider";
+import { LocaleProvider } from "@/lib/i18n/client";
+import { getLocale } from "@/lib/i18n/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,10 +40,11 @@ export default async function RootLayout({
   // Hide the nav on the sign-in page (no session, looks weird).
   const path = (await headers()).get("x-current-path") ?? "";
   const hideNav = path.startsWith("/sign-in");
+  const locale = await getLocale();
 
   return (
     <html
-      lang="cs"
+      lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
@@ -57,12 +60,14 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950">
-        <DialogProvider>
-          {!hideNav && <Nav />}
-          <main className="flex-1">{children}</main>
-          {!hideNav && <CommandPalette />}
-          {modal}
-        </DialogProvider>
+        <LocaleProvider locale={locale}>
+          <DialogProvider>
+            {!hideNav && <Nav />}
+            <main className="flex-1">{children}</main>
+            {!hideNav && <CommandPalette />}
+            {modal}
+          </DialogProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

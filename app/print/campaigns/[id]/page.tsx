@@ -19,12 +19,12 @@ import { kindLabel, kindEmoji } from "@/lib/products";
 import {
   formatDate,
   daysBetween,
-  pluralCs,
   computedRunState,
   statusLabel,
 } from "@/lib/utils";
 import { communicationTypeLabel } from "@/lib/communication";
 import { AutoPrint } from "@/components/auto-print";
+import { getT } from "@/lib/i18n/server";
 
 export default async function PrintCampaignPage({
   params,
@@ -88,9 +88,10 @@ export default async function PrintCampaignPage({
   const internalUrl = `${proto}://${host}/campaigns/${campaignId}`;
   const firstVideoUrl = videoRows[0]?.videoUrl ?? null;
   const qrTarget = firstVideoUrl || internalUrl;
+  const t = await getT();
   const qrLabel = firstVideoUrl
-    ? `Otevřít video${videoRows.length > 1 ? ` (${videoRows[0].countryCode})` : ""}`
-    : "Otevřít kampaň";
+    ? `${t("print.scan_video")}${videoRows.length > 1 ? ` (${videoRows[0].countryCode})` : ""}`
+    : t("print.scan_campaign");
   const qrSvg = await QRCode.toString(qrTarget, {
     type: "svg",
     margin: 0,
@@ -107,10 +108,10 @@ export default async function PrintCampaignPage({
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-4">
             <span className="text-xs uppercase tracking-widest text-zinc-500">
-              videospots · rozpis kampaně
+              videospots · {t("print.subheading")}
             </span>
             <span className="text-xs text-zinc-500">
-              Vytvořeno {formatDate(new Date())}
+              {t("print.created", { date: formatDate(new Date()) })}
             </span>
           </div>
           <div className="flex items-center gap-3 mt-3">
@@ -121,30 +122,30 @@ export default async function PrintCampaignPage({
             <h1 className="text-3xl font-bold">{c.name}</h1>
             <span className="ml-auto text-sm font-medium px-2 py-0.5 rounded bg-zinc-100 border border-zinc-300">
               {runState === "active"
-                ? "Právě běží"
+                ? t("timeline.bar_running_now")
                 : runState === "upcoming"
-                  ? "Čeká na start"
+                  ? t("timeline.bar_upcoming")
                   : runState === "done"
-                    ? "Doběhlo"
+                    ? t("timeline.bar_done")
                     : statusLabel(c.status)}
             </span>
           </div>
         {c.communicationType && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             <span className="text-xs bg-zinc-100 border border-zinc-400 rounded-full px-2 py-0.5">
-              Typ: {communicationTypeLabel(c.communicationType)}
+              {communicationTypeLabel(c.communicationType)}
             </span>
           </div>
         )}
         {c.client && <p className="mt-1 text-zinc-600">{c.client}</p>}
         {c.tags && c.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {c.tags.map((t) => (
+            {c.tags.map((tg) => (
               <span
-                key={t}
+                key={tg}
                 className="text-xs bg-zinc-100 border border-zinc-300 rounded-full px-2 py-0.5"
               >
-                #{t}
+                #{tg}
               </span>
             ))}
           </div>
@@ -167,21 +168,21 @@ export default async function PrintCampaignPage({
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <PrintCard label="Začátek" value={formatDate(c.startsAt)} />
-        <PrintCard label="Konec" value={formatDate(c.endsAt)} />
+        <PrintCard label={t("common.start")} value={formatDate(c.startsAt)} />
+        <PrintCard label={t("common.end")} value={formatDate(c.endsAt)} />
         <PrintCard
-          label="Délka"
-          value={`${dur} ${pluralCs(dur, "den", "dny", "dní")}`}
+          label={t("common.duration")}
+          value={`${dur} ${t.plural(dur, "unit.day")}`}
         />
         <PrintCard
-          label="Total reach"
+          label={t("detail.total_reach")}
           value={`${totalReach}`}
-          sub={`screen-days · ${channelRows.length} × ${pluralCs(dur, "den", "dny", "dní")}`}
+          sub={`${t("detail.screen_days")} · ${channelRows.length} × ${t.plural(dur, "unit.day")}`}
         />
       </div>
 
       {product && (
-        <Section title="Produkt">
+        <Section title={t("detail.product_section")}>
           <div className="flex items-start gap-4">
             {product.coverUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -201,7 +202,9 @@ export default async function PrintCampaignPage({
               </div>
               {product.releaseDate && (
                 <div className="text-sm text-zinc-600">
-                  Vyšlo {formatDate(product.releaseDate)}
+                  {t("detail.product_released", {
+                    date: formatDate(product.releaseDate),
+                  })}
                 </div>
               )}
               {product.summary && (
@@ -212,12 +215,16 @@ export default async function PrintCampaignPage({
         </Section>
       )}
 
-      <Section title={`Kanály (${channelRows.length})`}>
+      <Section title={`${t("detail.channels_section")} (${channelRows.length})`}>
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-zinc-300">
-              <th className="text-left py-1.5 pr-4 font-medium">Stát</th>
-              <th className="text-left py-1.5 font-medium">Řetězec</th>
+              <th className="text-left py-1.5 pr-4 font-medium">
+                {t.locale === "en" ? "Country" : "Stát"}
+              </th>
+              <th className="text-left py-1.5 font-medium">
+                {t.locale === "en" ? "Chain" : "Řetězec"}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -238,7 +245,7 @@ export default async function PrintCampaignPage({
       </Section>
 
       {videoRows.length > 0 && (
-        <Section title={`Spoty podle země (${videoRows.length})`}>
+        <Section title={`${t("detail.videos_section")} (${videoRows.length})`}>
           <ul className="space-y-1.5">
             {videoRows.map((v) => (
               <li
@@ -262,13 +269,13 @@ export default async function PrintCampaignPage({
       )}
 
       {c.notes && (
-        <Section title="Poznámky">
+        <Section title={t("detail.notes_section")}>
           <p className="text-sm whitespace-pre-wrap">{c.notes}</p>
         </Section>
       )}
 
       <p className="text-xs text-zinc-400 mt-12 text-center border-t border-zinc-200 pt-4">
-        Generováno z videospots #{c.id}
+        {t("print.generated", { date: formatDate(new Date()) })} · #{c.id}
       </p>
     </div>
   );
