@@ -25,21 +25,23 @@ Next.js 16 aplikace pro plánování video spotů v retail zobrazovačích PlayS
 
 1. **Schvalování JE — auth-gated.** Kampaně mají `clientApprovedAt` + `clientApprovedComment` + `approvedById`. Schvaluje **přihlášený uživatel** (z baru / peek panelu / detail page). Share view je read-only, recipient vidí jen badge. Schválení je **trvalé** — editace kampaně ho neinvaliduje.
 2. **Per-retailer overrides.** Datart vyprodal? Pravoklik na bar → "Upravit jen tento řetězec" → vlastní termín nebo cancellation just for that channel. Master kampaň ostatní řetězce neovlivní. Bary s override jsou italic + ✱ + non-draggable (drag by silently shiftnul master).
-3. **Žádný judging timing / nudge.** App neříká "tady něco chybí". `/releases` ukazuje co vychází bez označení "bez kampaně". Žádné lifecycle classification ("Pre-launch / Out now"), žádné "naked launch" warnings.
-4. **URL = filter state.** `?q`, `?country`, `?chain`, `?client`, `?runState`, `?communicationType`, `?approval`, `?tag`, `?from`, `?to`, `?sort`, `?order`. Stránky jsou bookmarkable.
-5. **Server-rendered first.** Client islands jen kde nutné (drag, kontextové menu, filter bar, command palette, tooltip, dialogs, peek panel).
-6. **Lokalizace:** CZ labels, EN error messages, `pluralKey` v dictionary. Country names přes `Intl.DisplayNames`.
-7. **Žádné mutace mimo Server Actions.** API routes jen pro reads (peek, search).
-8. **Vlastní komponenty místo knihoven.** DialogProvider, RouteModal, SidePanel, locale switcher, toast — všechno custom, ~50–250 řádků.
+3. **Spoty jako first-class entity.** Spot = (product × country × URL). Existuje samostatně v knihovně `/spots`, kampaně ho jen referencují přes `campaign_video.spot_id`. **Kampaň může existovat bez spotu** — plánuje se měsíce dopředu, spoty se vyrábí později a doplňují přes edit form.
+4. **Žádný judging timing / nudge.** App neříká "tady něco chybí". `/releases` ukazuje co vychází bez označení "bez kampaně". Žádné lifecycle classification ("Pre-launch / Out now"), žádné "naked launch" warnings. **Výjimka:** "spot pending" stav je viditelný (dashed kroužek na baru, amber box v detailu), ale vyloženě jako informace, ne jako chyba.
+5. **URL = filter state.** `?q`, `?country`, `?chain`, `?client`, `?runState`, `?communicationType`, `?approval`, `?missingSpot`, `?tag`, `?from`, `?to`, `?sort`, `?order`. Stránky jsou bookmarkable.
+6. **Server-rendered first.** Client islands jen kde nutné (drag, kontextové menu, filter bar, command palette, tooltip, dialogs, peek panel).
+7. **Lokalizace:** CZ labels, EN error messages, `pluralKey` v dictionary. Country names přes `Intl.DisplayNames`.
+8. **Žádné mutace mimo Server Actions.** API routes jen pro reads (peek, search).
+9. **Vlastní komponenty místo knihoven.** DialogProvider, RouteModal, SidePanel, locale switcher, toast — všechno custom, ~50–250 řádků.
 
 ## Doménové entity (zkráceně)
 
 - `users`, `accounts`, `sessions` — Auth.js
 - `countries` (CZ/SK/HU/PL — DB drží jen české názvy, EN přes `Intl.DisplayNames`), `chains`, `channels` = (country × chain) — admin-editable
 - `products` — co kampaň propaguje (game/console/controller/accessory/service/other). DB tabulka `game` z historie. `releaseDate`, `coverUrl`, `summary`, `kind`.
+- **`spots`** — knihovna video creativ. (product × country × videoUrl) + volitelný `name`, `archivedAt`, `createdById`. Existuje samostatně, kampaně ho referencují přes `campaign_video.spot_id`. Spot bez aktivní kampaně = "nenasazený" (viditelné na `/spots` + dashboard tile).
 - `campaigns` — name, client, ~~videoUrl~~ (deprecated), startsAt/endsAt, color, communicationType, tags[], notes, status (`approved`|`cancelled`), `archivedAt`, `clientApprovedAt`, `clientApprovedComment`, `approvedById`, createdById, productId
 - **`campaignChannels`** — junction (campaign × channel) **+ overrides**: `startsAt`, `endsAt`, `cancelledAt` (všechny nullable; null = inherit master). Per-retailer schedule.
-- `campaignVideos` — junction (campaign × country × videoUrl). Per-country jazyková mutace.
+- **`campaignVideos`** — junction (campaign × country) → `spot_id` NOT NULL. Připojuje konkrétní spot k tomu, jak ho kampaň v dané zemi nasazuje. Pokud je tahle row pro (kampaň, země) chybí = "spot ještě nepřiřazen" (kampaň je naplánovaná, čeká se na produkci).
 - `savedViews` — per-user pojmenované filter bookmarks (scope: timeline | campaigns)
 - `auditLog` (userId nullable — historicky pro public approve, dnes vždy auth), `comments`, `shareLinks`, `campaignTemplates`
 
@@ -88,13 +90,37 @@ Pravoklik bar → **"Upravit jen tento řetězec"** otevře dialog s:
 
 **Caveat**: range filter v queries.ts používá master termíny, ne efektivní. Override který by posouval bar mimo master rozsah by se nezobrazil. V praxi se overrides používají pro **zkrácení** uvnitř masteru, takže to v1 stačí.
 
+## Pracovní flow se spoty (canonical)
+
+```
+Plánování (např. leden, kampaň pro květen):
+  /campaigns/new → vyber kanály → spot dropdownů necháš na "— žádný spot —"
+  → ulož
+
+Kampaň existuje, je v timeline. Bar má místo ▶ malý dashed kroužek
+(stav "spot pending"). Peek/detail ukazují "Spoty (0/N)" + amber boxy.
+Filter chip "Bez spotu" najde takové kampaně globálně.
+
+Produkce (například duben):
+  /spots/new × N (jeden per země) → uloží do knihovny
+
+Připojení (před spuštěním):
+  /campaigns/<id>/edit → spot dropdownů jsou nově nabité spoty pro každou zemi → vyber → ulož
+  Bar v timeline: dashed kroužek se mění na ▶
+```
+
+Klíčová vlastnost: **kampaň bez spotu je legitimní stav**, ne chyba. Vizuální cue je intentionally subtle — informuje, ale nedělá z toho problém.
+
 ## Co dělá (route mapa)
 
-- `/` — Gantt timeline. Drag bar = posun/délka/přesun. Drag hlavičky = scrub času. **Klik na bar** = otevře peek panel. **Pravoklik** = kontextové menu (Otevřít / Upravit / Upravit jen tento řetězec / Schvaluji|Zrušit schválení / Sdílet odkaz / Posunout / Klonovat / Cancel / Archive). ▶ na baru = video v novém tabu.
+- `/` — Gantt timeline. Drag bar = posun/délka/přesun. Drag hlavičky = scrub času. **Klik na bar** = otevře peek panel. **Pravoklik** = kontextové menu (Otevřít / Upravit / Upravit jen tento řetězec / Schvaluji|Zrušit schválení / Sdílet odkaz / Posunout / Klonovat / Cancel / Archive). **▶** na baru = video v novém tabu, **⊕ (dashed)** = spot ještě nepřiřazen pro tuto zemi.
 - `/releases` — release kalendář, čistě informativní
 - `/campaigns` — tabulka s filtry, hromadné akce, CSV export, saved views. Klik na řádek otevře peek (modifier-klik = nová záložka)
-- `/campaigns/[id]` — detail (kanály, per-country videa, komentáře, audit log, share, print, **approval state v hlavičce**). Tlačítko "Schvaluji" / "Zrušit schválení" vedle status pillu.
-- `/campaigns/new`, `/campaigns/[id]/edit` — formuláře. `/new` se otevírá v modalu (intercepting routes) když navigovaný z `/` nebo `/campaigns`.
+- `/campaigns/[id]` — detail (kanály, per-country videa, komentáře, audit log, share, print, **approval state v hlavičce**). Pending země mají dashed amber box místo embedu + link "Přiřadit spoty".
+- `/campaigns/new`, `/campaigns/[id]/edit` — formuláře. `/new` se otevírá v modalu (intercepting routes) když navigovaný z `/` nebo `/campaigns`. **Per-country dropdown z knihovny spotů** + odkaz "+ Nový spot" (otevře `/spots/new` v nové záložce). "— žádný spot —" je validní volba pro plán-bez-produkce.
+- **`/spots`** — knihovna spotů, 4 záložky (**Nenasazené** | Nasazené | Všechny | Archiv). Default landing = Nenasazené. Tabulka: jméno + URL, produkt, země, deployment count, autor.
+- **`/spots/new`** — registrace nového spotu (jméno volitelné, produkt find-or-create, země radio chips, URL).
+- **`/spots/[id]`** — detail s embed přehrávačem, seznam aktivních kampaní, edit, archivace, smazání (jen když není v žádné kampani).
 - `/admin/{countries,chains,channels,products,users,templates,import,archive,audit}` — interní CRUD.
 - `/share/[token]` — public read-only (kampaň nebo timeline). **Žádné akční formuláře** — informační jen.
 - `/print/{campaigns/[id],timeline}` — printable PDF. Detail má QR kód.
@@ -102,21 +128,36 @@ Pravoklik bar → **"Upravit jen tento řetězec"** otevře dialog s:
 
 ## Klíčové UX prvky
 
-- **Peek panel** (pravý drawer) — otevírá se klikem na bar v timeline / řádek v `/campaigns`. Imperativní store v `lib/peek-store.ts` (žádné intercepting routes — Turbopack je s tím nestabilní). URL sync přes `?peek=<id>` + `history.replaceState` (sdílitelné, žádný server re-render). Footer akce: Otevřít detail, Upravit, **Schvaluji**, Klonovat, Cancel, Archive. Cancel-on-change při rychlém přepínání mezi bary.
+- **Peek panel** (pravý drawer) — otevírá se klikem na bar v timeline / řádek v `/campaigns`. Imperativní store v `lib/peek-store.ts` (žádné intercepting routes — Turbopack je s tím nestabilní). URL sync přes `?peek=<id>` + `history.replaceState` (sdílitelné, žádný server re-render). Footer akce: Otevřít detail, Upravit, **Schvaluji**, Klonovat, Cancel, Archive. Videos sekce: "Spoty (X/Y)" + per-country play link nebo "Spot ještě nebyl přiřazen". Cancel-on-change při rychlém přepínání mezi bary.
 - **Bar context menu** — pravoklik na bar v timeline. Položky: Otevřít detail, Upravit, **Upravit jen tento řetězec**, **Schvaluji** / **Zrušit schválení**, **Sdílet odkaz** (jeden klik vygeneruje + zkopíruje share link), Posunout o týden ←/→, Klonovat, Cancel/Reactivate, Archive.
 - **Channel override dialog** — viz výše per-retailer sekce.
 - **Public campaign modal** v share-timeline view — klik na bar otevře malý modal s videem (per-country) + metadaty + approved badge (jen info).
 - **Timeline drag pan**: chytni hlavičku → posun v čase, **shift+drag** = snap na pondělí, **dvojklik** = skok na dnešek
 - **Collapsible country groups**: per-user, localStorage persist
 - **Rich tooltip** na barech (250ms delay)
-- **Play button** na barech s videoUrl — `<a target="_blank">` per-channel přes country lookup
+- **Play button** vs **dashed kroužek** na pravém okraji baru — má spot / čeká na spot
 - **Modal pro Novou kampaň** (intercepting routes) — full-screen mobile, centered desktop
 - **Humanizovaný audit log** v detailu
 - **Saved views** v FilterBar (per-user)
 - **QR na print campaign**
 - **Toast + ConfirmDialog** systém
 - **CommunicationBadge** (Launch / Pre-order / Out Now / DLC / Promo / …)
-- **Dashboard "Čeká na schválení" tile** (`app/page.tsx` → `DashboardStats`) — počet kampaní co běží/startují bez schválení, sub-text rozdělí na "X už běží · Y v plánu" (urgentní vs. budoucí). Při 0 ukáže "Vše schváleno". Nahradilo dřívější "Screen-days" vanity metriku.
+- **Dashboard tiles** (`app/page.tsx` → `DashboardStats`):
+  - **Celkem kampaní** — total + this month
+  - **Čeká na schválení** — count + "X už běží · Y v plánu" (urgentní vs. budoucí)
+  - **Top klient** — campaigns count
+  - **Nenasazené spoty** — count of spots without active campaign
+
+## Vizuální cue cheatsheet (3 nezávislé osy na barech)
+
+| Stav | Bar |
+|---|---|
+| Schválená, má spot | Solid barva + ▶ |
+| Schválená, čeká na spot | Solid barva + ⊕ (dashed kruh) |
+| Neschválená, má spot | Šrafovaná + ▶ |
+| Neschválená, čeká na spot | Šrafovaná + ⊕ |
+| Per-channel override | Italic + ✱ (kombinuje se s ostatním) |
+| Cancelled (kampaň nebo channel) | Šedá + přeškrtnutá (přebije ostatní) |
 
 ## Toolbar styling discipline
 
@@ -148,6 +189,7 @@ Schema migrace = ručně `npm run db:push` proti prod URL po každé změně sch
 
 - ~~Schvalovací workflow~~ → **JE, auth-gated**
 - ~~Side panel detail kampaně z timeline~~ → **JE postavený jako peek**
+- ~~Spoty jako samostatná entita~~ → **JE, V2.1 shipped** (schema, /spots admin, picker ve formuláři, "spot pending" stav viditelný)
 - Lifecycle classification (Pre-launch / Launch / Out now badges, ⭐ marker) — vyhozeno
 - "Naked launch" warnings — žádné nudge
 - "Příliš brzy/pozdě" labely — žádné judging timing
@@ -163,19 +205,35 @@ Schema migrace = ručně `npm run db:push` proti prod URL po každé změně sch
 - Per-user permissions / role
 - **Excel import** — partner explicitně řekl "klientovi neříkat, posílali by chaotické tabulky"
 
-## V2 / další release (z partnerovy schůzky)
+## V2 — co už je hotové (recap)
+
+Z partnerova přepisu jsme za poslední iteraci shippnuli:
+
+1. **Spoty jako samostatná entita** ✅ commits `e39627d`, `0021d3e`, `a3383bd`, `cd61579`
+   - Schema: `spots` table (product × country × URL + name + archive)
+   - `campaign_video.spot_id NOT NULL` (refaktor z `video_url`)
+   - `/spots` admin (4 záložky: Nenasazené default, Nasazené, Všechny, Archiv)
+   - `/spots/new`, `/spots/[id]` edit/archive/delete
+   - Campaign formulář má per-country **dropdown z knihovny** + "+ Nový spot" link
+   - Dashboard tile "Nenasazené spoty"
+   - Filter chip "Bez spotu" v timeline
+   - "Spot pending" je viditelný stav (dashed kroužek na barech, amber box v detailu)
+   - Migrace dat proběhla idempotentně (1× per DB, scripts už smazaný)
+
+## V2 — zbývající plán (z partnerovy schůzky)
 
 **Diskutované, partner+kolega potvrdili odložit:**
 
-1. **Spoty jako samostatná entita** — seznam spotů, který existují ale nejsou nasazené v timeline. Drag-and-drop ze seznamu do timeline. "Nenasazené spoty" výstraha. Re-deploy historicky-použitých spotů. **Velký schema redesign.**
-2. **NAS sync** — automatický pull spotů z NAS adresáře (jmenná konvence pro country/chain mapping).
-3. **E-mailové notifikace** — SMTP (Atlas/Mailgun/Resend), upozornění na blížící se kampaně, schválení čeká, atd. _V V1 máme jen vizuální nudges (šrafování, badge, filter chip, activity feed) — to partner akceptuje._
-4. **Release → Campaign hierarchie** — release jako parent kampaní (více kampaní per release: Pre-order, Launch, …). Aktuálně jsou kampaně samostatné, release = product.releaseDate informativně.
-5. **Stopáž smyčky** — spot má délku v sekundách, timeline ukazuje "ve smyčce máš 90s, mohlo by se hodit dalších 20s".
-6. **Re-approval po edit** — schválení je teď trvalé, V2 možná snapshot + invalidate.
-7. **Multi-PDF export** (víc kampaní v jednom souboru)
-8. **Per-user permissions / role**
-9. **Tisk / banner kampaně** — rozšíření modelu mimo video.
+1. **Drag-and-drop spotu z `/spots` do timeline** — partnerova vize. Cross-page DnD, vytvoří kampaň z přetaženého spotu. Velmi vizuální demo feature.
+2. **Inline modal pro `/spots/new`** z campaign formuláře — místo "otevřít v nové záložce + refresh" by se otevřel modal, po uložení by se nový spot rovnou objevil v dropdownu. Hezčí UX.
+3. **NAS sync** — automatický pull spotů z NAS adresáře (jmenná konvence pro country/chain mapping). Závislé na hosting strategii.
+4. **E-mailové notifikace** — SMTP (Atlas/Mailgun/Resend), upozornění na blížící se kampaně, schválení čeká, atd. _V V1 máme jen vizuální nudges (šrafování, dashed kroužky, filter chips, dashboard tiles, activity feed) — to partner akceptuje._
+5. **Release → Campaign hierarchie** — release jako parent kampaní (více kampaní per release: Pre-order, Launch, …). Aktuálně jsou kampaně samostatné, release = product.releaseDate informativně.
+6. **Stopáž smyčky** — spot má délku v sekundách, timeline ukazuje "ve smyčce máš 90s, mohlo by se hodit dalších 20s".
+7. **Re-approval po edit** — schválení je teď trvalé, V2 možná snapshot + invalidate.
+8. **Multi-PDF export** (víc kampaní v jednom souboru)
+9. **Per-user permissions / role**
+10. **Tisk / banner kampaně** — rozšíření modelu mimo video.
 
 **Wow upgrades pro klientské demo (volitelné):**
 
@@ -187,20 +245,21 @@ Schema migrace = ručně `npm run db:push` proti prod URL po každé změně sch
 
 ## Klíčové soubory
 
-- `lib/db/schema.ts` — domain model (campaigns + campaignVideos + campaignChannels s overrides + savedViews + ...)
-- `lib/db/queries.ts` — `findCampaignIds(filters)` (handles `approval` filter), `fetchTimelineCampaigns` (joinuje channels → countries → campaignVideos → products → JS-side coalesce overrides), `getFilterOptions`
+- `lib/db/schema.ts` — domain model (campaigns + spots + campaignVideos + campaignChannels s overrides + savedViews + ...)
+- `lib/db/queries.ts` — `findCampaignIds(filters)` (handles `approval` + `missingSpot`), `fetchTimelineCampaigns` (joinuje channels → countries → campaignVideos → spots → products + JS-side coalesce overrides), `getSpotsByCountry()` (form picker), `getFilterOptions`
 - `lib/utils.ts` — formátování, `computedRunState`, `snapToMondayStart`, locale-aware `formatMonthName`
 - `lib/i18n/{messages,server,client,country}.ts` + `lib/theme/server.ts`
 - `lib/peek-store.ts` — module-level subscriber pro peek panel
 - `lib/communication.ts`, `lib/products.ts`, `lib/colors.ts`
-- `lib/campaign-video-form.ts` — `extractVideosByCountry(formData)`
-- `components/timeline.tsx` — Gantt + drag + tooltip + ContextMenu + collapsible groups + play button + density toggle + share-link copy
+- `lib/campaign-video-form.ts` — `extractSpotsByCountry(formData)` čte `spotId_<countryId>` ze submit
+- `components/timeline.tsx` — Gantt + drag + tooltip + ContextMenu + collapsible groups + play button + dashed-circle no-spot marker + density toggle + share-link copy
 - `components/public-timeline.tsx` — read-only timeline + bar-click modal s videem
 - `components/campaign-peek.tsx` — pravý peek panel (auth)
 - `components/side-panel.tsx` — generický shell pro pravé drawery
 - `components/channel-override-dialog.tsx` — per-retailer override editor
-- `components/campaign-form-body.tsx` — sdílený `/new` + `/edit` form
-- `components/filter-bar.tsx` — URL-driven filtry + saved views + approval filter
+- `components/campaign-form-body.tsx` — sdílený `/new` + `/edit` form (per-country spot dropdown)
+- `components/spot-form-body.tsx` — sdílený form pro `/spots/new` + `/spots/[id]`
+- `components/filter-bar.tsx` — URL-driven filtry + saved views + approval + missingSpot
 - `components/saved-views-menu.tsx`
 - `components/communication-badge.tsx`, `components/status-badge.tsx`
 - `components/route-modal.tsx` — generic shell pro intercepting-route modaly
@@ -208,10 +267,12 @@ Schema migrace = ručně `npm run db:push` proti prod URL po každé změně sch
 - `components/locale-switcher.tsx`, `components/dark-mode-toggle.tsx`
 - `components/video-embed.tsx`
 - `app/@modal/(.)campaigns/new/page.tsx` — intercepting modal pro novou kampaň (jen `/new` zůstal po předchozí stabilizaci)
-- `app/api/campaigns/[id]/peek/route.ts` — JSON endpoint pro peek panel
+- `app/api/campaigns/[id]/peek/route.ts` — JSON endpoint pro peek panel (vrací all-countries-with-optional-spot tvar)
 - `app/campaigns/[id]/actions.ts` — server actions (clone/cancel/move/archive/**approveCampaign**/**clearCampaignApproval**/**setChannelOverride**/**clearChannelOverride**/**createCampaignShareLink**/...)
-- `app/campaigns/[id]/edit/actions.ts` — `updateCampaign` s diff audit logem
-- `app/campaigns/[id]/page.tsx` — detail + humanizeAuditEntry + approval pill/buttons
+- `app/campaigns/[id]/edit/actions.ts` — `updateCampaign` s diff audit logem (audit klíč `videos` porovnává `<countryId>:<spotId>` arrays)
+- `app/campaigns/[id]/page.tsx` — detail + humanizeAuditEntry + approval pill/buttons + per-country spot pending boxes
+- `app/spots/{page,actions}.tsx` — knihovna spotů + create/update/archive/unarchive/delete server actions
+- `app/spots/{new,[id]}/page.tsx` — create + detail/edit pages
 - `app/saved-views/actions.ts`
 - `app/actions/{set-locale,set-theme}.ts`
 - `auth.config.ts` — public allow-list (`/sign-in`, `/api/auth`, `/share/`, `/favicon.ico`). **Žádný `/api/share/`** — všechny mutace jsou auth-gated.
