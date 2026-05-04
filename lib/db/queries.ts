@@ -20,6 +20,7 @@ import {
   campaigns,
   campaignChannels,
   campaignVideos,
+  spots,
   products,
 } from "./client";
 import type { CountryGroup } from "@/components/campaign-form-body";
@@ -277,7 +278,7 @@ export async function fetchTimelineCampaigns(
       status: campaigns.status,
       communicationType: campaigns.communicationType,
       clientApprovedAt: campaigns.clientApprovedAt,
-      videoUrl: campaignVideos.videoUrl,
+      videoUrl: spots.videoUrl,
       coverUrl: products.coverUrl,
       masterStartsAt: campaigns.startsAt,
       masterEndsAt: campaigns.endsAt,
@@ -299,6 +300,7 @@ export async function fetchTimelineCampaigns(
         eq(campaignVideos.countryId, channels.countryId)
       )
     )
+    .leftJoin(spots, eq(campaignVideos.spotId, spots.id))
     .leftJoin(products, eq(campaigns.productId, products.id))
     .where(
       and(

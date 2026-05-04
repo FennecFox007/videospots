@@ -5,6 +5,7 @@ import {
   campaigns,
   campaignChannels,
   campaignVideos,
+  spots,
   products,
 } from "@/lib/db/client";
 import { CampaignFormBody } from "@/components/campaign-form-body";
@@ -35,12 +36,16 @@ export default async function EditCampaignPage({
     .from(campaignChannels)
     .where(eq(campaignChannels.campaignId, campaignId));
 
+  // Pre-fill the form's per-country URL fields with whatever the campaign's
+  // currently-deployed spots have. Joining spots so we hand the form the
+  // raw URL it was originally created from.
   const videoRows = await db
     .select({
       countryId: campaignVideos.countryId,
-      videoUrl: campaignVideos.videoUrl,
+      videoUrl: spots.videoUrl,
     })
     .from(campaignVideos)
+    .innerJoin(spots, eq(campaignVideos.spotId, spots.id))
     .where(eq(campaignVideos.campaignId, campaignId));
   const videosByCountry: Record<number, string> = {};
   for (const v of videoRows) videosByCountry[v.countryId] = v.videoUrl;

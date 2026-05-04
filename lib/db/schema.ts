@@ -226,15 +226,48 @@ export const campaignChannels = pgTable(
   (t) => [primaryKey({ columns: [t.campaignId, t.channelId] })]
 );
 
-// Per-country video spot URLs. A campaign typically runs in multiple countries
-// and each country gets its own language-localized cut of the spot, so the
-// video URL is keyed by (campaign, country) — NOT a single value on the
-// campaign row (which would force one video across all markets and
-// silently leak the wrong language version into other countries).
+// Spot = a concrete piece of video creative. (product × country × videoUrl)
+// — same product + country + URL = same spot. Created either explicitly via
+// /spots or implicitly when a campaign form is saved with a URL that doesn't
+// match any existing spot.
 //
-// `campaigns.videoUrl` is kept as a deprecated legacy column for now; new
-// code only reads/writes through this table. Existing rows are migrated by
-// the ad-hoc SQL run alongside the schema push.
+// Spots are reusable: one spot can be deployed across multiple campaigns
+// (e.g. the "Saros launch CZ" spot used in the launch campaign and again
+// later for an anniversary push). A spot with no campaignVideos rows is
+// "undeployed" — surfaced on the dashboard so finished creatives don't
+// silently fall off the radar.
+//
+// productId nullable: brand campaigns / non-game spots are rare but possible.
+// archivedAt: soft-delete. archived spots are hidden from default lists but
+// stay attached to historical campaign_video rows.
+export const spots = pgTable("spot", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id, {
+    onDelete: "set null",
+  }),
+  countryId: integer("country_id")
+    .notNull()
+    .references(() => countries.id, { onDelete: "cascade" }),
+  videoUrl: text("video_url").notNull(),
+  // Optional human-readable name. When null, UI synthesises one from the
+  // joined product name + country code ("Saros · CZ").
+  name: text("name"),
+  archivedAt: timestamp("archived_at", { mode: "date" }),
+  createdById: text("created_by_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Per-country spot deployment for a campaign. (campaign × country) → spot.
+// Country redundancy with spot.countryId is kept on the junction so the
+// (campaign, country) primary key still enforces "one spot per country per
+// campaign" without needing a check constraint.
+//
+// Migration path: previous schema kept video_url directly on this row. The
+// 2026-05 spots refactor moved URLs into the spots table and replaced
+// video_url with spot_id. spotId is nullable during the migration window;
+// once the backfill completes it'll be NOT NULL.
 export const campaignVideos = pgTable(
   "campaign_video",
   {
@@ -244,7 +277,9 @@ export const campaignVideos = pgTable(
     countryId: integer("country_id")
       .notNull()
       .references(() => countries.id, { onDelete: "cascade" }),
-    videoUrl: text("video_url").notNull(),
+    spotId: integer("spot_id")
+      .notNull()
+      .references(() => spots.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

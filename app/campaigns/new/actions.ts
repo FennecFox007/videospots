@@ -12,6 +12,7 @@ import {
   products,
   auditLog,
 } from "@/lib/db/client";
+import { findOrCreateSpot } from "@/lib/spot-resolver";
 import { isValidCampaignColor, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
 import {
   isValidKind,
@@ -176,13 +177,24 @@ export async function createCampaign(formData: FormData) {
     );
 
     if (videosByCountry.length > 0) {
-      await db.insert(campaignVideos).values(
-        videosByCountry.map((v) => ({
-          campaignId: created.id,
+      // Each URL flows through findOrCreateSpot: existing (productId,
+      // countryId, url) tuples are reused so the spots library doesn't
+      // grow duplicates, new tuples create a fresh spot row.
+      const inserts: Array<{
+        campaignId: number;
+        countryId: number;
+        spotId: number;
+      }> = [];
+      for (const v of videosByCountry) {
+        const spotId = await findOrCreateSpot({
+          productId,
           countryId: v.countryId,
           videoUrl: v.videoUrl,
-        }))
-      );
+          userId: session.user.id,
+        });
+        inserts.push({ campaignId: created.id, countryId: v.countryId, spotId });
+      }
+      await db.insert(campaignVideos).values(inserts);
     }
 
     await db.insert(auditLog).values({

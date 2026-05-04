@@ -14,6 +14,7 @@ import {
   campaigns,
   campaignChannels,
   campaignVideos,
+  spots,
   channels,
   countries,
   chains,
@@ -121,10 +122,11 @@ export async function GET(
       .select({
         countryCode: countries.code,
         countryFlag: countries.flagEmoji,
-        videoUrl: campaignVideos.videoUrl,
+        videoUrl: spots.videoUrl,
       })
       .from(campaignVideos)
       .innerJoin(countries, eq(campaignVideos.countryId, countries.id))
+      .innerJoin(spots, eq(campaignVideos.spotId, spots.id))
       .where(eq(campaignVideos.campaignId, campaignId))
       .orderBy(asc(countries.sortOrder)),
     db

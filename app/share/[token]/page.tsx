@@ -14,6 +14,7 @@ import {
   campaigns,
   campaignChannels,
   campaignVideos,
+  spots,
   channels,
   countries,
   chains,
@@ -132,10 +133,11 @@ async function CampaignSharePage({
       countryName: countries.name,
       countryFlag: countries.flagEmoji,
       countryCode: countries.code,
-      videoUrl: campaignVideos.videoUrl,
+      videoUrl: spots.videoUrl,
     })
     .from(campaignVideos)
     .innerJoin(countries, eq(campaignVideos.countryId, countries.id))
+    .innerJoin(spots, eq(campaignVideos.spotId, spots.id))
     .where(eq(campaignVideos.campaignId, campaignId))
     .orderBy(asc(countries.sortOrder));
 

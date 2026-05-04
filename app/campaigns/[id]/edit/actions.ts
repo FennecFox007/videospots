@@ -9,9 +9,11 @@ import {
   campaigns,
   campaignChannels,
   campaignVideos,
+  spots,
   products,
   auditLog,
 } from "@/lib/db/client";
+import { findOrCreateSpot } from "@/lib/spot-resolver";
 import { extractVideosByCountry } from "@/lib/campaign-video-form";
 import { isValidCampaignColor, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
 import {
@@ -143,13 +145,15 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
 
   // Snapshot existing per-country videos so the audit log can show what
   // changed. Result is a "<countryId>:<url>" sorted list — comparing arrays
-  // is enough for "did this set of videos change at all".
+  // is enough for "did this set of videos change at all". Since spots
+  // refactor we read the URL through the joined spots row.
   const beforeVideos = await db
     .select({
       countryId: campaignVideos.countryId,
-      videoUrl: campaignVideos.videoUrl,
+      videoUrl: spots.videoUrl,
     })
     .from(campaignVideos)
+    .innerJoin(spots, eq(campaignVideos.spotId, spots.id))
     .where(eq(campaignVideos.campaignId, campaignId))
     .orderBy(asc(campaignVideos.countryId));
   const beforeVideosKey = beforeVideos
@@ -238,20 +242,32 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
     }))
   );
 
-  // Replace per-country videos: simplest is delete-all + re-insert. The
-  // campaign_video table is small and this keeps the code identical to how
-  // we handle channels above.
+  // Replace per-country videos: simplest is delete-all + re-insert. Each
+  // URL goes through findOrCreateSpot so the campaign_video junction
+  // points at a proper spot row (find existing by (productId, countryId,
+  // url) tuple, otherwise insert new). Old, now-orphaned spots stay in the
+  // table — they show up on /spots as undeployed and the user can archive
+  // them there. We never auto-delete spots because another campaign might
+  // still reference them.
   await db
     .delete(campaignVideos)
     .where(eq(campaignVideos.campaignId, campaignId));
   if (videosByCountry.length > 0) {
-    await db.insert(campaignVideos).values(
-      videosByCountry.map((v) => ({
-        campaignId,
+    const inserts: Array<{
+      campaignId: number;
+      countryId: number;
+      spotId: number;
+    }> = [];
+    for (const v of videosByCountry) {
+      const spotId = await findOrCreateSpot({
+        productId,
         countryId: v.countryId,
         videoUrl: v.videoUrl,
-      }))
-    );
+        userId: session.user.id,
+      });
+      inserts.push({ campaignId, countryId: v.countryId, spotId });
+    }
+    await db.insert(campaignVideos).values(inserts);
   }
 
   // Build diff: only include fields that actually changed. Each entry is
