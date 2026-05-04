@@ -10,6 +10,7 @@ import {
   reactivateCampaign,
   cloneCampaign,
   archiveCampaign,
+  createCampaignShareLink,
 } from "@/app/campaigns/[id]/actions";
 import {
   addDays,
@@ -33,6 +34,7 @@ import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { openCampaignPeek } from "@/lib/peek-store";
 import { ChannelOverrideDialog } from "@/components/channel-override-dialog";
+import { useDialog } from "@/components/dialog/dialog-provider";
 
 export type TimelineChannel = {
   id: number;
@@ -185,6 +187,7 @@ export function Timeline({
   now,
 }: Props) {
   const t = useT();
+  const { toast } = useDialog();
   // Right-click menu state. Single shared instance; only one menu is open at
   // a time. Position is in viewport (clientX/Y) since the menu is `fixed`.
   const [menu, setMenu] = useState<{
@@ -465,6 +468,33 @@ export function Timeline({
     ];
   }
 
+  async function shareForApproval(campaignId: number) {
+    try {
+      const url = await createCampaignShareLink(campaignId);
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success(t("ctx.share_for_approval_copied"));
+      } catch {
+        // Clipboard might be blocked (e.g. http context). Fall back to a
+        // hidden textarea + execCommand("copy") — same trick share-button
+        // uses. Worst case the toast tells the user to copy manually.
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand("copy");
+          toast.success(t("ctx.share_for_approval_copied"));
+        } catch {
+          toast.info(url);
+        }
+        ta.remove();
+      }
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
   function buildBarMenu(
     bar: TimelineCampaign,
     channel: TimelineChannel,
@@ -487,6 +517,17 @@ export function Timeline({
         label: t("ctx.edit_for_channel"),
         onClick: () =>
           setOverrideTarget({ bar, channel, country }),
+      },
+      // Share-for-approval is the partner-described primary path: agency
+      // generates a link, sends it to the client, client approves through
+      // the share view. Putting it on the bar menu cuts the previous "open
+      // detail → click Share → copy → paste" trail down to one click.
+      {
+        kind: "action",
+        label: bar.clientApprovedAt
+          ? t("ctx.share_again")
+          : t("ctx.share_for_approval"),
+        onClick: () => shareForApproval(bar.campaignId),
       },
       { kind: "separator" },
       {

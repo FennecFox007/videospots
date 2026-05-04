@@ -29,6 +29,8 @@ import {
   reactivateCampaign,
   addComment,
   deleteComment,
+  manuallyApproveCampaign,
+  clearCampaignApproval,
 } from "./actions";
 import { StatusBadge } from "@/components/status-badge";
 import { ShareButton } from "@/components/share-button";
@@ -156,34 +158,69 @@ export default async function CampaignDetailPage({
             <StatusBadge status={c.status} runState={runState} />
             <CommunicationBadge type={c.communicationType} />
             {/* Approval state — green pill if approved, amber "waiting"
-                otherwise. Permanent once set; no edit / undo from here
-                (the badge is informational, the state changes through
-                the public share view). */}
+                otherwise. The normal path is: agency generates a share
+                link, sends to client, client clicks "Schvaluji" inside
+                /share/<token>. The buttons next to the pill are a
+                FALLBACK for cases where the client approves verbally /
+                over email and the agency needs to mirror that into the
+                system. The audit log records who approved manually. */}
             {c.clientApprovedAt ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-200 dark:ring-emerald-900 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-300">
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  aria-hidden
+              <>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-200 dark:ring-emerald-900 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    aria-hidden
+                  >
+                    <path
+                      d="M3 8.5 L7 12 L13 5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {t("approval.approved_on", {
+                    date: formatDate(c.clientApprovedAt),
+                  })}
+                </span>
+                <form
+                  action={async () => {
+                    "use server";
+                    await clearCampaignApproval(campaignId);
+                  }}
                 >
-                  <path
-                    d="M3 8.5 L7 12 L13 5"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                {t("approval.approved_on", {
-                  date: formatDate(c.clientApprovedAt),
-                })}
-              </span>
+                  <button
+                    type="submit"
+                    className="text-[11px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:underline"
+                    title={t("approval.clear_tooltip")}
+                  >
+                    {t("approval.clear")}
+                  </button>
+                </form>
+              </>
             ) : (
-              <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-200 dark:ring-amber-900 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
-                {t("approval.waiting")}
-              </span>
+              <>
+                <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-200 dark:ring-amber-900 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+                  {t("approval.waiting")}
+                </span>
+                <form
+                  action={async () => {
+                    "use server";
+                    await manuallyApproveCampaign(campaignId);
+                  }}
+                >
+                  <button
+                    type="submit"
+                    className="text-[11px] text-emerald-700 dark:text-emerald-400 hover:underline"
+                    title={t("approval.manual_tooltip")}
+                  >
+                    {t("approval.manual")}
+                  </button>
+                </form>
+              </>
             )}
           </div>
           {c.clientApprovedAt && c.clientApprovedComment && (

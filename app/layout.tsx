@@ -8,6 +8,7 @@ import { DialogProvider } from "@/components/dialog/dialog-provider";
 import { CampaignPeek } from "@/components/campaign-peek";
 import { LocaleProvider } from "@/lib/i18n/client";
 import { getLocale } from "@/lib/i18n/server";
+import { getTheme } from "@/lib/theme/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,28 +43,17 @@ export default async function RootLayout({
   const path = (await headers()).get("x-current-path") ?? "";
   const hideNav = path.startsWith("/sign-in");
   const locale = await getLocale();
+  const theme = await getTheme();
 
+  // Theme is resolved server-side from a cookie and applied as a class on
+  // <html> directly. No inline script, no FOUC, no React 19 "script tag in
+  // render tree" warning. Default = light; the user toggles via the
+  // DarkModeToggle button which writes the cookie + revalidates the layout.
   return (
     <html
       lang={locale}
-      // Dark mode is applied by the inline script in <head> before React
-      // hydrates (so the page doesn't flash light → dark on first paint).
-      // That intentionally diverges <html class> from the server-rendered
-      // HTML, so suppress the hydration warning on this one element. React
-      // still validates the rest of the tree normally.
-      suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased${theme === "dark" ? " dark" : ""}`}
     >
-      <head>
-        {/*
-         * Dark-mode init runs as an external script in <head> so the browser
-         * fetches+executes it before first paint (no FOUC). External (not
-         * inline) avoids React 19's "script tag inside render tree" warning,
-         * and next/script with beforeInteractive renders an inline tag
-         * which still trips the warning. Source in /public/theme-init.js.
-         */}
-        <script src="/theme-init.js" />
-      </head>
       <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950">
         <LocaleProvider locale={locale}>
           <DialogProvider>

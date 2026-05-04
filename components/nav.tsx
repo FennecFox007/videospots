@@ -6,10 +6,12 @@ import { ActivityFeed } from "./activity-feed";
 import { DarkModeToggle } from "./dark-mode-toggle";
 import { LocaleSwitcher } from "./locale-switcher";
 import { getT } from "@/lib/i18n/server";
+import { getTheme } from "@/lib/theme/server";
 
 export async function Nav() {
   const session = await auth();
   const t = await getT();
+  const theme = await getTheme();
 
   // Last 10 audit entries for the activity dropdown. Cheap to fetch on every
   // request; we render the layout per-request anyway.
@@ -67,7 +69,7 @@ export async function Nav() {
             </span>
             <ActivityFeed entries={recentActivity} />
             <LocaleSwitcher />
-            <DarkModeToggle />
+            <DarkModeToggle current={theme} />
             <span className="hidden md:inline text-zinc-500 px-2">
               {session.user.email}
             </span>

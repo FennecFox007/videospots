@@ -226,6 +226,9 @@ const cs = {
   "ctx.expand": "Rozbalit",
   "ctx.focus_country": "Sbalit ostatní (zaměřit na tuto)",
   "ctx.edit_for_channel": "Upravit jen tento řetězec…",
+  "ctx.share_for_approval": "Sdílet ke schválení (zkopíruje odkaz)",
+  "ctx.share_again": "Sdílet znovu (zkopíruje odkaz)",
+  "ctx.share_for_approval_copied": "Odkaz pro klienta zkopírován do schránky.",
 
   // Per-channel override dialog
   "override.title": "Upravit jen tento řetězec",
@@ -244,6 +247,12 @@ const cs = {
   "approval.waiting": "Čeká na schválení",
   "approval.approved_on": "Schváleno {date}",
   "approval.client_said": "Klient napsal",
+  "approval.manual": "Označit jako schváleno",
+  "approval.manual_tooltip":
+    "Použít, pokud klient schválil mimo systém (telefon, e-mail). Audit log zaznamená manuální schválení.",
+  "approval.clear": "Zrušit schválení",
+  "approval.clear_tooltip":
+    "Vrátit kampaň do stavu „čeká na schválení“. Použij jen pokud bylo schválení omylem.",
   "filter.approval.all": "Schválení",
   "filter.approval.pending": "Čeká na schválení",
   "filter.approval.approved": "Schváleno",
@@ -640,6 +649,9 @@ const en: Record<keyof typeof cs, string> = {
   "ctx.expand": "Expand",
   "ctx.focus_country": "Collapse others (focus this one)",
   "ctx.edit_for_channel": "Edit only this retailer…",
+  "ctx.share_for_approval": "Share for approval (copies link)",
+  "ctx.share_again": "Share again (copies link)",
+  "ctx.share_for_approval_copied": "Client link copied to clipboard.",
 
   // Per-channel override dialog
   "override.title": "Edit only this retailer",
@@ -658,6 +670,12 @@ const en: Record<keyof typeof cs, string> = {
   "approval.waiting": "Waiting for approval",
   "approval.approved_on": "Approved {date}",
   "approval.client_said": "Client said",
+  "approval.manual": "Mark as approved",
+  "approval.manual_tooltip":
+    "Use when the client approved outside the system (phone, email). The audit log records this as a manual approval.",
+  "approval.clear": "Clear approval",
+  "approval.clear_tooltip":
+    "Return the campaign to \"waiting for approval\". Use only if the approval was a mistake.",
   "filter.approval.all": "Approval",
   "filter.approval.pending": "Awaiting approval",
   "filter.approval.approved": "Approved",

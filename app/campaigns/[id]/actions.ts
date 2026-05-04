@@ -526,6 +526,77 @@ export async function setChannelOverride(
   revalidatePath("/campaigns");
 }
 
+// ---------------------------------------------------------------------------
+// Manual approval override
+//
+// Normally the client approves through the share view — that path goes
+// through /api/share/<token>/approve. But sometimes the client approves
+// verbally / over email, and the agency needs to mark it inside the system
+// so the timeline catches up. These two actions cover that.
+// ---------------------------------------------------------------------------
+
+export async function manuallyApproveCampaign(campaignId: number) {
+  const userId = await requireUser();
+
+  const [existing] = await db
+    .select({ approvedAt: campaigns.clientApprovedAt })
+    .from(campaigns)
+    .where(eq(campaigns.id, campaignId))
+    .limit(1);
+  if (existing?.approvedAt) {
+    // Idempotent — the client_approved_at timestamp is "permanent" by design
+    // (per partner). Don't overwrite a real client approval with a manual one.
+    return;
+  }
+
+  const now = new Date();
+  await db
+    .update(campaigns)
+    .set({
+      clientApprovedAt: now,
+      clientApprovedComment: null,
+      updatedAt: now,
+    })
+    .where(eq(campaigns.id, campaignId));
+
+  await db.insert(auditLog).values({
+    action: "approved",
+    entity: "campaign",
+    entityId: campaignId,
+    userId,
+    changes: { via: "manual" },
+  });
+
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath("/");
+  revalidatePath("/campaigns");
+}
+
+export async function clearCampaignApproval(campaignId: number) {
+  const userId = await requireUser();
+
+  await db
+    .update(campaigns)
+    .set({
+      clientApprovedAt: null,
+      clientApprovedComment: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(campaigns.id, campaignId));
+
+  await db.insert(auditLog).values({
+    action: "updated",
+    entity: "campaign",
+    entityId: campaignId,
+    userId,
+    changes: { approvalCleared: true },
+  });
+
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath("/");
+  revalidatePath("/campaigns");
+}
+
 /** Wipe all per-channel overrides on this row — bar reverts to master dates
  *  and the channel becomes active (if the master campaign is itself active). */
 export async function clearChannelOverride(
