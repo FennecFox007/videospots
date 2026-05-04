@@ -12,7 +12,7 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, eq, desc } from "drizzle-orm";
+import { asc, eq, desc } from "drizzle-orm";
 import {
   db,
   campaigns,
@@ -102,7 +102,7 @@ export default async function CampaignPeekPage({
     .orderBy(desc(comments.createdAt))
     .limit(3);
   const totalCommentRow = await db
-    .select({ c: campaignChannels.campaignId })
+    .select({ id: comments.id })
     .from(comments)
     .where(eq(comments.campaignId, campaignId));
   const totalComments = totalCommentRow.length;
