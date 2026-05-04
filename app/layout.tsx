@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
+import Script from "next/script";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { CommandPalette } from "@/components/command-palette";
@@ -54,19 +55,17 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
+      <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950">
         {/*
          * Apply theme class before hydration to avoid FOUC. Reads localStorage
-         * (user override) and falls back to OS prefers-color-scheme.
+         * (user override) and falls back to OS prefers-color-scheme. Uses
+         * next/script with strategy="beforeInteractive" — same effect as a
+         * raw <script> in <head>, but React 19 no longer warns about script
+         * tags inside the render tree.
          */}
-        <script
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,
-          }}
-        />
-      </head>
-      <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950">
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`}
+        </Script>
         <LocaleProvider locale={locale}>
           <DialogProvider>
             {!hideNav && <Nav />}
