@@ -46,6 +46,12 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
+      // Dark mode is applied by the inline script in <head> before React
+      // hydrates (so the page doesn't flash light → dark on first paint).
+      // That intentionally diverges <html class> from the server-rendered
+      // HTML, so suppress the hydration warning on this one element. React
+      // still validates the rest of the tree normally.
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
