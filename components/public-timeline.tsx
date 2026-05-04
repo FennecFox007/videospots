@@ -1,8 +1,12 @@
-// Read-only timeline used on /share/<token> for public viewers. Mirrors the
-// visual layout of the interactive Timeline but is a plain server component:
-// no drag, no menus, no client JS to ship to external visitors. Bars are
-// static `<div>`s — non-clickable since /campaigns/[id] is auth-gated.
+"use client";
 
+// Read-only timeline used on /share/<token> for public viewers. Mirrors the
+// visual layout of the interactive Timeline but with no drag, no menus, no
+// edits — viewers can only LOOK and click a bar to peek the video and basic
+// metadata. The peek modal is the whole reason this is a client component;
+// the rest of the layout is the same arithmetic the authed timeline does.
+
+import { useEffect, useMemo, useState } from "react";
 import {
   daysBetween,
   formatDate,
@@ -10,9 +14,13 @@ import {
   formatMonthName,
   pluralCs,
 } from "@/lib/utils";
-import { communicationTypeLabel } from "@/lib/communication";
+import {
+  communicationTypeClasses,
+  communicationTypeLabel,
+} from "@/lib/communication";
 import { localizedCountryName } from "@/lib/i18n/country";
 import type { Locale } from "@/lib/i18n/messages";
+import { VideoEmbed } from "@/components/video-embed";
 
 export type PublicChannel = {
   id: number;
@@ -38,6 +46,10 @@ export type PublicCampaign = {
   startsAt: Date;
   endsAt: Date;
   channelId: number;
+  /** Per-country video URL for the bar. Set by joining campaign_video on
+   *  channel.countryId in fetchTimelineCampaigns; null if this country
+   *  doesn't have its own language cut. */
+  videoUrl: string | null;
 };
 
 type Props = {
@@ -61,6 +73,13 @@ const ROW_PAD_BOTTOM = 4;
 const ONE_DAY_MS = 86_400_000;
 const COMPACT_DAY_THRESHOLD = 45;
 
+type SelectedBar = PublicCampaign & {
+  countryName: string;
+  countryFlag: string | null;
+  countryCode: string;
+  chainName: string;
+};
+
 export function PublicTimeline({
   groups,
   campaigns,
@@ -70,6 +89,33 @@ export function PublicTimeline({
   locale = "cs-CZ",
   uiLocale = "cs",
 }: Props) {
+  const [selected, setSelected] = useState<SelectedBar | null>(null);
+
+  // Lookup channelId → { country, chain } so bar clicks can resolve the
+  // bar's context for the modal title without us re-fetching anything.
+  const channelLookup = useMemo(() => {
+    const m = new Map<
+      number,
+      {
+        countryName: string;
+        countryFlag: string | null;
+        countryCode: string;
+        chainName: string;
+      }
+    >();
+    for (const g of groups) {
+      for (const ch of g.channels) {
+        m.set(ch.id, {
+          countryName: g.name,
+          countryFlag: g.flag,
+          countryCode: g.code,
+          chainName: ch.chainName,
+        });
+      }
+    }
+    return m;
+  }, [groups]);
+
   const totalMs = rangeEnd.getTime() - rangeStart.getTime();
   const totalDays = Math.round(totalMs / ONE_DAY_MS);
   const compact = totalDays <= COMPACT_DAY_THRESHOLD;
@@ -346,10 +392,12 @@ export function PublicTimeline({
                       const commLabel = b.communicationType
                         ? communicationTypeLabel(b.communicationType)
                         : "";
+                      const ctx = channelLookup.get(b.channelId);
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={`${b.campaignId}-${b.channelId}`}
-                          className="absolute text-white text-xs px-2 rounded flex items-center overflow-hidden z-[1]"
+                          className="absolute text-white text-xs px-2 rounded flex items-center overflow-hidden z-[1] cursor-pointer text-left transition-shadow hover:ring-2 hover:ring-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
                           style={{
                             left: `${left}%`,
                             width: `${width}%`,
@@ -366,6 +414,10 @@ export function PublicTimeline({
                             opacity: isCancelled ? 0.45 : 1,
                           }}
                           title={`${b.name}\n${formatDate(b.startsAt)} – ${formatDate(b.endsAt)} (${dur} ${pluralCs(dur, "den", "dny", "dní")})${commLabel ? `\n${commLabel}` : ""}`}
+                          onClick={() => {
+                            if (!ctx) return;
+                            setSelected({ ...b, ...ctx });
+                          }}
                         >
                           {elapsedRatio > 0 && !isCancelled && (
                             <span
@@ -386,7 +438,7 @@ export function PublicTimeline({
                           <span className="truncate font-medium">
                             {b.name}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -406,6 +458,158 @@ export function PublicTimeline({
             V tomto rozsahu nejsou žádné kampaně.
           </div>
         )}
+      </div>
+
+      {selected && (
+        <PublicCampaignModal
+          bar={selected}
+          uiLocale={uiLocale}
+          onClose={() => setSelected(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Read-only peek over a single (campaign × channel) bar — opened from a
+// click on the public timeline. Shows the spot for the bar's country (the
+// reason this exists at all — partner specifically asked for "klient si
+// pustí spot ze sdíleného náhledu") plus enough metadata to know which
+// retailer / country / dates we're looking at.
+function PublicCampaignModal({
+  bar,
+  uiLocale,
+  onClose,
+}: {
+  bar: SelectedBar;
+  uiLocale: Locale;
+  onClose: () => void;
+}) {
+  // ESC closes.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Lock body scroll while modal is open.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  const dur = daysBetween(bar.startsAt, bar.endsAt);
+  const isCancelled = bar.status === "cancelled";
+  const commLabel = bar.communicationType
+    ? communicationTypeLabel(bar.communicationType)
+    : "";
+  const commCls = bar.communicationType
+    ? communicationTypeClasses(bar.communicationType)
+    : "";
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="public-campaign-modal-title"
+        className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-lg shadow-2xl ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden"
+      >
+        <header className="flex items-start justify-between gap-4 px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className="inline-block w-3 h-3 rounded-full ring-1 ring-zinc-200 dark:ring-zinc-700 shrink-0"
+                style={{ background: isCancelled ? "#9ca3af" : bar.color }}
+                aria-hidden
+              />
+              <h2
+                id="public-campaign-modal-title"
+                className="text-lg font-semibold tracking-tight truncate"
+                style={{
+                  textDecoration: isCancelled ? "line-through" : undefined,
+                }}
+              >
+                {bar.name}
+              </h2>
+            </div>
+            <div className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 flex items-center gap-2 flex-wrap">
+              <span aria-hidden>{bar.countryFlag}</span>
+              <span>
+                {localizedCountryName(
+                  bar.countryCode,
+                  bar.countryName,
+                  uiLocale
+                )}
+              </span>
+              <span className="text-zinc-300 dark:text-zinc-600">·</span>
+              <span className="font-medium">{bar.chainName}</span>
+              {commLabel && (
+                <>
+                  <span className="text-zinc-300 dark:text-zinc-600">·</span>
+                  <span
+                    className={`text-[11px] uppercase tracking-wide font-medium px-1.5 py-0.5 rounded ${commCls}`}
+                  >
+                    {commLabel}
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="mt-1 text-xs text-zinc-500">
+              {formatDate(bar.startsAt)} – {formatDate(bar.endsAt)} · {dur}{" "}
+              {pluralCs(dur, "den", "dny", "dní")}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Zavřít"
+            className="shrink-0 -m-1 p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden
+            >
+              <path
+                d="M5 5l10 10M15 5L5 15"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </header>
+
+        <div className="overflow-y-auto px-5 py-4">
+          {bar.videoUrl ? (
+            <VideoEmbed url={bar.videoUrl} />
+          ) : (
+            <div className="rounded-md bg-zinc-50 dark:bg-zinc-950/40 px-4 py-6 text-center text-sm text-zinc-500">
+              {/* Czech only — partner test was in Czech and this string is
+                  rare enough to keep simple. Localise if EN-mode share gets
+                  used in practice. */}
+              Pro tento řetězec není zatím přiřazený spot.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
