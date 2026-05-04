@@ -248,6 +248,19 @@ export async function fetchTimelineCampaigns(
   // language version on each bar (CZ Alza bar gets the CZ video, SK bar
   // gets the SK video, etc.). LEFT JOIN because not every (campaign,
   // country) pair has a video set.
+  //
+  // startsAt / endsAt are EFFECTIVE dates: COALESCE of the per-channel
+  // override (campaign_channel.starts_at/ends_at) over the master campaign
+  // dates. The master pair is also returned separately so the bar can show
+  // "this is overridden, master is X" affordances. cancelledAtChannel is
+  // the per-channel cancellation timestamp; the bar reads as cancelled if
+  // either the campaign or the channel is cancelled.
+  //
+  // Range filter still uses MASTER dates (not effective). Edge case: a
+  // channel override that pushes a bar entirely outside the master range
+  // won't be discovered by this query. In practice partners want overrides
+  // to SHRINK the campaign in one channel, not extend it past the master,
+  // so this is an acceptable limitation for v1.
   return db
     .select({
       campaignId: campaigns.id,
@@ -257,8 +270,12 @@ export async function fetchTimelineCampaigns(
       communicationType: campaigns.communicationType,
       videoUrl: campaignVideos.videoUrl,
       coverUrl: products.coverUrl,
-      startsAt: campaigns.startsAt,
-      endsAt: campaigns.endsAt,
+      startsAt: sql<Date>`COALESCE(${campaignChannels.startsAt}, ${campaigns.startsAt})`,
+      endsAt: sql<Date>`COALESCE(${campaignChannels.endsAt}, ${campaigns.endsAt})`,
+      masterStartsAt: campaigns.startsAt,
+      masterEndsAt: campaigns.endsAt,
+      channelCancelledAt: campaignChannels.cancelledAt,
+      hasChannelOverride: sql<boolean>`(${campaignChannels.startsAt} IS NOT NULL OR ${campaignChannels.endsAt} IS NOT NULL OR ${campaignChannels.cancelledAt} IS NOT NULL)`,
       channelId: campaignChannels.channelId,
     })
     .from(campaigns)

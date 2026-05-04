@@ -225,6 +225,20 @@ const cs = {
   "ctx.collapse": "Sbalit",
   "ctx.expand": "Rozbalit",
   "ctx.focus_country": "Sbalit ostatní (zaměřit na tuto)",
+  "ctx.edit_for_channel": "Upravit jen tento řetězec…",
+
+  // Per-channel override dialog
+  "override.title": "Upravit jen tento řetězec",
+  "override.scope_note":
+    "Tato změna se týká POUZE tohoto řetězce. Ostatní řetězce v kampani zůstanou beze změny.",
+  "override.cancel_in_channel": "Vypnout kampaň v tomto řetězci",
+  "override.master_dates": "Termín kampaně jako celku",
+  "override.clear": "Smazat přepsání",
+  "override.saved": "Uloženo.",
+  "override.cleared": "Přepsání zrušeno.",
+  "override.error_end_before_start": "Konec nemůže být před začátkem.",
+  "override.indicator_title":
+    "Tento řetězec má vlastní termín odlišný od kampaně.",
 
   // Campaign form body (new + edit)
   "form.section.basic": "Základní údaje",
@@ -617,6 +631,20 @@ const en: Record<keyof typeof cs, string> = {
   "ctx.collapse": "Collapse",
   "ctx.expand": "Expand",
   "ctx.focus_country": "Collapse others (focus this one)",
+  "ctx.edit_for_channel": "Edit only this retailer…",
+
+  // Per-channel override dialog
+  "override.title": "Edit only this retailer",
+  "override.scope_note":
+    "This change applies ONLY to this retailer. Other retailers in the campaign stay unchanged.",
+  "override.cancel_in_channel": "Turn campaign off in this retailer",
+  "override.master_dates": "Campaign-wide dates",
+  "override.clear": "Clear override",
+  "override.saved": "Saved.",
+  "override.cleared": "Override cleared.",
+  "override.error_end_before_start": "End cannot be before start.",
+  "override.indicator_title":
+    "This retailer has its own schedule, different from the campaign.",
 
   // Campaign form body
   "form.section.basic": "Basics",

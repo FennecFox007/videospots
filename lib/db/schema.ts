@@ -176,6 +176,20 @@ export const campaigns = pgTable("campaign", {
 });
 
 // Junction: which channels does this campaign run on?
+// Junction: which channels does this campaign run on?
+//
+// Per-channel overrides:
+//  - startsAt / endsAt — when this ONE channel needs a different schedule
+//    than the rest of the campaign (e.g. Datart sells the product out a week
+//    early — we end the spot in CZ-Datart on day 7, leave Alza, MediaMarkt
+//    etc. running to day 14). NULL = inherit from campaigns.startsAt/endsAt.
+//  - cancelledAt — turn this ONE channel off without cancelling the whole
+//    campaign. Distinct from campaigns.status='cancelled' which cancels
+//    everywhere. NULL = active in this channel.
+//
+// All three default to NULL on insert; the partner explicitly described this
+// as an "exception" feature, not a per-channel-everywhere rewrite, so the
+// common case stays "all channels follow the campaign".
 export const campaignChannels = pgTable(
   "campaign_channel",
   {
@@ -185,6 +199,9 @@ export const campaignChannels = pgTable(
     channelId: integer("channel_id")
       .notNull()
       .references(() => channels.id, { onDelete: "cascade" }),
+    startsAt: timestamp("starts_at", { mode: "date" }),
+    endsAt: timestamp("ends_at", { mode: "date" }),
+    cancelledAt: timestamp("cancelled_at", { mode: "date" }),
   },
   (t) => [primaryKey({ columns: [t.campaignId, t.channelId] })]
 );

@@ -43,6 +43,8 @@ export type PublicCampaign = {
   status: string;
   communicationType: string | null;
   coverUrl: string | null;
+  /** EFFECTIVE start/end — already coalesced from per-channel override over
+   *  master campaign dates in fetchTimelineCampaigns. */
   startsAt: Date;
   endsAt: Date;
   channelId: number;
@@ -50,6 +52,13 @@ export type PublicCampaign = {
    *  channel.countryId in fetchTimelineCampaigns; null if this country
    *  doesn't have its own language cut. */
   videoUrl: string | null;
+  /** Set when this ONE channel is cancelled (independent of campaign-level
+   *  status). The bar reads as cancelled if either is true. */
+  channelCancelledAt: Date | null;
+  /** True when the bar's dates / cancellation diverge from the master
+   *  campaign. Drives the italic + ✱ marker on the bar's name so the
+   *  reader knows this retailer's schedule is different. */
+  hasChannelOverride: boolean;
 };
 
 type Props = {
@@ -369,7 +378,9 @@ export function PublicTimeline({
                       const laneIdx = info.lanes.get(b.campaignId) ?? 0;
                       const top =
                         ROW_PAD_TOP + laneIdx * (BAR_HEIGHT + LANE_GAP);
-                      const isCancelled = b.status === "cancelled";
+                      const isCancelled =
+                        b.status === "cancelled" ||
+                        b.channelCancelledAt !== null;
                       const isRunning =
                         !isCancelled &&
                         now.getTime() >= b.startsAt.getTime() &&
@@ -448,7 +459,14 @@ export function PublicTimeline({
                               loading="lazy"
                             />
                           )}
-                          <span className="truncate font-medium pointer-events-none">
+                          <span
+                            className={`truncate font-medium pointer-events-none${b.hasChannelOverride ? " italic" : ""}`}
+                          >
+                            {b.hasChannelOverride && (
+                              <span aria-hidden className="mr-0.5 opacity-90">
+                                ✱
+                              </span>
+                            )}
                             {b.name}
                           </span>
                           {b.videoUrl && !isCancelled && (

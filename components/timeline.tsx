@@ -32,6 +32,7 @@ import {
 import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { openCampaignPeek } from "@/lib/peek-store";
+import { ChannelOverrideDialog } from "@/components/channel-override-dialog";
 
 export type TimelineChannel = {
   id: number;
@@ -62,8 +63,24 @@ export type TimelineCampaign = {
   videoUrl: string | null;
   /** Product cover image URL (joined from product table). Optional thumbnail. */
   coverUrl: string | null;
+  /** EFFECTIVE start/end — already coalesced from per-channel override over
+   *  master campaign dates in fetchTimelineCampaigns. The bar should render
+   *  these as-is. */
   startsAt: Date;
   endsAt: Date;
+  /** Master campaign start/end. Same for every bar of the same campaign,
+   *  regardless of per-channel overrides. The override dialog needs them
+   *  to show "campaign-wide dates" for reference. */
+  masterStartsAt: Date;
+  masterEndsAt: Date;
+  /** Set when this ONE channel is cancelled (independent of campaign-level
+   *  status). Bar reads as cancelled if EITHER status='cancelled' OR this
+   *  is set. */
+  channelCancelledAt: Date | null;
+  /** True when at least one of (startsAt / endsAt / cancelledAt) on the
+   *  campaign_channel row is non-null. Drives the small visual indicator
+   *  on the bar. */
+  hasChannelOverride: boolean;
   channelId: number;
 };
 
@@ -177,6 +194,16 @@ export function Timeline({
   const [hoverTooltip, setHoverTooltip] = useState<{
     bar: TimelineCampaign;
     rect: DOMRect;
+  } | null>(null);
+
+  // Per-channel override dialog target. Null = closed; an object opens the
+  // dialog scoped to that (campaign × channel) pair. We carry the channel +
+  // country alongside the bar so the dialog title can show "for <chain>
+  // (<country>)" without an extra lookup.
+  const [overrideTarget, setOverrideTarget] = useState<{
+    bar: TimelineCampaign;
+    channel: TimelineChannel;
+    country: TimelineCountryGroup;
   } | null>(null);
 
 
@@ -433,7 +460,11 @@ export function Timeline({
     ];
   }
 
-  function buildBarMenu(bar: TimelineCampaign): ContextMenuItem[] {
+  function buildBarMenu(
+    bar: TimelineCampaign,
+    channel: TimelineChannel,
+    country: TimelineCountryGroup
+  ): ContextMenuItem[] {
     const isCancelled = bar.status === "cancelled";
     return [
       {
@@ -445,6 +476,12 @@ export function Timeline({
         kind: "link",
         label: t("ctx.edit"),
         href: `/campaigns/${bar.campaignId}/edit`,
+      },
+      {
+        kind: "action",
+        label: t("ctx.edit_for_channel"),
+        onClick: () =>
+          setOverrideTarget({ bar, channel, country }),
       },
       { kind: "separator" },
       {
@@ -995,7 +1032,7 @@ export function Timeline({
                             setMenu({
                               x: e.clientX,
                               y: e.clientY,
-                              items: buildBarMenu(b),
+                              items: buildBarMenu(b, ch, g),
                             });
                           }}
                           onHoverShow={(bar, rect) =>
@@ -1073,6 +1110,30 @@ export function Timeline({
         </div>
       )}
     </div>
+
+    {/* Per-channel override dialog. Only mounted when a target is set; closing
+        unmounts it so the dialog state resets cleanly between bars. */}
+    {overrideTarget && (
+      <ChannelOverrideDialog
+        open
+        campaignId={overrideTarget.bar.campaignId}
+        channelId={overrideTarget.bar.channelId}
+        chainName={overrideTarget.channel.chainName}
+        countryName={localizedCountryName(
+          overrideTarget.country.code,
+          overrideTarget.country.name,
+          t.locale
+        )}
+        countryFlag={overrideTarget.country.flag}
+        effectiveStartsAt={overrideTarget.bar.startsAt}
+        effectiveEndsAt={overrideTarget.bar.endsAt}
+        masterStartsAt={overrideTarget.bar.masterStartsAt}
+        masterEndsAt={overrideTarget.bar.masterEndsAt}
+        cancelled={overrideTarget.bar.channelCancelledAt !== null}
+        hasOverride={overrideTarget.bar.hasChannelOverride}
+        onClose={() => setOverrideTarget(null)}
+      />
+    )}
     </div>
   );
 }
@@ -1272,6 +1333,14 @@ function DraggableBar({
     // onContextMenu, middle-click etc. is ignored.
     if (e.button !== 0) return;
     if (isPending) return;
+    // Bars with a per-channel override are not draggable: drag updates
+    // campaign master dates (moving every retailer together), which would
+    // silently move every other channel and leave the override stranded.
+    // Skip the drag setup entirely; the bar's onClick still fires on
+    // pointerup and opens the peek panel — same as a click on a regular
+    // bar. To re-enable drag, the user clears the override via
+    // "Smazat přepsání" in the override dialog.
+    if (bar.hasChannelOverride) return;
     e.preventDefault();
     const target = e.currentTarget;
     target.setPointerCapture(e.pointerId);
@@ -1394,8 +1463,9 @@ function DraggableBar({
     setDrag(null);
   }
 
-  const cursor =
-    drag?.mode === "resize-left" || drag?.mode === "resize-right"
+  const cursor = bar.hasChannelOverride
+    ? "pointer"
+    : drag?.mode === "resize-left" || drag?.mode === "resize-right"
       ? "ew-resize"
       : drag?.mode === "move"
         ? "grabbing"
@@ -1418,8 +1488,13 @@ function DraggableBar({
       : 0;
 
   // Visual treatment per status: cancelled = grayed and struck-through.
-  // Active (the only other state in current data) = solid bar.
-  const isCancelled = bar.status === "cancelled";
+  // "cancelled" here is the union of campaign-level cancel and per-channel
+  // cancel — both render the same way (a struck-through gray bar). The
+  // distinction matters for the menu (cancel/reactivate apply to the campaign
+  // as a whole, not per-channel; the dialog handles per-channel cancellation
+  // separately) but not for visual styling.
+  const isCancelled =
+    bar.status === "cancelled" || bar.channelCancelledAt !== null;
   const baseOpacity = isCancelled ? 0.45 : 1;
   const dragOpacity = drag || isPending ? baseOpacity * 0.85 : baseOpacity;
   const background = isCancelled ? "#9ca3af" : bar.color;
@@ -1441,6 +1516,17 @@ function DraggableBar({
       onContextMenu={onContextMenu}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      // Override bars skip the drag pipeline (see onPointerDown), so they
+      // don't reach the click-detection branch in onPointerUp. Use the
+      // browser's onClick instead — same outcome (open peek), without
+      // accidentally enabling drag for these locked bars.
+      onClick={(e) => {
+        if (!bar.hasChannelOverride) return;
+        // Don't let it bubble through the play-button anchor's container
+        // and open the peek twice.
+        if (e.defaultPrevented) return;
+        openCampaignPeek(bar.campaignId);
+      }}
       className={`absolute text-white ${density.barFont} ${density.barPx} rounded flex items-center overflow-hidden select-none transition-shadow z-[1]`}
       style={{
         left: `calc(${displayLeftPct}% + ${leftPxAdjust}px)`,
@@ -1491,7 +1577,22 @@ function DraggableBar({
           loading="lazy"
         />
       )}
-      <span className="truncate pointer-events-none px-0.5 font-medium">
+      <span
+        className={`truncate pointer-events-none px-0.5 font-medium${bar.hasChannelOverride ? " italic" : ""}`}
+        // Title duplicates the indicator hint for hover tooltip — the
+        // outer bar's title already shows the dates, so we only add this
+        // when there's an override to flag.
+        title={
+          bar.hasChannelOverride
+            ? t("override.indicator_title")
+            : undefined
+        }
+      >
+        {bar.hasChannelOverride && (
+          <span aria-hidden className="mr-0.5 opacity-90">
+            ✱
+          </span>
+        )}
         {bar.name}
       </span>
       {bar.videoUrl && !isCancelled && (

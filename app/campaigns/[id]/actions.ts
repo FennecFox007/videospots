@@ -454,3 +454,105 @@ export async function cloneCampaign(campaignId: number) {
   revalidatePath("/");
   redirect(`/campaigns/${clone.id}/edit`);
 }
+
+// ---------------------------------------------------------------------------
+// Per-channel overrides
+//
+// "Datart sells out on day 7, leave the rest of the campaign running" — the
+// dates / cancellation on a single (campaign × channel) row that supersede
+// the master campaign for that channel only. NULL = inherit master.
+// ---------------------------------------------------------------------------
+
+type ChannelOverride = {
+  /** ISO yyyy-mm-dd or null (= inherit master). */
+  startsAt: string | null;
+  /** ISO yyyy-mm-dd or null (= inherit master). */
+  endsAt: string | null;
+  /** When true, this channel is cancelled (timestamped now). When false,
+   *  cancellation is cleared. */
+  cancelled: boolean;
+};
+
+function parseDateOrNull(s: string | null): Date | null {
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
+export async function setChannelOverride(
+  campaignId: number,
+  channelId: number,
+  override: ChannelOverride
+) {
+  const userId = await requireUser();
+
+  const startsAt = parseDateOrNull(override.startsAt);
+  const endsAt = parseDateOrNull(override.endsAt);
+  if (startsAt && endsAt && endsAt < startsAt) {
+    throw new Error("Konec nemůže být před začátkem.");
+  }
+
+  await db
+    .update(campaignChannels)
+    .set({
+      startsAt,
+      endsAt,
+      cancelledAt: override.cancelled ? new Date() : null,
+    })
+    .where(
+      and(
+        eq(campaignChannels.campaignId, campaignId),
+        eq(campaignChannels.channelId, channelId)
+      )
+    );
+
+  await db.insert(auditLog).values({
+    action: "updated",
+    entity: "campaign",
+    entityId: campaignId,
+    userId,
+    changes: {
+      channelOverride: {
+        channelId,
+        startsAt: override.startsAt,
+        endsAt: override.endsAt,
+        cancelled: override.cancelled,
+      },
+    },
+  });
+
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath("/");
+  revalidatePath("/campaigns");
+}
+
+/** Wipe all per-channel overrides on this row — bar reverts to master dates
+ *  and the channel becomes active (if the master campaign is itself active). */
+export async function clearChannelOverride(
+  campaignId: number,
+  channelId: number
+) {
+  const userId = await requireUser();
+
+  await db
+    .update(campaignChannels)
+    .set({ startsAt: null, endsAt: null, cancelledAt: null })
+    .where(
+      and(
+        eq(campaignChannels.campaignId, campaignId),
+        eq(campaignChannels.channelId, channelId)
+      )
+    );
+
+  await db.insert(auditLog).values({
+    action: "updated",
+    entity: "campaign",
+    entityId: campaignId,
+    userId,
+    changes: { channelOverrideCleared: { channelId } },
+  });
+
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath("/");
+  revalidatePath("/campaigns");
+}
