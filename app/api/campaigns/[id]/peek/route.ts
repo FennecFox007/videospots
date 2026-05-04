@@ -34,6 +34,12 @@ export type CampaignPeekData = {
     endsAt: string;
     tags: string[] | null;
     notes: string | null;
+    /** ISO timestamp when the campaign was approved, or null if waiting. */
+    clientApprovedAt: string | null;
+    clientApprovedComment: string | null;
+    /** Display name (or email) of who approved. Null when no approval, or
+     *  when the original approver got removed from the user table. */
+    approvedByName: string | null;
   };
   product: {
     name: string;
@@ -79,9 +85,18 @@ export async function GET(
   }
 
   const [row] = await db
-    .select({ campaign: campaigns, product: products })
+    .select({
+      campaign: campaigns,
+      product: products,
+      // Join the user table to surface the approver's display name. Left
+      // join because campaigns can be unapproved (and the FK is set-null
+      // if a user gets deleted).
+      approvedByName: users.name,
+      approvedByEmail: users.email,
+    })
     .from(campaigns)
     .leftJoin(products, eq(campaigns.productId, products.id))
+    .leftJoin(users, eq(campaigns.approvedById, users.id))
     .where(eq(campaigns.id, campaignId))
     .limit(1);
   if (!row) {
@@ -143,6 +158,9 @@ export async function GET(
       endsAt: c.endsAt.toISOString(),
       tags: c.tags,
       notes: c.notes,
+      clientApprovedAt: c.clientApprovedAt?.toISOString() ?? null,
+      clientApprovedComment: c.clientApprovedComment,
+      approvedByName: row.approvedByName ?? row.approvedByEmail ?? null,
     },
     product: product
       ? {

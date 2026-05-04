@@ -36,7 +36,6 @@ import {
   PublicTimeline,
   type PublicCountryGroup,
 } from "@/components/public-timeline";
-import { PublicApproveCard } from "@/components/public-approve-card";
 import {
   findCampaignIds,
   fetchTimelineCampaigns,
@@ -79,13 +78,7 @@ export default async function PublicSharePage({
   const payload = link.payload as SharePayload;
 
   if (payload.type === "campaign") {
-    return (
-      <CampaignSharePage
-        campaignId={payload.campaignId}
-        link={link}
-        token={token}
-      />
-    );
+    return <CampaignSharePage campaignId={payload.campaignId} link={link} />;
   }
   if (payload.type === "timeline") {
     return (
@@ -93,7 +86,6 @@ export default async function PublicSharePage({
         filters={payload.filters ?? {}}
         link={link}
         now={now}
-        token={token}
       />
     );
   }
@@ -108,11 +100,9 @@ export default async function PublicSharePage({
 async function CampaignSharePage({
   campaignId,
   link,
-  token,
 }: {
   campaignId: number;
   link: { expiresAt: Date | null };
-  token: string;
 }) {
   const t = await getT();
   const [row] = await db
@@ -188,15 +178,30 @@ async function CampaignSharePage({
           )}
         </div>
 
-        {/* Approval card. Pinned high on the page so the client doesn't have
-            to scroll past channel details to find the action — partner
-            specifically said clients won't actively use the system, so the
-            "click to approve" affordance has to be impossible to miss. */}
-        <PublicApproveCard
-          token={token}
-          campaignId={c.id}
-          initialApprovedAt={c.clientApprovedAt}
-        />
+        {/* Approval status badge — informational only. Approval is an
+            internal, auth-gated action; share-view recipients can see the
+            status but can't change it. (Authenticated users approve via
+            the bar context menu, peek panel, or detail page.) */}
+        {c.clientApprovedAt && (
+          <div className="inline-flex items-center gap-2 text-sm rounded-md bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-200 dark:ring-emerald-900 px-3 py-2 text-emerald-800 dark:text-emerald-300">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M3 8.5 L7 12 L13 5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Schváleno {formatDate(c.clientApprovedAt)}</span>
+          </div>
+        )}
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card label={t("common.start")}>{formatDate(c.startsAt)}</Card>
@@ -298,12 +303,10 @@ async function TimelineSharePage({
   filters,
   link,
   now,
-  token,
 }: {
   filters: Record<string, string>;
   link: { expiresAt: Date | null };
   now: Date;
-  token: string;
 }) {
   const t = await getT();
   const fromParam = parseDateParam(filters.from);
@@ -406,7 +409,6 @@ async function TimelineSharePage({
           now={now}
           locale={t.locale === "en" ? "en-US" : "cs-CZ"}
           uiLocale={t.locale}
-          token={token}
         />
 
         <PublicFooter expiresAt={link.expiresAt} t={t} />

@@ -21,7 +21,6 @@ import {
 import { localizedCountryName } from "@/lib/i18n/country";
 import type { Locale } from "@/lib/i18n/messages";
 import { VideoEmbed } from "@/components/video-embed";
-import { PublicApproveCard } from "@/components/public-approve-card";
 
 export type PublicChannel = {
   id: number;
@@ -76,10 +75,6 @@ type Props = {
   locale?: string;
   /** UI locale ("cs" | "en"). Used for country-name lookup. */
   uiLocale?: Locale;
-  /** Share token from /share/<token>/ — passed down so the bar peek modal
-   *  can post to /api/share/<token>/approve when the client approves a
-   *  campaign from inside the timeline view. */
-  token: string;
 };
 
 const BAR_HEIGHT = 28;
@@ -105,7 +100,6 @@ export function PublicTimeline({
   now,
   locale = "cs-CZ",
   uiLocale = "cs",
-  token,
 }: Props) {
   const [selected, setSelected] = useState<SelectedBar | null>(null);
 
@@ -534,7 +528,6 @@ export function PublicTimeline({
         <PublicCampaignModal
           bar={selected}
           uiLocale={uiLocale}
-          token={token}
           onClose={() => setSelected(null)}
         />
       )}
@@ -550,12 +543,10 @@ export function PublicTimeline({
 function PublicCampaignModal({
   bar,
   uiLocale,
-  token,
   onClose,
 }: {
   bar: SelectedBar;
   uiLocale: Locale;
-  token: string;
   onClose: () => void;
 }) {
   // ESC closes.
@@ -683,19 +674,37 @@ function PublicCampaignModal({
             </div>
           )}
 
-          {/* Approval is per-CAMPAIGN, not per-bar — but the modal opens
-              from a specific bar, so we pass campaignId. The card is the
-              same component used on the single-campaign share view, just
-              compact. Note: clicking through different bars of the same
-              campaign here will all reflect / write the same approval
-              state, which is correct: approving "Saros" applies whether
-              you opened it via the CZ-Alza bar or the SK-PGS bar. */}
-          <PublicApproveCard
-            token={token}
-            campaignId={bar.campaignId}
-            initialApprovedAt={bar.clientApprovedAt}
-            compact
-          />
+          {/* Approval status — info-only in share view. The bar carries
+              clientApprovedAt as part of its data; if it's set we show a
+              green badge, otherwise nothing (the share viewer can't
+              approve, that's an authenticated action). */}
+          {bar.clientApprovedAt && (
+            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M3 8.5 L7 12 L13 5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span>
+                Schváleno{" "}
+                {new Intl.DateTimeFormat("cs-CZ", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                }).format(bar.clientApprovedAt)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

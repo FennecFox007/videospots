@@ -6,12 +6,11 @@ import { ActivityFeed } from "./activity-feed";
 import { DarkModeToggle } from "./dark-mode-toggle";
 import { LocaleSwitcher } from "./locale-switcher";
 import { getT } from "@/lib/i18n/server";
-import { getTheme } from "@/lib/theme/server";
+import type { Theme } from "@/lib/theme/server";
 
-export async function Nav() {
+export async function Nav({ theme }: { theme: Theme }) {
   const session = await auth();
   const t = await getT();
-  const theme = await getTheme();
 
   // Last 10 audit entries for the activity dropdown. Cheap to fetch on every
   // request; we render the layout per-request anyway.

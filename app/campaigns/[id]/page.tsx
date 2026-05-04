@@ -29,7 +29,7 @@ import {
   reactivateCampaign,
   addComment,
   deleteComment,
-  manuallyApproveCampaign,
+  approveCampaign,
   clearCampaignApproval,
 } from "./actions";
 import { StatusBadge } from "@/components/status-badge";
@@ -54,9 +54,12 @@ export default async function CampaignDetailPage({
     .select({
       campaign: campaigns,
       product: products,
+      approvedByName: users.name,
+      approvedByEmail: users.email,
     })
     .from(campaigns)
     .leftJoin(products, eq(campaigns.productId, products.id))
+    .leftJoin(users, eq(campaigns.approvedById, users.id))
     .where(eq(campaigns.id, campaignId))
     .limit(1);
 
@@ -157,13 +160,10 @@ export default async function CampaignDetailPage({
             />
             <StatusBadge status={c.status} runState={runState} />
             <CommunicationBadge type={c.communicationType} />
-            {/* Approval state — green pill if approved, amber "waiting"
-                otherwise. The normal path is: agency generates a share
-                link, sends to client, client clicks "Schvaluji" inside
-                /share/<token>. The buttons next to the pill are a
-                FALLBACK for cases where the client approves verbally /
-                over email and the agency needs to mirror that into the
-                system. The audit log records who approved manually. */}
+            {/* Approval is auth-gated — anyone signed in can approve or
+                un-approve via these buttons. The same action is exposed
+                in the bar context menu and peek footer; these two are
+                the canonical home. */}
             {c.clientApprovedAt ? (
               <>
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-200 dark:ring-emerald-900 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-300">
@@ -195,9 +195,8 @@ export default async function CampaignDetailPage({
                   <button
                     type="submit"
                     className="text-[11px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:underline"
-                    title={t("approval.clear_tooltip")}
                   >
-                    {t("approval.clear")}
+                    {t("approval.unapprove")}
                   </button>
                 </form>
               </>
@@ -209,23 +208,33 @@ export default async function CampaignDetailPage({
                 <form
                   action={async () => {
                     "use server";
-                    await manuallyApproveCampaign(campaignId);
+                    await approveCampaign(campaignId);
                   }}
                 >
                   <button
                     type="submit"
-                    className="text-[11px] text-emerald-700 dark:text-emerald-400 hover:underline"
-                    title={t("approval.manual_tooltip")}
+                    className="text-xs px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
                   >
-                    {t("approval.manual")}
+                    {t("approval.approve")}
                   </button>
                 </form>
               </>
             )}
           </div>
-          {c.clientApprovedAt && c.clientApprovedComment && (
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-2 italic max-w-xl">
-              {t("approval.client_said")}: &ldquo;{c.clientApprovedComment}&rdquo;
+          {c.clientApprovedAt && (
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-2 max-w-xl">
+              {t("approval.approved_by", {
+                who:
+                  row.approvedByName ?? row.approvedByEmail ?? t("detail.deleted_user"),
+              })}
+              {c.clientApprovedComment && (
+                <>
+                  {" — "}
+                  <span className="italic">
+                    &ldquo;{c.clientApprovedComment}&rdquo;
+                  </span>
+                </>
+              )}
             </p>
           )}
           {c.client && (

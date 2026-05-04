@@ -57,7 +57,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950">
         <LocaleProvider locale={locale}>
           <DialogProvider>
-            {!hideNav && <Nav />}
+            {!hideNav && <Nav theme={theme} />}
             <main className="flex-1">{children}</main>
             {!hideNav && <CommandPalette />}
             {modal}

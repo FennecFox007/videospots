@@ -168,15 +168,27 @@ export const campaigns = pgTable("campaign", {
   // Soft-delete timestamp. Non-null = "archived" (hidden from default lists,
   // restorable from /admin/archive). Null = active.
   archivedAt: timestamp("archived_at", { mode: "date" }),
-  // Client approval — set when the client clicks "Schvaluji" in a public
-  // /share/<token> view. NULL = waiting for approval (timeline shows the
-  // bar with diagonal stripes); non-null = approved (date stamped, never
-  // re-cleared by subsequent edits — partner explicitly chose "permanent
-  // approval" over "edit invalidates approval" for v1).
+  // Approval — set when an authenticated user clicks "Schvaluji" on the
+  // campaign (from the timeline bar's right-click menu, the peek panel, or
+  // the detail page). Share view is read-only; third-party recipients can
+  // see the badge but can't write. NULL = waiting; non-null = approved.
+  // Permanent: subsequent edits don't invalidate approval (per partner).
+  //
+  // Column names kept as `client_approved_*` for DB-migration ergonomics
+  // (renaming a populated column means a multi-step DDL dance). The
+  // `client` prefix is historical — the JS-level field has the same name
+  // for now, and we just understand "client_" here as "campaign-level".
   clientApprovedAt: timestamp("client_approved_at", { mode: "date" }),
-  // Optional comment the client typed alongside their approval. Free-form
-  // text. Surfaced on the detail page so the agency sees what was said.
+  // Optional approval note. Free-form text the approver can leave alongside
+  // the click — handy for "schválil jsem, ale prosím přemístit z 5.5. na
+  // 8.5." type sticky notes.
   clientApprovedComment: text("client_approved_comment"),
+  // Who approved. Null when no one has approved yet, OR when the user got
+  // deleted later (onDelete: set null preserves the audit ordering even
+  // if a teammate leaves the org).
+  approvedById: text("approved_by_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
   createdById: text("created_by").references(() => users.id, {
     onDelete: "set null",
   }),

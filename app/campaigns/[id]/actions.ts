@@ -527,15 +527,22 @@ export async function setChannelOverride(
 }
 
 // ---------------------------------------------------------------------------
-// Manual approval override
+// Approval (auth-gated)
 //
-// Normally the client approves through the share view — that path goes
-// through /api/share/<token>/approve. But sometimes the client approves
-// verbally / over email, and the agency needs to mark it inside the system
-// so the timeline catches up. These two actions cover that.
+// Clicking "Schvaluji" anywhere — bar context menu, peek panel footer, or
+// detail page header — calls approveCampaign. Share-view recipients can
+// see the approved badge but can't approve themselves; that's why this
+// action requires a logged-in user.
+//
+// Idempotent on second call: if already approved, we silently return so
+// double-clicks don't bump the timestamp forward and overwrite the
+// approver. clearCampaignApproval is the explicit way to undo.
 // ---------------------------------------------------------------------------
 
-export async function manuallyApproveCampaign(campaignId: number) {
+export async function approveCampaign(
+  campaignId: number,
+  note: string | null = null
+) {
   const userId = await requireUser();
 
   const [existing] = await db
@@ -543,18 +550,16 @@ export async function manuallyApproveCampaign(campaignId: number) {
     .from(campaigns)
     .where(eq(campaigns.id, campaignId))
     .limit(1);
-  if (existing?.approvedAt) {
-    // Idempotent — the client_approved_at timestamp is "permanent" by design
-    // (per partner). Don't overwrite a real client approval with a manual one.
-    return;
-  }
+  if (existing?.approvedAt) return;
 
+  const trimmedNote = note?.trim() || null;
   const now = new Date();
   await db
     .update(campaigns)
     .set({
       clientApprovedAt: now,
-      clientApprovedComment: null,
+      clientApprovedComment: trimmedNote,
+      approvedById: userId,
       updatedAt: now,
     })
     .where(eq(campaigns.id, campaignId));
@@ -564,7 +569,7 @@ export async function manuallyApproveCampaign(campaignId: number) {
     entity: "campaign",
     entityId: campaignId,
     userId,
-    changes: { via: "manual" },
+    changes: { note: trimmedNote },
   });
 
   revalidatePath(`/campaigns/${campaignId}`);
@@ -580,6 +585,7 @@ export async function clearCampaignApproval(campaignId: number) {
     .set({
       clientApprovedAt: null,
       clientApprovedComment: null,
+      approvedById: null,
       updatedAt: new Date(),
     })
     .where(eq(campaigns.id, campaignId));

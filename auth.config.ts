@@ -19,7 +19,6 @@ export const authConfig: NextAuthConfig = {
         path.startsWith("/sign-in") ||
         path.startsWith("/api/auth") ||
         path.startsWith("/share/") || // public read-only client links
-        path.startsWith("/api/share/") || // public approval / similar endpoints
         path === "/favicon.ico";
       if (isPublic) return true;
       // /print/* still requires auth — printables are internal handoff aids,

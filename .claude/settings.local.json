@@ -27,7 +27,13 @@
       "Bash(git -c user.name=FennecFox007 -c user.email=FennecFox007@users.noreply.github.com commit -m ' *)",
       "Bash(git branch *)",
       "Bash(git remote *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "PowerShell($env:Path = \"C:\\\\Program Files\\\\nodejs;\" + $env:Path; node --version)",
+      "Bash(git commit -m ' *)",
+      "Bash(git reset *)",
+      "PowerShell(Get-Command node | Select-Object -Property Source; Get-ChildItem -Path 'C:\\\\Program Files\\\\nodejs', 'C:\\\\Program Files \\(x86\\)\\\\nodejs' -Filter 'node.exe' -ErrorAction SilentlyContinue | Select-Object FullName; if \\(Test-Path \"$env:LOCALAPPDATA\\\\nvs\"\\) { Get-ChildItem \"$env:LOCALAPPDATA\\\\nvs\" -Recurse -Filter node.exe -ErrorAction SilentlyContinue | Select-Object FullName }; if \\(Test-Path \"$env:APPDATA\\\\nvm\"\\) { Get-ChildItem \"$env:APPDATA\\\\nvm\" -Recurse -Filter node.exe -ErrorAction SilentlyContinue | Select-Object FullName })",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, StartTime, @{n='Cmd';e={\\(Get-CimInstance Win32_Process -Filter \"ProcessId=$\\($_.Id\\)\" -ErrorAction SilentlyContinue\\).CommandLine}} | Format-Table -AutoSize -Wrap)",
+      "PowerShell($env:Path = 'C:\\\\Program Files\\\\nodejs;' + $env:Path; Start-Process -FilePath 'C:\\\\Program Files\\\\nodejs\\\\npm.cmd' -ArgumentList 'run','dev' -WorkingDirectory 'C:\\\\Users\\\\johnc\\\\videospots' -WindowStyle Normal; Start-Sleep -Seconds 8; try { $r = Invoke-WebRequest -Uri 'http://localhost:3000/' -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop; \"OK status: $\\($r.StatusCode\\)\" } catch { if \\($_.Exception.Response\\) { \"Status: $\\($_.Exception.Response.StatusCode\\)\" } else { \"Failed: $\\($_.Exception.Message\\)\" } })"
     ]
   }
 }

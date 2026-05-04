@@ -33,8 +33,10 @@ import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { kindEmoji, kindLabel } from "@/lib/products";
 import {
+  approveCampaign,
   archiveCampaign,
   cancelCampaign,
+  clearCampaignApproval,
   cloneCampaign,
   reactivateCampaign,
 } from "@/app/campaigns/[id]/actions";
@@ -130,6 +132,25 @@ export function CampaignPeek() {
           />
           <StatusBadge status={c.status} runState={runState} />
           <CommunicationBadge type={c.communicationType} />
+          {c.clientApprovedAt ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-200 dark:ring-emerald-900 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800 dark:text-emerald-300"
+              title={
+                c.approvedByName
+                  ? t("approval.approved_by", { who: c.approvedByName })
+                  : undefined
+              }
+            >
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path d="M3 8.5 L7 12 L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {t("approval.approved")}
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-200 dark:ring-amber-900 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-300">
+              {t("approval.waiting")}
+            </span>
+          )}
           {c.client && (
             <span className="text-xs text-zinc-500">{c.client}</span>
           )}
@@ -151,6 +172,39 @@ export function CampaignPeek() {
           >
             {t("detail.edit")}
           </Link>
+          {/* Approve / unapprove right next to Edit so it's the first thing
+              the eye hits after Open. The label flips based on current
+              state; the action stays in the panel and bumps gen so the
+              fresh state shows up without close/reopen. */}
+          {c.clientApprovedAt ? (
+            <form
+              action={async () => {
+                await clearCampaignApproval(c.id);
+                refreshCampaignPeek();
+              }}
+            >
+              <button
+                type="submit"
+                className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900"
+              >
+                {t("approval.unapprove")}
+              </button>
+            </form>
+          ) : (
+            <form
+              action={async () => {
+                await approveCampaign(c.id);
+                refreshCampaignPeek();
+              }}
+            >
+              <button
+                type="submit"
+                className="text-sm px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+              >
+                {t("approval.approve")}
+              </button>
+            </form>
+          )}
           <form
             action={async () => {
               await cloneCampaign(c.id);

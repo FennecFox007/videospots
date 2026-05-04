@@ -11,6 +11,8 @@ import {
   cloneCampaign,
   archiveCampaign,
   createCampaignShareLink,
+  approveCampaign,
+  clearCampaignApproval,
 } from "@/app/campaigns/[id]/actions";
 import {
   addDays,
@@ -518,15 +520,22 @@ export function Timeline({
         onClick: () =>
           setOverrideTarget({ bar, channel, country }),
       },
-      // Share-for-approval is the partner-described primary path: agency
-      // generates a link, sends it to the client, client approves through
-      // the share view. Putting it on the bar menu cuts the previous "open
-      // detail → click Share → copy → paste" trail down to one click.
+      // Approval is auth-gated. Anyone logged in can approve or unapprove
+      // via this menu — same effect as the button in the peek footer or on
+      // the detail page. The label flips depending on current state.
       {
         kind: "action",
         label: bar.clientApprovedAt
-          ? t("ctx.share_again")
-          : t("ctx.share_for_approval"),
+          ? t("ctx.unapprove")
+          : t("ctx.approve"),
+        onClick: () =>
+          bar.clientApprovedAt
+            ? clearCampaignApproval(bar.campaignId)
+            : approveCampaign(bar.campaignId),
+      },
+      {
+        kind: "action",
+        label: t("ctx.share_link"),
         onClick: () => shareForApproval(bar.campaignId),
       },
       { kind: "separator" },
