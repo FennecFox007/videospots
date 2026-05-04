@@ -249,19 +249,19 @@ export async function fetchTimelineCampaigns(
   // gets the SK video, etc.). LEFT JOIN because not every (campaign,
   // country) pair has a video set.
   //
-  // startsAt / endsAt are EFFECTIVE dates: COALESCE of the per-channel
-  // override (campaign_channel.starts_at/ends_at) over the master campaign
-  // dates. The master pair is also returned separately so the bar can show
-  // "this is overridden, master is X" affordances. cancelledAtChannel is
-  // the per-channel cancellation timestamp; the bar reads as cancelled if
-  // either the campaign or the channel is cancelled.
+  // We return master + override dates as separate raw columns and coalesce
+  // in JS rather than via SQL. Reason: Drizzle auto-parses timestamp
+  // columns to Date objects only when they're declared with mode: "date"
+  // in the schema; raw `sql\`COALESCE(...)\`` expressions skip that mapping
+  // and come back as strings, which breaks any downstream code calling
+  // `.getTime()` on them. Resolving in JS keeps everything as proper Dates.
   //
   // Range filter still uses MASTER dates (not effective). Edge case: a
   // channel override that pushes a bar entirely outside the master range
   // won't be discovered by this query. In practice partners want overrides
   // to SHRINK the campaign in one channel, not extend it past the master,
   // so this is an acceptable limitation for v1.
-  return db
+  const rows = await db
     .select({
       campaignId: campaigns.id,
       name: campaigns.name,
@@ -270,12 +270,11 @@ export async function fetchTimelineCampaigns(
       communicationType: campaigns.communicationType,
       videoUrl: campaignVideos.videoUrl,
       coverUrl: products.coverUrl,
-      startsAt: sql<Date>`COALESCE(${campaignChannels.startsAt}, ${campaigns.startsAt})`,
-      endsAt: sql<Date>`COALESCE(${campaignChannels.endsAt}, ${campaigns.endsAt})`,
       masterStartsAt: campaigns.startsAt,
       masterEndsAt: campaigns.endsAt,
+      channelStartsAt: campaignChannels.startsAt,
+      channelEndsAt: campaignChannels.endsAt,
       channelCancelledAt: campaignChannels.cancelledAt,
-      hasChannelOverride: sql<boolean>`(${campaignChannels.startsAt} IS NOT NULL OR ${campaignChannels.endsAt} IS NOT NULL OR ${campaignChannels.cancelledAt} IS NOT NULL)`,
       channelId: campaignChannels.channelId,
     })
     .from(campaigns)
@@ -299,4 +298,25 @@ export async function fetchTimelineCampaigns(
         gte(campaigns.endsAt, rangeStart)
       )
     );
+
+  return rows.map((r) => ({
+    campaignId: r.campaignId,
+    name: r.name,
+    color: r.color,
+    status: r.status,
+    communicationType: r.communicationType,
+    videoUrl: r.videoUrl,
+    coverUrl: r.coverUrl,
+    // Effective: per-channel override falls back to master.
+    startsAt: r.channelStartsAt ?? r.masterStartsAt,
+    endsAt: r.channelEndsAt ?? r.masterEndsAt,
+    masterStartsAt: r.masterStartsAt,
+    masterEndsAt: r.masterEndsAt,
+    channelCancelledAt: r.channelCancelledAt,
+    hasChannelOverride:
+      r.channelStartsAt !== null ||
+      r.channelEndsAt !== null ||
+      r.channelCancelledAt !== null,
+    channelId: r.channelId,
+  }));
 }
