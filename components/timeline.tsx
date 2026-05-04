@@ -1215,12 +1215,6 @@ function DraggableBar({
       if (ref.current) {
         onHoverShow?.(bar, ref.current.getBoundingClientRect());
       }
-      // Warm the peek route only after the user has paused on this bar
-      // for 250 ms — the same delay as the tooltip. Firing prefetch on
-      // every mouseenter caused a stampede when the cursor swept across
-      // the timeline (50+ bars × full RSC render). Now it fires only
-      // when intent is actually signalled. Next dedupes repeats.
-      router.prefetch(`/campaigns/${bar.campaignId}`);
     }, 250);
   }
 
