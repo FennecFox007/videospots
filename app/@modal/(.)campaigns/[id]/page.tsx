@@ -53,6 +53,10 @@ export default async function CampaignPeekPage({
   const campaignId = Number(id);
   if (!Number.isFinite(campaignId)) notFound();
 
+  // We need the campaign row first (to call notFound() if missing), but the
+  // other four datasets are independent — fire them in parallel so wall-time
+  // is one round-trip instead of four. Each Neon HTTP call is ~80–150 ms, so
+  // serialising them was costing ~400 ms per peek for no reason.
   const [row] = await db
     .select({ campaign: campaigns, product: products })
     .from(campaigns)
@@ -61,52 +65,49 @@ export default async function CampaignPeekPage({
     .limit(1);
   if (!row) notFound();
 
-  const channelRows = await db
-    .select({
-      countryCode: countries.code,
-      countryName: countries.name,
-      countryFlag: countries.flagEmoji,
-      chainName: chains.name,
-    })
-    .from(campaignChannels)
-    .innerJoin(channels, eq(campaignChannels.channelId, channels.id))
-    .innerJoin(countries, eq(channels.countryId, countries.id))
-    .innerJoin(chains, eq(channels.chainId, chains.id))
-    .where(eq(campaignChannels.campaignId, campaignId))
-    .orderBy(asc(countries.sortOrder), asc(chains.sortOrder));
-
-  const videoRows = await db
-    .select({
-      countryCode: countries.code,
-      countryFlag: countries.flagEmoji,
-      videoUrl: campaignVideos.videoUrl,
-    })
-    .from(campaignVideos)
-    .innerJoin(countries, eq(campaignVideos.countryId, countries.id))
-    .where(eq(campaignVideos.campaignId, campaignId))
-    .orderBy(asc(countries.sortOrder));
-
-  // Last 3 comments — the rest is a "view all in detail" hop.
-  const recentComments = await db
-    .select({
-      id: comments.id,
-      body: comments.body,
-      createdAt: comments.createdAt,
-      userName: users.name,
-      userEmail: users.email,
-    })
-    .from(comments)
-    .leftJoin(users, eq(comments.userId, users.id))
-    .where(eq(comments.campaignId, campaignId))
-    .orderBy(desc(comments.createdAt))
-    .limit(3);
-  // Count total comments via SQL — fetching all rows just to call .length is
-  // an O(n) row transfer for what should be a single integer.
-  const [totalCommentRow] = await db
-    .select({ c: sql<number>`count(*)::int` })
-    .from(comments)
-    .where(eq(comments.campaignId, campaignId));
-  const totalComments = totalCommentRow?.c ?? 0;
+  const [channelRows, videoRows, commentData] = await Promise.all([
+    db
+      .select({
+        countryCode: countries.code,
+        countryName: countries.name,
+        countryFlag: countries.flagEmoji,
+        chainName: chains.name,
+      })
+      .from(campaignChannels)
+      .innerJoin(channels, eq(campaignChannels.channelId, channels.id))
+      .innerJoin(countries, eq(channels.countryId, countries.id))
+      .innerJoin(chains, eq(channels.chainId, chains.id))
+      .where(eq(campaignChannels.campaignId, campaignId))
+      .orderBy(asc(countries.sortOrder), asc(chains.sortOrder)),
+    db
+      .select({
+        countryCode: countries.code,
+        countryFlag: countries.flagEmoji,
+        videoUrl: campaignVideos.videoUrl,
+      })
+      .from(campaignVideos)
+      .innerJoin(countries, eq(campaignVideos.countryId, countries.id))
+      .where(eq(campaignVideos.campaignId, campaignId))
+      .orderBy(asc(countries.sortOrder)),
+    // One query for both the last 3 comments AND the total count, via a
+    // window function. Saves a second round-trip just to read an integer.
+    db
+      .select({
+        id: comments.id,
+        body: comments.body,
+        createdAt: comments.createdAt,
+        userName: users.name,
+        userEmail: users.email,
+        total: sql<number>`count(*) over()::int`,
+      })
+      .from(comments)
+      .leftJoin(users, eq(comments.userId, users.id))
+      .where(eq(comments.campaignId, campaignId))
+      .orderBy(desc(comments.createdAt))
+      .limit(3),
+  ]);
+  const recentComments = commentData;
+  const totalComments = commentData[0]?.total ?? 0;
 
   const c = row.campaign;
   const product = row.product;
