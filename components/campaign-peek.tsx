@@ -18,6 +18,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SidePanel } from "@/components/side-panel";
 import { StatusBadge } from "@/components/status-badge";
 import { CommunicationBadge } from "@/components/communication-badge";
@@ -47,6 +48,7 @@ export function CampaignPeek() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useT();
+  const router = useRouter();
 
   // Subscribe + hydrate from URL once on mount. Hydration covers the case
   // where the user reloads (or follows a shared link) on /?peek=<id>.
@@ -181,6 +183,9 @@ export function CampaignPeek() {
               action={async () => {
                 await clearCampaignApproval(c.id);
                 refreshCampaignPeek();
+                // Also refresh the timeline behind so the bar's stripes
+                // (re)appear without the user navigating.
+                router.refresh();
               }}
             >
               <button
@@ -195,6 +200,7 @@ export function CampaignPeek() {
               action={async () => {
                 await approveCampaign(c.id);
                 refreshCampaignPeek();
+                router.refresh();
               }}
             >
               <button
@@ -231,6 +237,7 @@ export function CampaignPeek() {
               action={async () => {
                 await cancelCampaign(c.id);
                 refreshCampaignPeek();
+                router.refresh();
               }}
             >
               <button
@@ -246,6 +253,7 @@ export function CampaignPeek() {
               action={async () => {
                 await reactivateCampaign(c.id);
                 refreshCampaignPeek();
+                router.refresh();
               }}
             >
               <button

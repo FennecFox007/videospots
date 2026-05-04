@@ -197,7 +197,6 @@ export const campaigns = pgTable("campaign", {
 });
 
 // Junction: which channels does this campaign run on?
-// Junction: which channels does this campaign run on?
 //
 // Per-channel overrides:
 //  - startsAt / endsAt — when this ONE channel needs a different schedule

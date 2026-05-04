@@ -523,15 +523,22 @@ export function Timeline({
       // Approval is auth-gated. Anyone logged in can approve or unapprove
       // via this menu — same effect as the button in the peek footer or on
       // the detail page. The label flips depending on current state.
+      // router.refresh() afterwards forces this server-rendered timeline
+      // page to reload its data, so the bar's stripes (un)appear without
+      // the user having to navigate.
       {
         kind: "action",
         label: bar.clientApprovedAt
           ? t("ctx.unapprove")
           : t("ctx.approve"),
-        onClick: () =>
-          bar.clientApprovedAt
-            ? clearCampaignApproval(bar.campaignId)
-            : approveCampaign(bar.campaignId),
+        onClick: async () => {
+          if (bar.clientApprovedAt) {
+            await clearCampaignApproval(bar.campaignId);
+          } else {
+            await approveCampaign(bar.campaignId);
+          }
+          router.refresh();
+        },
       },
       {
         kind: "action",
@@ -1312,7 +1319,6 @@ function DraggableBar({
   onHoverHide?: () => void;
   density: DensityPreset;
 }) {
-  const router = useRouter();
   const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<number | null>(null);

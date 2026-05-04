@@ -16,6 +16,7 @@
 //  - Master dates shown read-only at the bottom for reference.
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toDateInputValue } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import {
@@ -63,6 +64,7 @@ export function ChannelOverrideDialog({
 }: Props) {
   const t = useT();
   const { toast } = useDialog();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [startsAt, setStartsAt] = useState(toDateInputValue(effectiveStartsAt));
   const [endsAt, setEndsAt] = useState(toDateInputValue(effectiveEndsAt));
@@ -113,6 +115,9 @@ export function ChannelOverrideDialog({
           cancelled,
         });
         toast.success(t("override.saved"));
+        // Refresh server-rendered timeline / detail page so the bar's
+        // italic + ✱ marker appears (or its dates change) right away.
+        router.refresh();
         onClose();
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : String(e));
@@ -126,6 +131,7 @@ export function ChannelOverrideDialog({
       try {
         await clearChannelOverride(campaignId, channelId);
         toast.success(t("override.cleared"));
+        router.refresh();
         onClose();
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : String(e));
