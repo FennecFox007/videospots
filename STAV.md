@@ -227,6 +227,27 @@ Schema migrace = ručně `npm run db:push` proti prod URL po každé změně sch
 - **Drizzle Date parsing** — auto-parsuje sloupce s `mode: "date"`, ne raw `sql<Date>` template. Kdykoliv potřebuješ COALESCE dvou date sloupců, dělej to v JS po `await db.select(...)`.
 - **Stale dev server** — když změníš schema.ts a dev server běží, runtime má cached prepared statementy a vidí "column does not exist" i když migrace prošla. Restart dev serveru to vyřeší.
 
+## Patterns / konvence pro mutace
+
+Když posíláš mutaci ze **client komponenty** v autorizovaném kontextu (peek panel, context menu, dialog):
+
+1. **Server action volá `revalidatePath(...)`** uvnitř — tím Next.js označí cache stale
+2. **Po awaitu volej `router.refresh()`** v client komponentě — vynutí re-render server komponent na aktuální stránce bez full reloadu
+
+Bez kroku 2 server cache je sice invalidovaná, ale běžící klient o tom neví dokud nezavře/otevře stránku. Aplikováno: `approveCampaign` / `clearCampaignApproval` / `cancelCampaign` / `reactivateCampaign` / `setChannelOverride` / `clearChannelOverride` v timeline context menu, peek panel footeru, override dialogu.
+
+Akce co dělají `redirect(...)` (clone, archive) automaticky refreshují přes navigaci, `router.refresh()` tam nepotřeba.
+
+Pro **peek panel**: nezapomeň ještě `refreshCampaignPeek()` (z `lib/peek-store.ts`) — to bumpne `gen` counter a peek si refetchne svoje data nezávisle na server-side refreshi (peek čte přes `/api/campaigns/[id]/peek`, ne přes RSC).
+
+```ts
+action={async () => {
+  await someServerAction(c.id);
+  refreshCampaignPeek();  // peek panel data
+  router.refresh();        // server-rendered timeline / detail
+}}
+```
+
 ## Jak otevřít session
 
 ```
