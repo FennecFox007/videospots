@@ -97,7 +97,8 @@ export function SidePanel({ title, subtitle, footer, children }: Props) {
           <div className="min-w-0 flex-1">
             <h2
               id="side-panel-title"
-              className="text-base font-semibold tracking-tight"
+              className="text-base font-semibold tracking-tight truncate"
+              title={title}
             >
               {title}
             </h2>

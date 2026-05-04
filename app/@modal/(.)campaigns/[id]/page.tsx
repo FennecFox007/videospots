@@ -12,7 +12,7 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, eq, desc } from "drizzle-orm";
+import { asc, eq, desc, sql } from "drizzle-orm";
 import {
   db,
   campaigns,
@@ -77,7 +77,6 @@ export default async function CampaignPeekPage({
 
   const videoRows = await db
     .select({
-      countryName: countries.name,
       countryCode: countries.code,
       countryFlag: countries.flagEmoji,
       videoUrl: campaignVideos.videoUrl,
@@ -101,11 +100,13 @@ export default async function CampaignPeekPage({
     .where(eq(comments.campaignId, campaignId))
     .orderBy(desc(comments.createdAt))
     .limit(3);
-  const totalCommentRow = await db
-    .select({ id: comments.id })
+  // Count total comments via SQL — fetching all rows just to call .length is
+  // an O(n) row transfer for what should be a single integer.
+  const [totalCommentRow] = await db
+    .select({ c: sql<number>`count(*)::int` })
     .from(comments)
     .where(eq(comments.campaignId, campaignId));
-  const totalComments = totalCommentRow.length;
+  const totalComments = totalCommentRow?.c ?? 0;
 
   const c = row.campaign;
   const product = row.product;
