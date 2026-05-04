@@ -1208,6 +1208,10 @@ function DraggableBar({
 
   function onMouseEnter() {
     if (drag) return;
+    // Warm the peek route as soon as the cursor enters a bar, so by the time
+    // the user clicks, the route bundle is already on the wire (and Turbopack
+    // has compiled it in dev). Prefetch is a no-op if already cached.
+    router.prefetch(`/campaigns/${bar.campaignId}`);
     if (hoverTimeoutRef.current !== null) {
       window.clearTimeout(hoverTimeoutRef.current);
     }
