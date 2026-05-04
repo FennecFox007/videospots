@@ -335,7 +335,22 @@ export function CampaignPeek() {
         )}
 
         {data.videos.length > 0 && (
-          <Block label={t("detail.videos_section")}>
+          <Block
+            label={`${t("detail.videos_section")} (${
+              data.videos.filter((v) => v.videoUrl).length
+            }/${data.videos.length})`}
+            action={
+              data.videos.some((v) => !v.videoUrl) ? (
+                <Link
+                  href={`/campaigns/${c.id}/edit`}
+                  onClick={closeCampaignPeek}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  {t("detail.assign_spots")}
+                </Link>
+              ) : undefined
+            }
+          >
             <ul className="space-y-1.5">
               {data.videos.map((v) => (
                 <li
@@ -346,31 +361,39 @@ export function CampaignPeek() {
                   <span className="font-medium w-12 shrink-0">
                     {v.countryCode}
                   </span>
-                  <a
-                    href={v.videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline truncate flex-1"
-                  >
-                    {v.videoUrl}
-                  </a>
-                  <a
-                    href={v.videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Play"
-                    className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-                  >
-                    <svg
-                      width="9"
-                      height="9"
-                      viewBox="0 0 9 9"
-                      fill="currentColor"
-                      aria-hidden
-                    >
-                      <path d="M1.5 0.5l6.5 4-6.5 4z" />
-                    </svg>
-                  </a>
+                  {v.videoUrl ? (
+                    <>
+                      <a
+                        href={v.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 dark:text-blue-400 hover:underline truncate flex-1"
+                      >
+                        {v.spotName ?? v.videoUrl}
+                      </a>
+                      <a
+                        href={v.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Play"
+                        className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                      >
+                        <svg
+                          width="9"
+                          height="9"
+                          viewBox="0 0 9 9"
+                          fill="currentColor"
+                          aria-hidden
+                        >
+                          <path d="M1.5 0.5l6.5 4-6.5 4z" />
+                        </svg>
+                      </a>
+                    </>
+                  ) : (
+                    <span className="italic text-amber-700 dark:text-amber-400 flex-1">
+                      {t("detail.spot_pending")}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>

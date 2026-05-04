@@ -7,7 +7,7 @@
 // slot, no @modal interaction.
 
 import { NextRequest, NextResponse } from "next/server";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import {
   db,
@@ -55,10 +55,15 @@ export type CampaignPeekData = {
     countryFlag: string | null;
     chainName: string;
   }>;
+  /** One row per distinct country the campaign runs in. videoUrl is null
+   *  when the spot for that country hasn't been assigned yet — common
+   *  when a campaign is planned months ahead of spot production. */
   videos: Array<{
     countryCode: string;
+    countryName: string;
     countryFlag: string | null;
-    videoUrl: string;
+    videoUrl: string | null;
+    spotName: string | null;
   }>;
   recentComments: Array<{
     id: number;
@@ -118,16 +123,31 @@ export async function GET(
       .innerJoin(chains, eq(channels.chainId, chains.id))
       .where(eq(campaignChannels.campaignId, campaignId))
       .orderBy(asc(countries.sortOrder), asc(chains.sortOrder)),
+    // One row per DISTINCT country the campaign has channels in. Left-
+    // join campaign_video → spots so countries without an assigned spot
+    // come back with videoUrl=null. The peek UI renders both states —
+    // play link if assigned, "spot pending" if not.
     db
-      .select({
+      .selectDistinct({
         countryCode: countries.code,
+        countryName: countries.name,
         countryFlag: countries.flagEmoji,
+        countrySortOrder: countries.sortOrder,
         videoUrl: spots.videoUrl,
+        spotName: spots.name,
       })
-      .from(campaignVideos)
-      .innerJoin(countries, eq(campaignVideos.countryId, countries.id))
-      .innerJoin(spots, eq(campaignVideos.spotId, spots.id))
-      .where(eq(campaignVideos.campaignId, campaignId))
+      .from(campaignChannels)
+      .innerJoin(channels, eq(campaignChannels.channelId, channels.id))
+      .innerJoin(countries, eq(channels.countryId, countries.id))
+      .leftJoin(
+        campaignVideos,
+        and(
+          eq(campaignVideos.campaignId, campaignId),
+          eq(campaignVideos.countryId, countries.id)
+        )
+      )
+      .leftJoin(spots, eq(campaignVideos.spotId, spots.id))
+      .where(eq(campaignChannels.campaignId, campaignId))
       .orderBy(asc(countries.sortOrder)),
     db
       .select({
@@ -174,7 +194,13 @@ export async function GET(
         }
       : null,
     channels: channelRows,
-    videos: videoRows,
+    videos: videoRows.map((v) => ({
+      countryCode: v.countryCode,
+      countryName: v.countryName,
+      countryFlag: v.countryFlag,
+      videoUrl: v.videoUrl,
+      spotName: v.spotName,
+    })),
     recentComments: commentRows.map((cm) => ({
       id: cm.id,
       body: cm.body,

@@ -1700,6 +1700,17 @@ function DraggableBar({
           </svg>
         </a>
       )}
+      {!bar.videoUrl && !isCancelled && (
+        // No spot assigned for this country yet. Render a small dashed
+        // ring in the play-button slot so the user can see at a glance
+        // which bars need a spot — it's a planned-not-yet-produced state,
+        // not an error, so the marker is intentionally subtle.
+        <span
+          aria-hidden
+          title={t("timeline.bar_no_spot")}
+          className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border border-dashed border-white/70 pointer-events-none"
+        />
+      )}
     </div>
   );
 }

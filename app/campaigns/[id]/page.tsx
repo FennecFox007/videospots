@@ -80,19 +80,32 @@ export default async function CampaignDetailPage({
     .where(eq(campaignChannels.campaignId, campaignId))
     .orderBy(asc(countries.sortOrder), asc(chains.sortOrder));
 
-  // Per-country video URLs. Each country may have its own language cut of
-  // the spot — we render them as a separate block per country.
+  // One row per distinct country the campaign runs in. Left-joined so
+  // countries without a yet-assigned spot come back with videoUrl=null —
+  // the detail page renders both states (play link if assigned, "spot
+  // pending" if not). Lets the user plan campaigns months ahead and
+  // attach spots once production delivers them.
   const videoRows = await db
-    .select({
+    .selectDistinct({
       countryName: countries.name,
       countryFlag: countries.flagEmoji,
       countryCode: countries.code,
       videoUrl: spots.videoUrl,
+      spotName: spots.name,
+      countrySortOrder: countries.sortOrder,
     })
-    .from(campaignVideos)
-    .innerJoin(countries, eq(campaignVideos.countryId, countries.id))
-    .innerJoin(spots, eq(campaignVideos.spotId, spots.id))
-    .where(eq(campaignVideos.campaignId, campaignId))
+    .from(campaignChannels)
+    .innerJoin(channels, eq(campaignChannels.channelId, channels.id))
+    .innerJoin(countries, eq(channels.countryId, countries.id))
+    .leftJoin(
+      campaignVideos,
+      and(
+        eq(campaignVideos.campaignId, campaignId),
+        eq(campaignVideos.countryId, countries.id)
+      )
+    )
+    .leftJoin(spots, eq(campaignVideos.spotId, spots.id))
+    .where(eq(campaignChannels.campaignId, campaignId))
     .orderBy(asc(countries.sortOrder));
 
   const c = row.campaign;
@@ -408,9 +421,20 @@ export default async function CampaignDetailPage({
 
       {videoRows.length > 0 && (
         <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-5">
-          <h2 className="font-medium">
-            {t("detail.videos_section")} ({videoRows.length})
-          </h2>
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <h2 className="font-medium">
+              {t("detail.videos_section")} (
+              {videoRows.filter((v) => v.videoUrl).length}/{videoRows.length})
+            </h2>
+            {videoRows.some((v) => !v.videoUrl) && (
+              <Link
+                href={`/campaigns/${campaignId}/edit`}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                {t("detail.assign_spots")}
+              </Link>
+            )}
+          </div>
           {videoRows.map((v) => (
             <div key={v.countryCode}>
               <div className="flex items-baseline gap-2 mb-2">
@@ -421,8 +445,19 @@ export default async function CampaignDetailPage({
                 <span className="text-xs text-zinc-500 font-mono uppercase">
                   {v.countryCode}
                 </span>
+                {v.spotName && (
+                  <span className="text-xs text-zinc-500 italic">
+                    · {v.spotName}
+                  </span>
+                )}
               </div>
-              <VideoEmbed url={v.videoUrl} />
+              {v.videoUrl ? (
+                <VideoEmbed url={v.videoUrl} />
+              ) : (
+                <div className="rounded-md border-2 border-dashed border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 px-4 py-6 text-sm text-amber-800 dark:text-amber-300">
+                  {t("detail.spot_pending")}
+                </div>
+              )}
             </div>
           ))}
         </div>

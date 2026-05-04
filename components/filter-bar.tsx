@@ -81,6 +81,7 @@ export function FilterBar({
   const tag = searchParams.get("tag") ?? "";
   const commType = searchParams.get("communicationType") ?? "";
   const approval = searchParams.get("approval") ?? ""; // "" | "pending" | "approved"
+  const missingSpot = searchParams.get("missingSpot") === "1";
 
   const hasFilters =
     !!search ||
@@ -90,7 +91,8 @@ export function FilterBar({
     !!runState ||
     !!tag ||
     !!commType ||
-    !!approval;
+    !!approval ||
+    missingSpot;
 
   function clearAll() {
     const params = new URLSearchParams(searchParams);
@@ -104,6 +106,7 @@ export function FilterBar({
       "tag",
       "communicationType",
       "approval",
+      "missingSpot",
     ].forEach((k) => params.delete(k));
     setSearch("");
     lastSearchRef.current = "";
@@ -157,6 +160,19 @@ export function FilterBar({
         ]}
         placeholder={t("filter.approval.all")}
       />
+      <button
+        type="button"
+        onClick={() => setParam("missingSpot", missingSpot ? "" : "1")}
+        className={
+          "rounded-md border px-3 py-1.5 text-sm transition-colors " +
+          (missingSpot
+            ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300"
+            : "border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800")
+        }
+        title={t("filter.missing_spot.tooltip")}
+      >
+        {t("filter.missing_spot.label")}
+      </button>
       {clients.length > 0 && (
         <Select
           value={client}

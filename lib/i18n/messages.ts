@@ -101,6 +101,7 @@ const cs = {
   "timeline.create_first": "Vytvoř první",
   "timeline.now_marker": "DNES",
   "timeline.bar_play": "Přehrát spot v novém panelu",
+  "timeline.bar_no_spot": "Spot pro tuto zemi ještě nebyl přiřazen",
   "timeline.country_collapse_hint":
     "Klik = sbalit/rozbalit zemi · pravoklik = další akce",
   "timeline.bar_cancelled": "(zrušeno)",
@@ -187,6 +188,9 @@ const cs = {
   "detail.product_section": "Produkt",
   "detail.product_released": "Vyšlo {date}",
   "detail.videos_section": "Spoty podle země",
+  "detail.spot_pending":
+    "Spot ještě nebyl přiřazen — kampaň je naplánována, spot doplníš později.",
+  "detail.assign_spots": "Přiřadit spoty",
   "detail.channels_section": "Kanály",
   "detail.no_channels": "Žádné kanály.",
   "detail.notes_section": "Poznámky",
@@ -315,6 +319,9 @@ const cs = {
   "filter.approval.all": "Schválení",
   "filter.approval.pending": "Čeká na schválení",
   "filter.approval.approved": "Schváleno",
+  "filter.missing_spot.label": "Bez spotu",
+  "filter.missing_spot.tooltip":
+    "Kampaně, kde alespoň jedna země ještě nemá přiřazený spot.",
 
   // Campaign form body (new + edit)
   "form.section.basic": "Základní údaje",
@@ -587,6 +594,7 @@ const en: Record<keyof typeof cs, string> = {
   "timeline.create_first": "Create the first one",
   "timeline.now_marker": "NOW",
   "timeline.bar_play": "Play the spot in a new tab",
+  "timeline.bar_no_spot": "No spot assigned for this country yet",
   "timeline.country_collapse_hint":
     "Click = collapse/expand country · right-click = more actions",
   "timeline.bar_cancelled": "(cancelled)",
@@ -673,6 +681,9 @@ const en: Record<keyof typeof cs, string> = {
   "detail.product_section": "Product",
   "detail.product_released": "Released {date}",
   "detail.videos_section": "Spots by country",
+  "detail.spot_pending":
+    "No spot assigned yet — the campaign is scheduled, attach a spot later.",
+  "detail.assign_spots": "Assign spots",
   "detail.channels_section": "Channels",
   "detail.no_channels": "No channels.",
   "detail.notes_section": "Notes",
@@ -801,6 +812,9 @@ const en: Record<keyof typeof cs, string> = {
   "filter.approval.all": "Approval",
   "filter.approval.pending": "Awaiting approval",
   "filter.approval.approved": "Approved",
+  "filter.missing_spot.label": "Missing spot",
+  "filter.missing_spot.tooltip":
+    "Campaigns with at least one country still waiting for a spot.",
 
   // Campaign form body
   "form.section.basic": "Basics",

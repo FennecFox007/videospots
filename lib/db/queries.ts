@@ -92,6 +92,10 @@ export type CampaignFilters = {
   /** "pending" | "approved" — filter by client approval status. Empty/undef
    *  = both. */
   approval?: string;
+  /** When "1", return only campaigns where at least one country has no
+   *  assigned spot yet. Useful for the "campaigns waiting for spots"
+   *  workflow — agency plans months ahead, spots get attached later. */
+  missingSpot?: string;
   tag?: string;
   /** Optional date window (overlap test). */
   rangeStart?: Date;
@@ -194,6 +198,21 @@ async function buildWhere(filters: CampaignFilters): Promise<{
     conds.push(isNull(campaigns.clientApprovedAt));
   } else if (filters.approval === "approved") {
     conds.push(sql`${campaigns.clientApprovedAt} IS NOT NULL`);
+  }
+  if (filters.missingSpot === "1") {
+    // Has at least one channel whose country has no campaign_video row.
+    // Phrased as: there exists a campaign_channel without a matching
+    // campaign_video for the same (campaign, country) pair.
+    conds.push(sql`EXISTS (
+      SELECT 1 FROM ${campaignChannels} cc
+      INNER JOIN ${channels} ch ON ch.id = cc.channel_id
+      WHERE cc.campaign_id = ${campaigns.id}
+        AND NOT EXISTS (
+          SELECT 1 FROM ${campaignVideos} cv
+          WHERE cv.campaign_id = cc.campaign_id
+            AND cv.country_id = ch.country_id
+        )
+    )`);
   }
   if (filters.tag) {
     // Postgres array contains: tags @> ARRAY['tag']
