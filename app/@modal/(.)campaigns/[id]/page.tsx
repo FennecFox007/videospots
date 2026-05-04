@@ -98,7 +98,7 @@ export default async function CampaignPeekPage({
         createdAt: comments.createdAt,
         userName: users.name,
         userEmail: users.email,
-        total: sql<number>`count(*) over()::int`,
+        total: sql<number>`(count(*) over ())::int`,
       })
       .from(comments)
       .leftJoin(users, eq(comments.userId, users.id))
