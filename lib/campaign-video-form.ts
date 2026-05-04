@@ -1,21 +1,24 @@
-// Helper for parsing the per-country video URL fields out of a campaign
-// form submission. Each country renders an input named `videoUrl_<countryId>`;
-// we walk the FormData and collect non-empty entries into a flat list ready
-// for inserting into the campaign_video table.
+// Helper for parsing the per-country spot picks out of a campaign form
+// submission. Each country renders a <select name="spotId_<countryId>">;
+// we walk the FormData and collect the selected (countryId, spotId) pairs.
+// Empty values mean the user explicitly picked "— no spot —" for that
+// country.
 
-export type VideoByCountry = { countryId: number; videoUrl: string };
+export type SpotByCountry = { countryId: number; spotId: number };
 
-export function extractVideosByCountry(formData: FormData): VideoByCountry[] {
-  const out: VideoByCountry[] = [];
+export function extractSpotsByCountry(formData: FormData): SpotByCountry[] {
+  const out: SpotByCountry[] = [];
   for (const [key, value] of formData.entries()) {
-    const m = /^videoUrl_(\d+)$/.exec(key);
+    const m = /^spotId_(\d+)$/.exec(key);
     if (!m) continue;
     if (typeof value !== "string") continue;
-    const url = value.trim();
-    if (!url) continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue; // user picked "— no spot —"
     const countryId = Number(m[1]);
+    const spotId = Number(trimmed);
     if (!Number.isFinite(countryId) || countryId <= 0) continue;
-    out.push({ countryId, videoUrl: url });
+    if (!Number.isFinite(spotId) || spotId <= 0) continue;
+    out.push({ countryId, spotId });
   }
   return out;
 }

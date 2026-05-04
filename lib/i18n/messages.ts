@@ -319,9 +319,9 @@ const cs = {
   // Campaign form body (new + edit)
   "form.section.basic": "Základní údaje",
   "form.section.product": "Produkt",
-  "form.section.video": "Video (jazyková mutace pro každou zemi)",
+  "form.section.video": "Spoty (jeden per země)",
   "form.section.video_hint":
-    "Každá země běží vlastní jazykovou verzi spotu. Nech prázdné, pokud pro tu zemi spot zatím nemáš.",
+    "Vyber spot z knihovny pro každou zemi. Pokud potřebný spot ještě nemáš, klikni na „+ Nový spot“ — otevře se ve vedlejší záložce, po vytvoření obnov tuto stránku.",
   "form.section.term": "Termín",
   "form.section.channels": "Kanály",
   "form.section.channels_hint":
@@ -366,6 +366,10 @@ const cs = {
   "form.recurring.note":
     "Každá další kampaň bude pojmenovaná „Název (n/N)“. Výběr kanálů a hra se zachovají u všech.",
   "form.video.placeholder": "YouTube / Vimeo / přímý mp4 odkaz",
+  "form.video.no_spot": "— žádný spot —",
+  "form.video.new_spot": "+ Nový spot",
+  "form.video.new_spot_tooltip":
+    "Otevře knihovnu spotů v nové záložce. Po vytvoření obnov tuto stránku.",
   "form.submit_create": "Vytvořit kampaň",
   "form.submit_save": "Uložit změny",
   "form.cancel": "Zrušit",
@@ -801,9 +805,9 @@ const en: Record<keyof typeof cs, string> = {
   // Campaign form body
   "form.section.basic": "Basics",
   "form.section.product": "Product",
-  "form.section.video": "Video (one language version per country)",
+  "form.section.video": "Spots (one per country)",
   "form.section.video_hint":
-    "Each country runs its own language cut. Leave empty if you don't have it for that country yet.",
+    "Pick a spot from the library for each country. If the spot you need doesn't exist yet, click \"+ New spot\" — it opens in another tab; reload this page after creating.",
   "form.section.term": "Schedule",
   "form.section.channels": "Retailers",
   "form.section.channels_hint":
@@ -848,6 +852,10 @@ const en: Record<keyof typeof cs, string> = {
   "form.recurring.note":
     "Each subsequent campaign will be named \"Name (n/N)\". Channel selection and product carry over to all of them.",
   "form.video.placeholder": "YouTube / Vimeo / direct mp4 URL",
+  "form.video.no_spot": "— no spot —",
+  "form.video.new_spot": "+ New spot",
+  "form.video.new_spot_tooltip":
+    "Opens the spots library in a new tab. Reload this page after you've created the spot.",
   "form.submit_create": "Create campaign",
   "form.submit_save": "Save changes",
   "form.cancel": "Cancel",

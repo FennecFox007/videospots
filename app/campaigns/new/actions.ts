@@ -12,7 +12,6 @@ import {
   products,
   auditLog,
 } from "@/lib/db/client";
-import { findOrCreateSpot } from "@/lib/spot-resolver";
 import { isValidCampaignColor, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
 import {
   isValidKind,
@@ -20,7 +19,7 @@ import {
 } from "@/lib/products";
 import { isValidCommunicationType } from "@/lib/communication";
 import { isValidStatus, parseTags } from "@/lib/utils";
-import { extractVideosByCountry } from "@/lib/campaign-video-form";
+import { extractSpotsByCountry } from "@/lib/campaign-video-form";
 
 const schema = z
   .object({
@@ -61,10 +60,12 @@ export async function createCampaign(formData: FormData) {
   const statusRaw = String(formData.get("status") ?? "");
   const tagsRaw = String(formData.get("tags") ?? "");
 
-  // Per-country video URLs come in as `videoUrl_<countryId>` form fields
-  // (one per country we render in the form). Pull them out before zod parses
-  // the rest — schema doesn't validate these, they're a flat URL/empty map.
-  const videosByCountry = extractVideosByCountry(formData);
+  // Per-country spot picks come in as `spotId_<countryId>` form fields
+  // (the dropdown in CampaignFormBody). Empty value = "no spot for this
+  // country", we just don't insert a campaign_video row. Spots are
+  // managed exclusively through /spots; the form only references existing
+  // ones, never creates new spots inline.
+  const spotsByCountry = extractSpotsByCountry(formData);
 
   const parsed = schema.parse({
     name: formData.get("name"),
@@ -176,25 +177,14 @@ export async function createCampaign(formData: FormData) {
       }))
     );
 
-    if (videosByCountry.length > 0) {
-      // Each URL flows through findOrCreateSpot: existing (productId,
-      // countryId, url) tuples are reused so the spots library doesn't
-      // grow duplicates, new tuples create a fresh spot row.
-      const inserts: Array<{
-        campaignId: number;
-        countryId: number;
-        spotId: number;
-      }> = [];
-      for (const v of videosByCountry) {
-        const spotId = await findOrCreateSpot({
-          productId,
+    if (spotsByCountry.length > 0) {
+      await db.insert(campaignVideos).values(
+        spotsByCountry.map((v) => ({
+          campaignId: created.id,
           countryId: v.countryId,
-          videoUrl: v.videoUrl,
-          userId: session.user.id,
-        });
-        inserts.push({ campaignId: created.id, countryId: v.countryId, spotId });
-      }
-      await db.insert(campaignVideos).values(inserts);
+          spotId: v.spotId,
+        }))
+      );
     }
 
     await db.insert(auditLog).values({

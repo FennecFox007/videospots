@@ -9,6 +9,7 @@ import {
   loadNewCampaignContext,
   type NewCampaignSearchParams,
 } from "./_context";
+import { getSpotsByCountry } from "@/lib/db/queries";
 import { getT } from "@/lib/i18n/server";
 
 export default async function NewCampaignPage({
@@ -17,7 +18,10 @@ export default async function NewCampaignPage({
   searchParams: Promise<NewCampaignSearchParams>;
 }) {
   const params = await searchParams;
-  const { groups, defaults, hint } = await loadNewCampaignContext(params);
+  const [{ groups, defaults, hint }, spotsByCountry] = await Promise.all([
+    loadNewCampaignContext(params),
+    getSpotsByCountry(),
+  ]);
   const t = await getT();
 
   return (
@@ -30,6 +34,7 @@ export default async function NewCampaignPage({
       <form action={createCampaign} className="space-y-6">
         <CampaignFormBody
           groups={groups}
+          spotsByCountry={spotsByCountry}
           defaults={defaults}
           submitLabel={t("form.submit_create")}
           cancelHref="/"

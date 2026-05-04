@@ -3,6 +3,7 @@
 import {
   and,
   asc,
+  desc,
   eq,
   gte,
   ilike,
@@ -23,6 +24,7 @@ import {
   spots,
   products,
 } from "./client";
+import type { SpotOption } from "@/components/campaign-form-body";
 import type { CountryGroup } from "@/components/campaign-form-body";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedCountryName } from "@/lib/i18n/country";
@@ -331,4 +333,41 @@ export async function fetchTimelineCampaigns(
       r.channelCancelledAt !== null,
     channelId: r.channelId,
   }));
+}
+
+/**
+ * Fetch all non-archived spots, grouped by countryId, ordered with the
+ * country's spots sorted newest-first within the group. Used by the
+ * campaign create/edit form to populate per-country dropdowns. Includes
+ * the joined product name so the dropdown label can be "Saros Launch CZ"
+ * even when the spot has no explicit name set.
+ */
+export async function getSpotsByCountry(): Promise<
+  Record<number, SpotOption[]>
+> {
+  const rows = await db
+    .select({
+      id: spots.id,
+      name: spots.name,
+      videoUrl: spots.videoUrl,
+      countryId: spots.countryId,
+      productName: products.name,
+      createdAt: spots.createdAt,
+    })
+    .from(spots)
+    .leftJoin(products, eq(spots.productId, products.id))
+    .where(isNull(spots.archivedAt))
+    .orderBy(asc(spots.countryId), desc(spots.createdAt));
+
+  const grouped: Record<number, SpotOption[]> = {};
+  for (const r of rows) {
+    if (!grouped[r.countryId]) grouped[r.countryId] = [];
+    grouped[r.countryId].push({
+      id: r.id,
+      name: r.name,
+      videoUrl: r.videoUrl,
+      productName: r.productName,
+    });
+  }
+  return grouped;
 }

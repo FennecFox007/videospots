@@ -15,6 +15,7 @@ import {
   loadNewCampaignContext,
   type NewCampaignSearchParams,
 } from "@/app/campaigns/new/_context";
+import { getSpotsByCountry } from "@/lib/db/queries";
 import { RouteModal } from "@/components/route-modal";
 import { getT } from "@/lib/i18n/server";
 
@@ -24,7 +25,10 @@ export default async function NewCampaignModalPage({
   searchParams: Promise<NewCampaignSearchParams>;
 }) {
   const params = await searchParams;
-  const { groups, defaults, hint } = await loadNewCampaignContext(params);
+  const [{ groups, defaults, hint }, spotsByCountry] = await Promise.all([
+    loadNewCampaignContext(params),
+    getSpotsByCountry(),
+  ]);
   const t = await getT();
 
   return (
@@ -32,6 +36,7 @@ export default async function NewCampaignModalPage({
       <form action={createCampaign} className="space-y-6">
         <CampaignFormBody
           groups={groups}
+          spotsByCountry={spotsByCountry}
           defaults={defaults}
           submitLabel={t("form.submit_create")}
           cancelHref="/"

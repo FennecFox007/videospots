@@ -9,12 +9,10 @@ import {
   campaigns,
   campaignChannels,
   campaignVideos,
-  spots,
   products,
   auditLog,
 } from "@/lib/db/client";
-import { findOrCreateSpot } from "@/lib/spot-resolver";
-import { extractVideosByCountry } from "@/lib/campaign-video-form";
+import { extractSpotsByCountry } from "@/lib/campaign-video-form";
 import { isValidCampaignColor, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
 import {
   isValidKind,
@@ -88,8 +86,8 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
   const statusRaw = String(formData.get("status") ?? "");
   const tagsRaw = String(formData.get("tags") ?? "");
 
-  // Per-country videoUrls — keyed inputs videoUrl_<countryId>.
-  const videosByCountry = extractVideosByCountry(formData);
+  // Per-country spot picks — keyed inputs spotId_<countryId>.
+  const spotsByCountry = extractSpotsByCountry(formData);
 
   const parsed = schema.parse({
     name: formData.get("name"),
@@ -143,24 +141,22 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
     (a, b) => a - b
   );
 
-  // Snapshot existing per-country videos so the audit log can show what
-  // changed. Result is a "<countryId>:<url>" sorted list — comparing arrays
-  // is enough for "did this set of videos change at all". Since spots
-  // refactor we read the URL through the joined spots row.
+  // Snapshot existing per-country spot assignments so the audit log can
+  // show what changed. Comparing "<countryId>:<spotId>" sorted arrays is
+  // enough for "did this set of (country → spot) mappings change?".
   const beforeVideos = await db
     .select({
       countryId: campaignVideos.countryId,
-      videoUrl: spots.videoUrl,
+      spotId: campaignVideos.spotId,
     })
     .from(campaignVideos)
-    .innerJoin(spots, eq(campaignVideos.spotId, spots.id))
     .where(eq(campaignVideos.campaignId, campaignId))
     .orderBy(asc(campaignVideos.countryId));
   const beforeVideosKey = beforeVideos
-    .map((v) => `${v.countryId}:${v.videoUrl}`)
+    .map((v) => `${v.countryId}:${v.spotId}`)
     .sort();
-  const newVideosKey = videosByCountry
-    .map((v) => `${v.countryId}:${v.videoUrl}`)
+  const newVideosKey = spotsByCountry
+    .map((v) => `${v.countryId}:${v.spotId}`)
     .sort();
 
   let beforeProductName: string | null = null;
@@ -242,32 +238,23 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
     }))
   );
 
-  // Replace per-country videos: simplest is delete-all + re-insert. Each
-  // URL goes through findOrCreateSpot so the campaign_video junction
-  // points at a proper spot row (find existing by (productId, countryId,
-  // url) tuple, otherwise insert new). Old, now-orphaned spots stay in the
-  // table — they show up on /spots as undeployed and the user can archive
-  // them there. We never auto-delete spots because another campaign might
-  // still reference them.
+  // Replace per-country spot assignments: delete-all + re-insert. The
+  // form sends spot ids picked from the dropdown, so each (countryId,
+  // spotId) goes straight into campaign_video. Spots that the user
+  // un-picked stay in the spots table — they show up on /spots as
+  // undeployed and can be archived there. We never auto-delete spots
+  // because another campaign might still reference them.
   await db
     .delete(campaignVideos)
     .where(eq(campaignVideos.campaignId, campaignId));
-  if (videosByCountry.length > 0) {
-    const inserts: Array<{
-      campaignId: number;
-      countryId: number;
-      spotId: number;
-    }> = [];
-    for (const v of videosByCountry) {
-      const spotId = await findOrCreateSpot({
-        productId,
+  if (spotsByCountry.length > 0) {
+    await db.insert(campaignVideos).values(
+      spotsByCountry.map((v) => ({
+        campaignId,
         countryId: v.countryId,
-        videoUrl: v.videoUrl,
-        userId: session.user.id,
-      });
-      inserts.push({ campaignId, countryId: v.countryId, spotId });
-    }
-    await db.insert(campaignVideos).values(inserts);
+        spotId: v.spotId,
+      }))
+    );
   }
 
   // Build diff: only include fields that actually changed. Each entry is

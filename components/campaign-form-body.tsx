@@ -13,10 +13,11 @@ import { localizedCountryName } from "@/lib/i18n/country";
 export type CampaignFormDefaults = {
   name?: string;
   client?: string | null;
-  /** Per-country video URLs, keyed by country.id. Empty entry = no video for
-   *  that country. Each country runs its own language cut of the spot, so
-   *  there's no single "campaign video URL" — see lib/db/schema.ts. */
-  videosByCountry?: Record<number, string>;
+  /** Per-country selected spot, keyed by country.id. Maps to the spot id
+   *  the campaign currently has assigned for that country (or undefined =
+   *  no spot picked). Renders as a pre-selection in the per-country
+   *  dropdown built from {@link SpotOption}. */
+  spotsByCountry?: Record<number, number>;
   startsAt?: Date;
   endsAt?: Date;
   notes?: string | null;
@@ -42,9 +43,20 @@ export type CountryGroup = {
   channels: { id: number; chainName: string }[];
 };
 
+/** Lightweight spot summary for the per-country dropdown options. */
+export type SpotOption = {
+  id: number;
+  name: string | null;
+  videoUrl: string;
+  productName: string | null;
+};
+
 type Props = {
   defaults?: CampaignFormDefaults;
   groups: CountryGroup[];
+  /** All non-archived spots, grouped by countryId. The form renders a
+   *  dropdown per country populated from this map. */
+  spotsByCountry: Record<number, SpotOption[]>;
   submitLabel: string;
   cancelHref: string;
   /** Show the "create as recurring series" section. Only meaningful on /new. */
@@ -54,6 +66,7 @@ type Props = {
 export async function CampaignFormBody({
   defaults,
   groups,
+  spotsByCountry,
   submitLabel,
   cancelHref,
   showRecurring,
@@ -227,28 +240,56 @@ export async function CampaignFormBody({
         hint={t("form.section.video_hint")}
       >
         <div className="space-y-2">
-          {groups.map((g) => (
-            <div key={g.id} className="grid grid-cols-[auto_1fr] items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300 w-20 sm:w-24 shrink-0">
-                <span className="text-base leading-none" aria-hidden>
-                  {g.flag}
+          {groups.map((g) => {
+            const options = spotsByCountry[g.id] ?? [];
+            const selectedId = defaults?.spotsByCountry?.[g.id] ?? "";
+            return (
+              <div
+                key={g.id}
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-3"
+              >
+                <span className="inline-flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300 w-20 sm:w-24 shrink-0">
+                  <span className="text-base leading-none" aria-hidden>
+                    {g.flag}
+                  </span>
+                  <span
+                    className="font-mono text-xs uppercase"
+                    title={localizedCountryName(g.code, g.name, t.locale)}
+                  >
+                    {g.code}
+                  </span>
                 </span>
-                <span
-                  className="font-mono text-xs uppercase"
-                  title={localizedCountryName(g.code, g.name, t.locale)}
+                <select
+                  name={`spotId_${g.id}`}
+                  defaultValue={String(selectedId)}
+                  className={inputClass}
                 >
-                  {g.code}
-                </span>
-              </span>
-              <input
-                name={`videoUrl_${g.id}`}
-                type="url"
-                defaultValue={defaults?.videosByCountry?.[g.id] ?? ""}
-                placeholder={t("form.video.placeholder")}
-                className={inputClass}
-              />
-            </div>
-          ))}
+                  <option value="">{t("form.video.no_spot")}</option>
+                  {options.map((s) => {
+                    const label = s.name
+                      ? s.name
+                      : s.productName
+                        ? `${s.productName} · ${g.code}`
+                        : `Spot · ${g.code}`;
+                    return (
+                      <option key={s.id} value={String(s.id)}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+                <a
+                  href="/spots/new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                  title={t("form.video.new_spot_tooltip")}
+                >
+                  {t("form.video.new_spot")}
+                </a>
+              </div>
+            );
+          })}
         </div>
       </Section>
 

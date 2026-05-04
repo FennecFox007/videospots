@@ -5,11 +5,10 @@ import {
   campaigns,
   campaignChannels,
   campaignVideos,
-  spots,
   products,
 } from "@/lib/db/client";
 import { CampaignFormBody } from "@/components/campaign-form-body";
-import { getChannelGroups } from "@/lib/db/queries";
+import { getChannelGroups, getSpotsByCountry } from "@/lib/db/queries";
 import { updateCampaign } from "./actions";
 import { getT } from "@/lib/i18n/server";
 
@@ -36,21 +35,22 @@ export default async function EditCampaignPage({
     .from(campaignChannels)
     .where(eq(campaignChannels.campaignId, campaignId));
 
-  // Pre-fill the form's per-country URL fields with whatever the campaign's
-  // currently-deployed spots have. Joining spots so we hand the form the
-  // raw URL it was originally created from.
+  // Pre-fill the form's per-country spot picker with whatever spot the
+  // campaign currently has assigned for each country.
   const videoRows = await db
     .select({
       countryId: campaignVideos.countryId,
-      videoUrl: spots.videoUrl,
+      spotId: campaignVideos.spotId,
     })
     .from(campaignVideos)
-    .innerJoin(spots, eq(campaignVideos.spotId, spots.id))
     .where(eq(campaignVideos.campaignId, campaignId));
-  const videosByCountry: Record<number, string> = {};
-  for (const v of videoRows) videosByCountry[v.countryId] = v.videoUrl;
+  const spotsByCountryDefaults: Record<number, number> = {};
+  for (const v of videoRows) spotsByCountryDefaults[v.countryId] = v.spotId;
 
-  const groups = await getChannelGroups();
+  const [groups, spotsByCountry] = await Promise.all([
+    getChannelGroups(),
+    getSpotsByCountry(),
+  ]);
   const t = await getT();
 
   const action = updateCampaign.bind(null, campaignId);
@@ -67,10 +67,11 @@ export default async function EditCampaignPage({
       <form action={action} className="space-y-6">
         <CampaignFormBody
           groups={groups}
+          spotsByCountry={spotsByCountry}
           defaults={{
             name: row.campaign.name,
             client: row.campaign.client,
-            videosByCountry,
+            spotsByCountry: spotsByCountryDefaults,
             color: row.campaign.color,
             status: row.campaign.status,
             communicationType: row.campaign.communicationType,
