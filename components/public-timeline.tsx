@@ -393,11 +393,21 @@ export function PublicTimeline({
                         ? communicationTypeLabel(b.communicationType)
                         : "";
                       const ctx = channelLookup.get(b.channelId);
+                      const openPeek = () => {
+                        if (!ctx) return;
+                        setSelected({ ...b, ...ctx });
+                      };
                       return (
-                        <button
-                          type="button"
+                        // <div role="button"> rather than a real <button>: we
+                        // want a nested <a> for the play overlay (HTML
+                        // disallows interactive content inside a button).
+                        // Mirrors the authed timeline's bar shape.
+                        <div
                           key={`${b.campaignId}-${b.channelId}`}
-                          className="absolute text-white text-xs px-2 rounded flex items-center overflow-hidden z-[1] cursor-pointer text-left transition-shadow hover:ring-2 hover:ring-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={b.name}
+                          className="absolute text-white text-xs px-2 rounded flex items-center overflow-hidden z-[1] cursor-pointer transition-shadow hover:ring-2 hover:ring-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
                           style={{
                             left: `${left}%`,
                             width: `${width}%`,
@@ -414,9 +424,12 @@ export function PublicTimeline({
                             opacity: isCancelled ? 0.45 : 1,
                           }}
                           title={`${b.name}\n${formatDate(b.startsAt)} – ${formatDate(b.endsAt)} (${dur} ${pluralCs(dur, "den", "dny", "dní")})${commLabel ? `\n${commLabel}` : ""}`}
-                          onClick={() => {
-                            if (!ctx) return;
-                            setSelected({ ...b, ...ctx });
+                          onClick={openPeek}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              openPeek();
+                            }
                           }}
                         >
                           {elapsedRatio > 0 && !isCancelled && (
@@ -435,10 +448,40 @@ export function PublicTimeline({
                               loading="lazy"
                             />
                           )}
-                          <span className="truncate font-medium">
+                          <span className="truncate font-medium pointer-events-none">
                             {b.name}
                           </span>
-                        </button>
+                          {b.videoUrl && !isCancelled && (
+                            // Small white play circle on the right edge —
+                            // same affordance as the authed timeline. Click
+                            // opens the source URL in a new tab; click on
+                            // the bar itself (anywhere outside this anchor)
+                            // opens the in-app modal with the embedded
+                            // player. stopPropagation so the bar's onClick
+                            // doesn't ALSO fire and pop a modal we didn't
+                            // ask for.
+                            <a
+                              href={b.videoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`Přehrát spot — ${b.name}`}
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/95 hover:bg-white text-zinc-900 flex items-center justify-center shadow-sm ring-1 ring-black/10 transition-colors cursor-pointer"
+                              style={{ touchAction: "manipulation" }}
+                            >
+                              <svg
+                                width="9"
+                                height="9"
+                                viewBox="0 0 9 9"
+                                fill="currentColor"
+                                aria-hidden
+                              >
+                                <path d="M1.5 0.5l6.5 4-6.5 4z" />
+                              </svg>
+                            </a>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
