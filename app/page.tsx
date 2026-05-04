@@ -17,7 +17,8 @@ import {
   chains,
   campaigns,
   campaignChannels,
-  products,
+  campaignVideos,
+  spots,
 } from "@/lib/db/client";
 import {
   Timeline,
@@ -743,7 +744,7 @@ async function DashboardStats() {
     59
   );
 
-  const [thisMonthCount, totalCount, topClients, topGames, awaitingRows] =
+  const [thisMonthCount, totalCount, topClients, awaitingRows, undeployedSpotsCount] =
     await Promise.all([
       db
         .select({ c: sql<number>`count(*)::int` })
@@ -774,17 +775,6 @@ async function DashboardStats() {
         .groupBy(campaigns.client)
         .orderBy(sql`count(*) desc`)
         .limit(3),
-      db
-        .select({
-          name: products.name,
-          c: sql<number>`count(*)::int`,
-        })
-        .from(campaigns)
-        .innerJoin(products, eq(campaigns.productId, products.id))
-        .where(isNull(campaigns.archivedAt))
-        .groupBy(products.name)
-        .orderBy(sql`count(*) desc`)
-        .limit(3),
       // "Awaiting approval" = unapproved campaigns that haven't ended yet.
       // We pull startsAt so we can split running-now vs upcoming in JS for
       // the StatCard's sub-text.
@@ -800,6 +790,23 @@ async function DashboardStats() {
             isNull(campaigns.archivedAt),
             isNull(campaigns.clientApprovedAt),
             gte(campaigns.endsAt, now)
+          )
+        ),
+      // Undeployed spots: not archived, and not currently referenced by
+      // any non-archived campaign. Sub-select counts deployments and we
+      // pick zero. Same logic the /spots page uses, just collapsed to a
+      // count for the dashboard tile.
+      db
+        .select({ c: sql<number>`count(*)::int` })
+        .from(spots)
+        .where(
+          and(
+            isNull(spots.archivedAt),
+            sql`NOT EXISTS (
+              SELECT 1 FROM ${campaignVideos} cv
+              INNER JOIN ${campaigns} c ON c.id = cv.campaign_id
+              WHERE cv.spot_id = ${spots.id} AND c.archived_at IS NULL
+            )`
           )
         ),
     ]);
@@ -849,15 +856,17 @@ async function DashboardStats() {
         }
         small
       />
+      {/* "Undeployed spots" — partner-driven V2 metric. The agency makes
+          spots, sometimes forgets to schedule them, this tile is the
+          early warning. Links straight to the /spots filter. */}
       <StatCard
-        label={t("dashboard.stats.top_product")}
-        value={topGames[0]?.name ?? "—"}
+        label={t("dashboard.stats.undeployed_spots")}
+        value={undeployedSpotsCount[0]?.c ?? 0}
         sub={
-          topGames[0]
-            ? `${topGames[0].c} ${t.plural(topGames[0].c, "unit.campaign")}`
-            : t("dashboard.stats.no_yet")
+          (undeployedSpotsCount[0]?.c ?? 0) === 0
+            ? t("dashboard.stats.undeployed_none")
+            : t("dashboard.stats.undeployed_sub")
         }
-        small
       />
     </div>
   );
