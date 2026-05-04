@@ -1,123 +1,114 @@
-// Intercepting route: when the user clicks a bar on the timeline (or a row
-// on /campaigns), the bar's `router.push("/campaigns/<id>")` is caught
-// here and rendered as a right-side peek panel instead of replacing the
-// underlying page. Direct URL hits (refresh, deep link, middle-click) still
-// fall through to app/campaigns/[id]/page.tsx as the full detail page.
-//
-// The panel is intentionally a *condensed* view: enough to triage and act
-// on (see channels, last comments, take quick actions), but not the full
-// detail. "Otevřít detail" / "Open detail" inside the panel is a regular
-// <a href> (NOT a Next Link) so it bypasses the intercept and gives the
-// user the full page when they want to dig in.
+"use client";
 
+// Campaign-specific wrapper around <SidePanel />. Mounted once at the root
+// layout level; it stays inert (returns null) until something — typically a
+// timeline bar — calls openCampaignPeek(id) from lib/peek-store.
+//
+// Architecture note: this used to live as an intercepting route under
+// app/@modal/(.)campaigns/[id]/page.tsx. That worked but Next.js 16's
+// Turbopack dev server kept crashing under HMR with the parallel-slot +
+// intercept combination, especially with two intercepts at the same level
+// ((.)campaigns/new + (.)campaigns/[id]). We swapped to a plain
+// fetch-and-render so the panel doesn't depend on Next.js routing internals
+// at all. Trade-offs:
+//   - Lost: shareable peek URL (the panel is no longer at /campaigns/<id>).
+//   - Gained: a dev server that doesn't fall over.
+//   - The full /campaigns/<id> page still exists for sharing / direct
+//     navigation.
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { asc, eq, desc, sql } from "drizzle-orm";
-import {
-  db,
-  campaigns,
-  campaignChannels,
-  campaignVideos,
-  channels,
-  countries,
-  chains,
-  products,
-  comments,
-  users,
-} from "@/lib/db/client";
-import { kindEmoji, kindLabel } from "@/lib/products";
-import {
-  formatDate,
-  daysBetween,
-  computedRunState,
-  formatRelative,
-} from "@/lib/utils";
-import {
-  cancelCampaign,
-  reactivateCampaign,
-  cloneCampaign,
-  archiveCampaign,
-} from "@/app/campaigns/[id]/actions";
+import { useRouter } from "next/navigation";
+import { SidePanel } from "@/components/side-panel";
 import { StatusBadge } from "@/components/status-badge";
 import { CommunicationBadge } from "@/components/communication-badge";
-import { SidePanel } from "@/components/side-panel";
-import { getT } from "@/lib/i18n/server";
+import {
+  closeCampaignPeek,
+  getCurrentPeekId,
+  subscribeToPeek,
+} from "@/lib/peek-store";
+import type { CampaignPeekData } from "@/app/api/campaigns/[id]/peek/route";
+import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
+import { kindEmoji, kindLabel } from "@/lib/products";
+import { cloneCampaign } from "@/app/campaigns/[id]/actions";
 
-export default async function CampaignPeekPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const campaignId = Number(id);
-  if (!Number.isFinite(campaignId)) notFound();
+export function CampaignPeek() {
+  const [id, setId] = useState<number | null>(getCurrentPeekId());
+  const [data, setData] = useState<CampaignPeekData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const t = useT();
+  const router = useRouter();
 
-  // We need the campaign row first (to call notFound() if missing), but the
-  // other four datasets are independent — fire them in parallel so wall-time
-  // is one round-trip instead of four. Each Neon HTTP call is ~80–150 ms, so
-  // serialising them was costing ~400 ms per peek for no reason.
-  const [row] = await db
-    .select({ campaign: campaigns, product: products })
-    .from(campaigns)
-    .leftJoin(products, eq(campaigns.productId, products.id))
-    .where(eq(campaigns.id, campaignId))
-    .limit(1);
-  if (!row) notFound();
+  useEffect(() => subscribeToPeek(setId), []);
 
-  const [channelRows, videoRows, commentData] = await Promise.all([
-    db
-      .select({
-        countryCode: countries.code,
-        countryName: countries.name,
-        countryFlag: countries.flagEmoji,
-        chainName: chains.name,
+  // Fetch panel data whenever the peek id changes. Cancel-on-change so a
+  // slower previous response can't overwrite a newer one.
+  useEffect(() => {
+    if (id == null) {
+      setData(null);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetch(`/api/campaigns/${id}/peek`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return (await r.json()) as CampaignPeekData;
       })
-      .from(campaignChannels)
-      .innerJoin(channels, eq(campaignChannels.channelId, channels.id))
-      .innerJoin(countries, eq(channels.countryId, countries.id))
-      .innerJoin(chains, eq(channels.chainId, chains.id))
-      .where(eq(campaignChannels.campaignId, campaignId))
-      .orderBy(asc(countries.sortOrder), asc(chains.sortOrder)),
-    db
-      .select({
-        countryCode: countries.code,
-        countryFlag: countries.flagEmoji,
-        videoUrl: campaignVideos.videoUrl,
+      .then((d) => {
+        if (cancelled) return;
+        setData(d);
+        setLoading(false);
       })
-      .from(campaignVideos)
-      .innerJoin(countries, eq(campaignVideos.countryId, countries.id))
-      .where(eq(campaignVideos.campaignId, campaignId))
-      .orderBy(asc(countries.sortOrder)),
-    // One query for both the last 3 comments AND the total count, via a
-    // window function. Saves a second round-trip just to read an integer.
-    db
-      .select({
-        id: comments.id,
-        body: comments.body,
-        createdAt: comments.createdAt,
-        userName: users.name,
-        userEmail: users.email,
-        total: sql<number>`(count(*) over ())::int`,
-      })
-      .from(comments)
-      .leftJoin(users, eq(comments.userId, users.id))
-      .where(eq(comments.campaignId, campaignId))
-      .orderBy(desc(comments.createdAt))
-      .limit(3),
-  ]);
-  const recentComments = commentData;
-  const totalComments = commentData[0]?.total ?? 0;
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : String(e));
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
-  const c = row.campaign;
-  const product = row.product;
-  const runState = computedRunState(c);
-  const dur = daysBetween(c.startsAt, c.endsAt);
-  const t = await getT();
+  if (id == null) return null;
+
+  // Loading: render the panel shell with a placeholder title while the
+  // fetch is in flight. Avoids the panel popping into existence half a
+  // second after the click.
+  if (loading || !data) {
+    return (
+      <SidePanel
+        title="…"
+        onClose={closeCampaignPeek}
+        closeLabel={t("common.close")}
+      >
+        {error ? (
+          <p className="text-sm text-red-600">
+            {t("common.error")}: {error}
+          </p>
+        ) : (
+          <SkeletonBody />
+        )}
+      </SidePanel>
+    );
+  }
+
+  const c = data.campaign;
+  const product = data.product;
+  const startsAt = new Date(c.startsAt);
+  const endsAt = new Date(c.endsAt);
+  const dur = daysBetween(startsAt, endsAt);
+  const runState = computedRunStateClient(c.status, startsAt, endsAt);
 
   return (
     <SidePanel
       title={c.name}
+      onClose={closeCampaignPeek}
+      closeLabel={t("common.close")}
       subtitle={
         <div className="flex items-center gap-2 flex-wrap">
           <span
@@ -134,25 +125,28 @@ export default async function CampaignPeekPage({
       }
       footer={
         <>
-          {/* Plain <a> so we BYPASS the interceptor and load the real detail
-              page (the panel is a peek; "Otevřít detail" is the explicit
-              hop to the full experience). */}
-          <a
-            href={`/campaigns/${campaignId}`}
+          <Link
+            href={`/campaigns/${c.id}`}
+            onClick={closeCampaignPeek}
             className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5"
           >
             {t("ctx.open_detail")}
-          </a>
+          </Link>
           <Link
-            href={`/campaigns/${campaignId}/edit`}
+            href={`/campaigns/${c.id}/edit`}
+            onClick={closeCampaignPeek}
             className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900"
           >
             {t("detail.edit")}
           </Link>
           <form
             action={async () => {
-              "use server";
-              await cloneCampaign(campaignId);
+              await cloneCampaign(c.id);
+              // cloneCampaign redirects to /campaigns/<newId>/edit, so the
+              // panel will unmount with the navigation. closeCampaignPeek
+              // here belt-and-braces: if redirect ever changes, panel still
+              // closes cleanly.
+              closeCampaignPeek();
             }}
           >
             <button
@@ -162,66 +156,25 @@ export default async function CampaignPeekPage({
               {t("detail.clone")}
             </button>
           </form>
-          <span className="ml-auto" />
-          {c.status !== "cancelled" ? (
-            <form
-              action={async () => {
-                "use server";
-                await cancelCampaign(campaignId);
-              }}
-            >
-              <button
-                type="submit"
-                className="text-sm px-2 py-1 text-amber-700 hover:underline"
-                title={t("detail.cancel_historic")}
-              >
-                {t("detail.cancel_historic")}
-              </button>
-            </form>
-          ) : (
-            <form
-              action={async () => {
-                "use server";
-                await reactivateCampaign(campaignId);
-              }}
-            >
-              <button
-                type="submit"
-                className="text-sm px-2 py-1 text-emerald-700 hover:underline"
-              >
-                {t("detail.reactivate")}
-              </button>
-            </form>
-          )}
-          <form
-            action={async () => {
-              "use server";
-              await archiveCampaign(campaignId);
-            }}
-          >
-            <button
-              type="submit"
-              className="text-sm px-2 py-1 text-red-600 hover:underline"
-              title={t("detail.archive_tooltip")}
-            >
-              {t("detail.archive")}
-            </button>
-          </form>
+          <span className="ml-auto text-xs text-zinc-400">
+            {/* Cancel / archive actions stay on the full detail page — keeping
+                the peek read-only-ish makes the data-freshness story trivial
+                (no need to refetch after a server action mutates the DB). */}
+          </span>
         </>
       }
     >
       <div className="space-y-5 text-sm">
-        {/* Term + duration */}
-        <Block label={t("common.start") + " – " + t("common.end")}>
+        <Block label={`${t("common.start")} – ${t("common.end")}`}>
           <div className="font-medium text-zinc-900 dark:text-zinc-100">
-            {formatDate(c.startsAt)} – {formatDate(c.endsAt)}
+            {formatDateClient(startsAt, t.locale)} –{" "}
+            {formatDateClient(endsAt, t.locale)}
           </div>
           <div className="text-xs text-zinc-500 mt-0.5">
             {dur} {t.plural(dur, "unit.day")}
           </div>
         </Block>
 
-        {/* Product */}
         {product && (
           <Block label={t("detail.product_section")}>
             <div className="flex items-start gap-3">
@@ -244,7 +197,10 @@ export default async function CampaignPeekPage({
                 {product.releaseDate && (
                   <div className="text-xs text-zinc-500 mt-0.5">
                     {t("detail.product_released", {
-                      date: formatDate(product.releaseDate),
+                      date: formatDateClient(
+                        new Date(product.releaseDate),
+                        t.locale
+                      ),
                     })}
                   </div>
                 )}
@@ -258,11 +214,10 @@ export default async function CampaignPeekPage({
           </Block>
         )}
 
-        {/* Per-country videos */}
-        {videoRows.length > 0 && (
+        {data.videos.length > 0 && (
           <Block label={t("detail.videos_section")}>
             <ul className="space-y-1.5">
-              {videoRows.map((v) => (
+              {data.videos.map((v) => (
                 <li
                   key={v.countryCode}
                   className="flex items-center gap-2 text-xs"
@@ -302,12 +257,11 @@ export default async function CampaignPeekPage({
           </Block>
         )}
 
-        {/* Channels */}
         <Block
-          label={`${t("detail.channels_section")} (${channelRows.length})`}
+          label={`${t("detail.channels_section")} (${data.channels.length})`}
         >
           <div className="flex flex-wrap gap-1.5">
-            {channelRows.map((ch, i) => (
+            {data.channels.map((ch, i) => (
               <span
                 key={i}
                 className="inline-flex items-center gap-1 rounded-md bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs"
@@ -327,7 +281,6 @@ export default async function CampaignPeekPage({
           </div>
         </Block>
 
-        {/* Tags */}
         {c.tags && c.tags.length > 0 && (
           <Block label={t("common.tags")}>
             <div className="flex flex-wrap gap-1">
@@ -343,7 +296,6 @@ export default async function CampaignPeekPage({
           </Block>
         )}
 
-        {/* Notes */}
         {c.notes && (
           <Block label={t("detail.notes_section")}>
             <p className="text-xs whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 line-clamp-6">
@@ -352,21 +304,21 @@ export default async function CampaignPeekPage({
           </Block>
         )}
 
-        {/* Last comments */}
-        {totalComments > 0 && (
+        {data.totalComments > 0 && (
           <Block
-            label={`${t("detail.comments_section")} (${totalComments})`}
+            label={`${t("detail.comments_section")} (${data.totalComments})`}
             action={
-              <a
-                href={`/campaigns/${campaignId}#comments`}
+              <Link
+                href={`/campaigns/${c.id}#comments`}
+                onClick={closeCampaignPeek}
                 className="text-xs text-blue-600 hover:underline"
               >
                 {t("ctx.open_detail")}
-              </a>
+              </Link>
             }
           >
             <ul className="space-y-2">
-              {recentComments.map((cm) => (
+              {data.recentComments.map((cm) => (
                 <li
                   key={cm.id}
                   className="rounded-md bg-zinc-50 dark:bg-zinc-950/40 px-2.5 py-1.5"
@@ -378,7 +330,7 @@ export default async function CampaignPeekPage({
                         t("detail.deleted_user")}
                     </span>
                     <span className="text-[10px] text-zinc-500">
-                      {formatRelative(cm.createdAt)}
+                      {formatRelativeClient(new Date(cm.createdAt), t.locale)}
                     </span>
                   </div>
                   <p className="text-xs whitespace-pre-wrap text-zinc-700 dark:text-zinc-300 line-clamp-3">
@@ -414,4 +366,66 @@ function Block({
       {children}
     </div>
   );
+}
+
+function SkeletonBody() {
+  return (
+    <div className="space-y-5 text-sm" aria-hidden>
+      {[2, 3, 2, 2].map((lines, i) => (
+        <div key={i}>
+          <div className="h-3 w-20 rounded bg-zinc-200 dark:bg-zinc-800 mb-2 animate-pulse" />
+          <div className="space-y-1.5">
+            {Array.from({ length: lines }).map((_, j) => (
+              <div
+                key={j}
+                className="h-3 rounded bg-zinc-200 dark:bg-zinc-800 animate-pulse"
+                style={{ width: `${90 - j * 18}%` }}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Client-side helpers — server-side equivalents in lib/utils.ts use Date
+// objects from the DB; here we get ISO strings out of JSON, parse them, and
+// duplicate the formatting so we don't drag server-only code into the bundle.
+
+function daysBetween(start: Date, end: Date): number {
+  const ms = end.getTime() - start.getTime();
+  return Math.max(1, Math.round(ms / 86_400_000) + 1);
+}
+
+function computedRunStateClient(
+  status: string,
+  startsAt: Date,
+  endsAt: Date
+): "upcoming" | "active" | "done" | "cancelled" {
+  if (status === "cancelled") return "cancelled";
+  const now = Date.now();
+  if (now < startsAt.getTime()) return "upcoming";
+  if (now > endsAt.getTime() + 86_400_000) return "done";
+  return "active";
+}
+
+function formatDateClient(d: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale === "cs" ? "cs-CZ" : "en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(d);
+}
+
+function formatRelativeClient(d: Date, locale: string): string {
+  const ms = Date.now() - d.getTime();
+  const min = Math.floor(ms / 60_000);
+  if (min < 1) return locale === "cs" ? "teď" : "now";
+  if (min < 60) return `${min} min`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} h`;
+  const dd = Math.floor(hr / 24);
+  if (dd < 7) return `${dd} d`;
+  return formatDateClient(d, locale);
 }

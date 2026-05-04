@@ -31,6 +31,7 @@ import {
 } from "@/lib/communication";
 import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
+import { openCampaignPeek } from "@/lib/peek-store";
 
 export type TimelineChannel = {
   id: number;
@@ -1320,7 +1321,12 @@ function DraggableBar({
       Math.abs(rawDelta) < CLICK_THRESHOLD_PX &&
       Math.abs(rawDeltaY) < CLICK_THRESHOLD_PX
     ) {
-      router.push(`/campaigns/${bar.campaignId}`);
+      // Open the right-side peek panel (mounted at root layout). This used
+      // to be a router.push to /campaigns/<id> caught by an intercepting
+      // route, but Turbopack + parallel slots + intercepts kept crashing
+      // the dev server. Now it's just an imperative call into a tiny
+      // module-level store; no routing involved.
+      openCampaignPeek(bar.campaignId);
       return;
     }
 

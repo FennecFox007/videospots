@@ -5,6 +5,7 @@ import "./globals.css";
 import { Nav } from "@/components/nav";
 import { CommandPalette } from "@/components/command-palette";
 import { DialogProvider } from "@/components/dialog/dialog-provider";
+import { CampaignPeek } from "@/components/campaign-peek";
 import { LocaleProvider } from "@/lib/i18n/client";
 import { getLocale } from "@/lib/i18n/server";
 
@@ -66,6 +67,10 @@ export default async function RootLayout({
             <main className="flex-1">{children}</main>
             {!hideNav && <CommandPalette />}
             {modal}
+            {/* Imperative peek panel — listens to lib/peek-store and renders
+                a right-side drawer when openCampaignPeek() has been called.
+                Used to be an intercepting route; see component header. */}
+            {!hideNav && <CampaignPeek />}
           </DialogProvider>
         </LocaleProvider>
       </body>
