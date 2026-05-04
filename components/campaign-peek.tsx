@@ -18,35 +18,47 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { SidePanel } from "@/components/side-panel";
 import { StatusBadge } from "@/components/status-badge";
 import { CommunicationBadge } from "@/components/communication-badge";
 import {
   closeCampaignPeek,
-  getCurrentPeekId,
+  getPeekState,
+  hydratePeekFromUrl,
+  refreshCampaignPeek,
   subscribeToPeek,
 } from "@/lib/peek-store";
 import type { CampaignPeekData } from "@/app/api/campaigns/[id]/peek/route";
 import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { kindEmoji, kindLabel } from "@/lib/products";
-import { cloneCampaign } from "@/app/campaigns/[id]/actions";
+import {
+  archiveCampaign,
+  cancelCampaign,
+  cloneCampaign,
+  reactivateCampaign,
+} from "@/app/campaigns/[id]/actions";
 
 export function CampaignPeek() {
-  const [id, setId] = useState<number | null>(getCurrentPeekId());
+  const [state, setState] = useState(getPeekState());
   const [data, setData] = useState<CampaignPeekData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useT();
-  const router = useRouter();
 
-  useEffect(() => subscribeToPeek(setId), []);
-
-  // Fetch panel data whenever the peek id changes. Cancel-on-change so a
-  // slower previous response can't overwrite a newer one.
+  // Subscribe + hydrate from URL once on mount. Hydration covers the case
+  // where the user reloads (or follows a shared link) on /?peek=<id>.
   useEffect(() => {
-    if (id == null) {
+    hydratePeekFromUrl();
+    return subscribeToPeek(setState);
+  }, []);
+
+  // Fetch panel data whenever the peek id OR the gen counter changes. The
+  // gen bump is what refreshCampaignPeek() relies on to force a refetch
+  // after a server action mutates the campaign. Cancel-on-change so a slow
+  // previous response can't overwrite a newer one.
+  useEffect(() => {
+    if (state.id == null) {
       setData(null);
       setError(null);
       return;
@@ -54,7 +66,7 @@ export function CampaignPeek() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch(`/api/campaigns/${id}/peek`)
+    fetch(`/api/campaigns/${state.id}/peek`)
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return (await r.json()) as CampaignPeekData;
@@ -72,9 +84,9 @@ export function CampaignPeek() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [state.id, state.gen]);
 
-  if (id == null) return null;
+  if (state.id == null) return null;
 
   // Loading: render the panel shell with a placeholder title while the
   // fetch is in flight. Avoids the panel popping into existence half a
@@ -144,8 +156,8 @@ export function CampaignPeek() {
               await cloneCampaign(c.id);
               // cloneCampaign redirects to /campaigns/<newId>/edit, so the
               // panel will unmount with the navigation. closeCampaignPeek
-              // here belt-and-braces: if redirect ever changes, panel still
-              // closes cleanly.
+              // here is belt-and-braces: if redirect ever changes, panel
+              // still closes cleanly.
               closeCampaignPeek();
             }}
           >
@@ -156,11 +168,57 @@ export function CampaignPeek() {
               {t("detail.clone")}
             </button>
           </form>
-          <span className="ml-auto text-xs text-zinc-400">
-            {/* Cancel / archive actions stay on the full detail page — keeping
-                the peek read-only-ish makes the data-freshness story trivial
-                (no need to refetch after a server action mutates the DB). */}
-          </span>
+          <span className="ml-auto" />
+          {/* Status toggle — cancel ↔ reactivate. Both leave the panel open
+              and bump the peek's gen counter so the next render reflects the
+              new state without the user closing/reopening. */}
+          {c.status !== "cancelled" ? (
+            <form
+              action={async () => {
+                await cancelCampaign(c.id);
+                refreshCampaignPeek();
+              }}
+            >
+              <button
+                type="submit"
+                className="text-sm px-2 py-1 text-amber-700 hover:underline"
+                title={t("detail.cancel_historic")}
+              >
+                {t("detail.cancel_historic")}
+              </button>
+            </form>
+          ) : (
+            <form
+              action={async () => {
+                await reactivateCampaign(c.id);
+                refreshCampaignPeek();
+              }}
+            >
+              <button
+                type="submit"
+                className="text-sm px-2 py-1 text-emerald-700 hover:underline"
+              >
+                {t("detail.reactivate")}
+              </button>
+            </form>
+          )}
+          {/* Archive redirects to /campaigns, which navigates away from the
+              current page. Close the panel imperatively too so URL state and
+              UI state stay in sync regardless of where the redirect lands. */}
+          <form
+            action={async () => {
+              await archiveCampaign(c.id);
+              closeCampaignPeek();
+            }}
+          >
+            <button
+              type="submit"
+              className="text-sm px-2 py-1 text-red-600 hover:underline"
+              title={t("detail.archive_tooltip")}
+            >
+              {t("detail.archive")}
+            </button>
+          </form>
         </>
       }
     >

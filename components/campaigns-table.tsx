@@ -26,6 +26,7 @@ import {
   type ConfirmOptions,
 } from "@/components/dialog/dialog-provider";
 import { useT } from "@/lib/i18n/client";
+import { openCampaignPeek } from "@/lib/peek-store";
 
 export type CampaignsTableRow = {
   id: number;
@@ -162,8 +163,26 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
                     />
                   </td>
                   <td className="px-3 py-2 font-medium">
+                    {/* Plain click opens the peek panel; modifier-clicks
+                        (Cmd/Ctrl/Shift/middle) fall through to default <a>
+                        behavior so users can still open the full detail in
+                        a new tab. The href stays /campaigns/<id> so right-
+                        click "copy link" gives a useful URL. */}
                     <Link
                       href={`/campaigns/${r.id}`}
+                      onClick={(e) => {
+                        if (
+                          e.metaKey ||
+                          e.ctrlKey ||
+                          e.shiftKey ||
+                          e.altKey ||
+                          e.button !== 0
+                        ) {
+                          return;
+                        }
+                        e.preventDefault();
+                        openCampaignPeek(r.id);
+                      }}
                       className="hover:underline"
                     >
                       {r.name}
