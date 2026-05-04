@@ -395,7 +395,7 @@ export default async function Dashboard({
           })}
         </div>
 
-        <div className="inline-flex rounded-md border border-zinc-300 dark:border-zinc-700 overflow-hidden text-xs">
+        <div className="inline-flex rounded-md border border-zinc-300 dark:border-zinc-700 overflow-hidden">
           {(() => {
             // Contextual presets snapped to calendar boundaries.
             const today = new Date();
@@ -454,7 +454,7 @@ export default async function Dashboard({
                 key={p.label}
                 href={rangeUrl(p.start, p.days, queryParamsForward)}
                 className={
-                  "px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 " +
+                  "px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 " +
                   (i < presets.length - 1
                     ? "border-r border-zinc-300 dark:border-zinc-700"
                     : "")

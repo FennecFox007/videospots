@@ -136,7 +136,7 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
         onClick={() => setOpen((v) => !v)}
         disabled={isPending}
         className={
-          "rounded-md border border-zinc-300 dark:border-zinc-700 px-2.5 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1 " +
+          "rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1 " +
           (activeId !== null ? "ring-1 ring-blue-400" : "")
         }
         aria-haspopup="menu"
