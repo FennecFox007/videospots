@@ -743,7 +743,7 @@ async function DashboardStats() {
     59
   );
 
-  const [thisMonthCount, totalCount, topClients, topGames, monthCampaigns] =
+  const [thisMonthCount, totalCount, topClients, topGames, awaitingRows] =
     await Promise.all([
       db
         .select({ c: sql<number>`count(*)::int` })
@@ -785,55 +785,33 @@ async function DashboardStats() {
         .groupBy(products.name)
         .orderBy(sql`count(*) desc`)
         .limit(3),
-      // Approved campaigns overlapping this month — used for screen-days math.
+      // "Awaiting approval" = unapproved campaigns that haven't ended yet.
+      // We pull startsAt so we can split running-now vs upcoming in JS for
+      // the StatCard's sub-text.
       db
         .select({
           id: campaigns.id,
           startsAt: campaigns.startsAt,
-          endsAt: campaigns.endsAt,
         })
         .from(campaigns)
         .where(
           and(
             eq(campaigns.status, "approved"),
             isNull(campaigns.archivedAt),
-            lte(campaigns.startsAt, monthEnd),
-            gte(campaigns.endsAt, monthStart)
+            isNull(campaigns.clientApprovedAt),
+            gte(campaigns.endsAt, now)
           )
         ),
     ]);
 
-  // Screen-days = Σ (days the campaign runs in this month × number of channels
-  // it targets). Computed in JS — small dataset, avoids fragile SQL casting.
-  let screenDays = 0;
-  if (monthCampaigns.length > 0) {
-    const channelCounts = await db
-      .select({
-        campaignId: campaignChannels.campaignId,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(campaignChannels)
-      .where(
-        inArray(
-          campaignChannels.campaignId,
-          monthCampaigns.map((c) => c.id)
-        )
-      )
-      .groupBy(campaignChannels.campaignId);
-    const channelsByCampaign = new Map(
-      channelCounts.map((r) => [r.campaignId, r.count])
-    );
-    for (const c of monthCampaigns) {
-      const start =
-        c.startsAt > monthStart ? c.startsAt : monthStart;
-      const end = c.endsAt < monthEnd ? c.endsAt : monthEnd;
-      const days = Math.max(
-        0,
-        Math.round((end.getTime() - start.getTime()) / ONE_DAY_MS) + 1
-      );
-      screenDays += days * (channelsByCampaign.get(c.id) ?? 0);
-    }
+  // Split "awaiting approval" into running-now vs upcoming.
+  let awaitingRunning = 0;
+  let awaitingUpcoming = 0;
+  for (const r of awaitingRows) {
+    if (r.startsAt <= now) awaitingRunning += 1;
+    else awaitingUpcoming += 1;
   }
+  const awaitingTotal = awaitingRows.length;
 
   const t = await getT();
   const localeTag = t.locale === "en" ? "en-US" : "cs-CZ";
@@ -846,9 +824,20 @@ async function DashboardStats() {
         sub={`${thisMonthCount[0].c} ${t("dashboard.stats.this_month", { month: monthName })}`}
       />
       <StatCard
-        label={t("dashboard.stats.screen_days")}
-        value={screenDays}
-        sub={t("dashboard.stats.screen_days_sub")}
+        label={t("dashboard.stats.awaiting_approval")}
+        value={awaitingTotal}
+        sub={
+          awaitingTotal === 0
+            ? t("dashboard.stats.awaiting_none")
+            : awaitingRunning > 0
+              ? t("dashboard.stats.awaiting_split", {
+                  running: awaitingRunning,
+                  upcoming: awaitingUpcoming,
+                })
+              : t("dashboard.stats.awaiting_upcoming_only", {
+                  upcoming: awaitingUpcoming,
+                })
+        }
       />
       <StatCard
         label={t("dashboard.stats.top_client")}
