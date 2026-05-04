@@ -116,6 +116,11 @@ Pravoklik bar → **"Upravit jen tento řetězec"** otevře dialog s:
 - **QR na print campaign**
 - **Toast + ConfirmDialog** systém
 - **CommunicationBadge** (Launch / Pre-order / Out Now / DLC / Promo / …)
+- **Dashboard "Čeká na schválení" tile** (`app/page.tsx` → `DashboardStats`) — počet kampaní co běží/startují bez schválení, sub-text rozdělí na "X už běží · Y v plánu" (urgentní vs. budoucí). Při 0 ukáže "Vše schváleno". Nahradilo dřívější "Screen-days" vanity metriku.
+
+## Toolbar styling discipline
+
+Všechny ovládací prvky v hlavičce timeline (zoom presety, date nav, presety, filter dropdowns, Pohledy button) jsou na **`text-sm` + `px-3 py-1.5`**. Když přidáváš další button/dropdown do toolbar řady, drž tento standard. Density toggle v rohu timeline je výjimka (`text-xs`, sekundární kontrola odsunutá od hlavního toolbaru).
 
 ## Hosting & deploy strategie
 
