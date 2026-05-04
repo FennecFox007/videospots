@@ -79,14 +79,64 @@ type Props = {
 
 // Bar geometry (pixels). Each channel row has 1+ lanes; bars in the same lane
 // never overlap in time, so multiple parallel campaigns just stack.
-const BAR_HEIGHT = 28;
+//
+// Two density presets — "comfort" (default) keeps the legacy generous spacing,
+// "compact" trims everything down so a heavily-stacked timeline (lots of
+// channels × many lanes) fits the viewport without scrolling. The toggle in
+// the timeline chrome flips between them; the choice persists per user via
+// localStorage.
 const BAR_MIN_WIDTH_PX = 24; // make 1-day bars clickable instead of hairlines
-const LANE_GAP = 4;
-const ROW_PAD_TOP = 4;
-const ROW_PAD_BOTTOM = 4;
 const RESIZE_EDGE_PX = 8;
 const CLICK_THRESHOLD_PX = 5;
 const ONE_DAY_MS = 86_400_000;
+
+type Density = "comfort" | "compact";
+
+type DensityPreset = {
+  barHeight: number;
+  laneGap: number;
+  rowPadTop: number;
+  rowPadBottom: number;
+  /** Bar text size class. */
+  barFont: string;
+  /** Bar inner horizontal padding class. */
+  barPx: string;
+  /** Render the per-bar product cover thumbnail? */
+  showCover: boolean;
+  /** Country header (group row) padding-y class. */
+  countryHeaderPy: string;
+  /** Country header text size class. */
+  countryHeaderText: string;
+  /** Channel-label cell text size class. */
+  channelLabelText: string;
+};
+
+const DENSITY: Record<Density, DensityPreset> = {
+  comfort: {
+    barHeight: 28,
+    laneGap: 4,
+    rowPadTop: 4,
+    rowPadBottom: 4,
+    barFont: "text-xs",
+    barPx: "px-2",
+    showCover: true,
+    countryHeaderPy: "py-2.5",
+    countryHeaderText: "text-sm",
+    channelLabelText: "text-sm",
+  },
+  compact: {
+    barHeight: 20,
+    laneGap: 2,
+    rowPadTop: 2,
+    rowPadBottom: 2,
+    barFont: "text-[10px]",
+    barPx: "px-1",
+    showCover: false,
+    countryHeaderPy: "py-1",
+    countryHeaderText: "text-xs",
+    channelLabelText: "text-xs",
+  },
+};
 
 // Above this many visible days, daily labels become illegible — fall back to
 // weekly Monday-only markers (matches the wide quarter view).
@@ -158,24 +208,43 @@ export function Timeline({
   // first load is acceptable for a UI toggle.
   // ---------------------------------------------------------------------------
   const COLLAPSE_STORAGE_KEY = "videospots:timeline:collapsed";
+  const DENSITY_STORAGE_KEY = "videospots:timeline:density";
   const [collapsedCountries, setCollapsedCountries] = useState<Set<string>>(
     new Set()
   );
+  const [density, setDensity] = useState<Density>("comfort");
+  const dp = DENSITY[density];
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(COLLAPSE_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setCollapsedCountries(
-          new Set(parsed.filter((x): x is string => typeof x === "string"))
-        );
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setCollapsedCountries(
+            new Set(parsed.filter((x): x is string => typeof x === "string"))
+          );
+        }
       }
     } catch {
       // Bad JSON or no localStorage — ignore.
     }
+    try {
+      const d = localStorage.getItem(DENSITY_STORAGE_KEY);
+      if (d === "compact" || d === "comfort") setDensity(d);
+    } catch {
+      // ignore
+    }
   }, []);
+
+  function persistDensity(next: Density) {
+    setDensity(next);
+    try {
+      localStorage.setItem(DENSITY_STORAGE_KEY, next);
+    } catch {
+      // ignore
+    }
+  }
 
   function persistCollapsed(next: Set<string>) {
     setCollapsedCountries(next);
@@ -566,6 +635,41 @@ export function Timeline({
   const hasNoCampaigns = campaigns.length === 0;
 
   return (
+    <div className="space-y-2">
+      {/* Density toggle — flips bar/header sizes for dense timelines. State
+          persists in localStorage so the user's choice carries across pages. */}
+      <div className="flex items-center justify-end gap-2 text-xs text-zinc-500">
+        <span>{t("timeline.density")}:</span>
+        <div
+          className="inline-flex rounded-md ring-1 ring-zinc-300 dark:ring-zinc-700 overflow-hidden font-medium"
+          role="group"
+          aria-label={t("timeline.density")}
+        >
+          {(["comfort", "compact"] as const).map((d, i) => {
+            const active = density === d;
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() => persistDensity(d)}
+                aria-pressed={active}
+                className={
+                  "px-2 py-1 transition-colors " +
+                  (active
+                    ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800") +
+                  (i === 0
+                    ? ""
+                    : " border-l border-zinc-200 dark:border-zinc-700")
+                }
+              >
+                {t(d === "comfort" ? "timeline.density.comfort" : "timeline.density.compact")}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
     <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm overflow-x-auto">
       <div className="min-w-[900px]">
         {/* HEADER ----------------------------------------------------------- */}
@@ -709,7 +813,7 @@ export function Timeline({
               }}
             >
               <div
-                className={`w-32 sm:w-48 shrink-0 px-4 py-2.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 sticky left-0 z-10 ${GROUP_HEADER_BG} flex items-center gap-2`}
+                className={`w-32 sm:w-48 shrink-0 px-4 ${dp.countryHeaderPy} ${dp.countryHeaderText} font-semibold text-zinc-800 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 sticky left-0 z-10 ${GROUP_HEADER_BG} flex items-center gap-2`}
               >
                 <span
                   aria-hidden
@@ -748,10 +852,10 @@ export function Timeline({
                 laneInfoByChannel.get(ch.id) ??
                 ({ lanes: new Map(), laneCount: 1 } as LaneInfo);
               const rowHeight =
-                ROW_PAD_TOP +
-                info.laneCount * BAR_HEIGHT +
-                Math.max(0, info.laneCount - 1) * LANE_GAP +
-                ROW_PAD_BOTTOM;
+                dp.rowPadTop +
+                info.laneCount * dp.barHeight +
+                Math.max(0, info.laneCount - 1) * dp.laneGap +
+                dp.rowPadBottom;
 
               return (
                 <div
@@ -759,7 +863,7 @@ export function Timeline({
                   className="flex border-b border-zinc-100 dark:border-zinc-800"
                 >
                   <div
-                    className={`w-32 sm:w-48 shrink-0 px-4 text-sm text-zinc-700 dark:text-zinc-300 border-r border-zinc-100 dark:border-zinc-800 truncate flex items-center sticky left-0 z-10 ${ROW_BG}`}
+                    className={`w-32 sm:w-48 shrink-0 px-4 ${dp.channelLabelText} text-zinc-700 dark:text-zinc-300 border-r border-zinc-100 dark:border-zinc-800 truncate flex items-center sticky left-0 z-10 ${ROW_BG}`}
                     style={{ minHeight: rowHeight }}
                     onContextMenu={(e) => {
                       e.preventDefault();
@@ -873,7 +977,7 @@ export function Timeline({
                       const width = Math.max(right - left, 0.5);
                       const laneIdx = info.lanes.get(b.campaignId) ?? 0;
                       const top =
-                        ROW_PAD_TOP + laneIdx * (BAR_HEIGHT + LANE_GAP);
+                        dp.rowPadTop + laneIdx * (dp.barHeight + dp.laneGap);
                       return (
                         <DraggableBar
                           key={`${b.campaignId}-${b.channelId}`}
@@ -897,6 +1001,7 @@ export function Timeline({
                             setHoverTooltip({ bar, rect })
                           }
                           onHoverHide={() => setHoverTooltip(null)}
+                          density={dp}
                         />
                       );
                     })}
@@ -966,6 +1071,7 @@ export function Timeline({
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
@@ -1075,6 +1181,7 @@ function DraggableBar({
   onContextMenu,
   onHoverShow,
   onHoverHide,
+  density,
 }: {
   bar: TimelineCampaign;
   leftPct: number;
@@ -1086,6 +1193,7 @@ function DraggableBar({
   onContextMenu?: (e: React.MouseEvent) => void;
   onHoverShow?: (bar: TimelineCampaign, rect: DOMRect) => void;
   onHoverHide?: () => void;
+  density: DensityPreset;
 }) {
   const router = useRouter();
   const t = useT();
@@ -1327,13 +1435,13 @@ function DraggableBar({
       onContextMenu={onContextMenu}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className="absolute text-white text-xs px-2 rounded flex items-center overflow-hidden select-none transition-shadow z-[1]"
+      className={`absolute text-white ${density.barFont} ${density.barPx} rounded flex items-center overflow-hidden select-none transition-shadow z-[1]`}
       style={{
         left: `calc(${displayLeftPct}% + ${leftPxAdjust}px)`,
         width: `calc(${displayWidthPct}% + ${widthPxAdjust}px)`,
         minWidth: BAR_MIN_WIDTH_PX,
         top: `${top}px`,
-        height: `${BAR_HEIGHT}px`,
+        height: `${density.barHeight}px`,
         background,
         cursor,
         transform:
@@ -1368,7 +1476,7 @@ function DraggableBar({
         className="absolute right-0 top-0 bottom-0"
         style={{ width: RESIZE_EDGE_PX, cursor: "ew-resize" }}
       />
-      {bar.coverUrl && (
+      {bar.coverUrl && density.showCover && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={bar.coverUrl}

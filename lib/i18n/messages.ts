@@ -72,6 +72,9 @@ const cs = {
 
   // Timeline
   "timeline.heading": "Timeline",
+  "timeline.density": "Hustota",
+  "timeline.density.comfort": "Komfortní",
+  "timeline.density.compact": "Kompaktní",
   "timeline.tip":
     "táhni za střed = posun, za okraj = délka, klik = otevřít detail, ▶ na baru = přehrát spot. Hlavičku s dny chytni a táhni pro posun v čase, shift+táhnout = snap na pondělí, dvojklik = skok na dnešek.",
   "timeline.share": "Sdílet",
@@ -460,6 +463,9 @@ const en: Record<keyof typeof cs, string> = {
 
   // Timeline
   "timeline.heading": "Timeline",
+  "timeline.density": "Density",
+  "timeline.density.comfort": "Comfort",
+  "timeline.density.compact": "Compact",
   "timeline.tip":
     "drag the middle = move, drag the edge = resize, click = open detail, ▶ on bar = play the spot. Grab the days header to scrub through time, shift+drag = snap to Monday, double-click = jump to today.",
   "timeline.share": "Share",
