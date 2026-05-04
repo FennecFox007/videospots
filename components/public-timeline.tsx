@@ -21,6 +21,7 @@ import {
 import { localizedCountryName } from "@/lib/i18n/country";
 import type { Locale } from "@/lib/i18n/messages";
 import { VideoEmbed } from "@/components/video-embed";
+import { PublicApproveCard } from "@/components/public-approve-card";
 
 export type PublicChannel = {
   id: number;
@@ -59,6 +60,9 @@ export type PublicCampaign = {
    *  campaign. Drives the italic + ✱ marker on the bar's name so the
    *  reader knows this retailer's schedule is different. */
   hasChannelOverride: boolean;
+  /** Client approval timestamp. Null = waiting for approval; the share
+   *  modal then shows the "Schvaluji" button. Permanent once set. */
+  clientApprovedAt: Date | null;
 };
 
 type Props = {
@@ -72,6 +76,10 @@ type Props = {
   locale?: string;
   /** UI locale ("cs" | "en"). Used for country-name lookup. */
   uiLocale?: Locale;
+  /** Share token from /share/<token>/ — passed down so the bar peek modal
+   *  can post to /api/share/<token>/approve when the client approves a
+   *  campaign from inside the timeline view. */
+  token: string;
 };
 
 const BAR_HEIGHT = 28;
@@ -97,6 +105,7 @@ export function PublicTimeline({
   now,
   locale = "cs-CZ",
   uiLocale = "cs",
+  token,
 }: Props) {
   const [selected, setSelected] = useState<SelectedBar | null>(null);
 
@@ -525,6 +534,7 @@ export function PublicTimeline({
         <PublicCampaignModal
           bar={selected}
           uiLocale={uiLocale}
+          token={token}
           onClose={() => setSelected(null)}
         />
       )}
@@ -540,10 +550,12 @@ export function PublicTimeline({
 function PublicCampaignModal({
   bar,
   uiLocale,
+  token,
   onClose,
 }: {
   bar: SelectedBar;
   uiLocale: Locale;
+  token: string;
   onClose: () => void;
 }) {
   // ESC closes.
@@ -659,7 +671,7 @@ function PublicCampaignModal({
           </button>
         </header>
 
-        <div className="overflow-y-auto px-5 py-4">
+        <div className="overflow-y-auto px-5 py-4 space-y-4">
           {bar.videoUrl ? (
             <VideoEmbed url={bar.videoUrl} />
           ) : (
@@ -670,6 +682,20 @@ function PublicCampaignModal({
               Pro tento řetězec není zatím přiřazený spot.
             </div>
           )}
+
+          {/* Approval is per-CAMPAIGN, not per-bar — but the modal opens
+              from a specific bar, so we pass campaignId. The card is the
+              same component used on the single-campaign share view, just
+              compact. Note: clicking through different bars of the same
+              campaign here will all reflect / write the same approval
+              state, which is correct: approving "Saros" applies whether
+              you opened it via the CZ-Alza bar or the SK-PGS bar. */}
+          <PublicApproveCard
+            token={token}
+            campaignId={bar.campaignId}
+            initialApprovedAt={bar.clientApprovedAt}
+            compact
+          />
         </div>
       </div>
     </div>

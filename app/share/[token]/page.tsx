@@ -36,6 +36,7 @@ import {
   PublicTimeline,
   type PublicCountryGroup,
 } from "@/components/public-timeline";
+import { PublicApproveCard } from "@/components/public-approve-card";
 import {
   findCampaignIds,
   fetchTimelineCampaigns,
@@ -78,7 +79,13 @@ export default async function PublicSharePage({
   const payload = link.payload as SharePayload;
 
   if (payload.type === "campaign") {
-    return <CampaignSharePage campaignId={payload.campaignId} link={link} />;
+    return (
+      <CampaignSharePage
+        campaignId={payload.campaignId}
+        link={link}
+        token={token}
+      />
+    );
   }
   if (payload.type === "timeline") {
     return (
@@ -86,6 +93,7 @@ export default async function PublicSharePage({
         filters={payload.filters ?? {}}
         link={link}
         now={now}
+        token={token}
       />
     );
   }
@@ -100,9 +108,11 @@ export default async function PublicSharePage({
 async function CampaignSharePage({
   campaignId,
   link,
+  token,
 }: {
   campaignId: number;
   link: { expiresAt: Date | null };
+  token: string;
 }) {
   const t = await getT();
   const [row] = await db
@@ -177,6 +187,16 @@ async function CampaignSharePage({
             </div>
           )}
         </div>
+
+        {/* Approval card. Pinned high on the page so the client doesn't have
+            to scroll past channel details to find the action — partner
+            specifically said clients won't actively use the system, so the
+            "click to approve" affordance has to be impossible to miss. */}
+        <PublicApproveCard
+          token={token}
+          campaignId={c.id}
+          initialApprovedAt={c.clientApprovedAt}
+        />
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card label={t("common.start")}>{formatDate(c.startsAt)}</Card>
@@ -278,10 +298,12 @@ async function TimelineSharePage({
   filters,
   link,
   now,
+  token,
 }: {
   filters: Record<string, string>;
   link: { expiresAt: Date | null };
   now: Date;
+  token: string;
 }) {
   const t = await getT();
   const fromParam = parseDateParam(filters.from);
@@ -384,6 +406,7 @@ async function TimelineSharePage({
           now={now}
           locale={t.locale === "en" ? "en-US" : "cs-CZ"}
           uiLocale={t.locale}
+          token={token}
         />
 
         <PublicFooter expiresAt={link.expiresAt} t={t} />

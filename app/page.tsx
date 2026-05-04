@@ -75,6 +75,7 @@ type SearchParams = {
   runState?: string;
   tag?: string;
   communicationType?: string;
+  approval?: string;
 };
 
 export default async function Dashboard({
@@ -145,6 +146,7 @@ export default async function Dashboard({
     status: params.status,
     runState: params.runState,
     communicationType: params.communicationType,
+    approval: params.approval,
     tag: params.tag,
     rangeStart,
     rangeEnd,

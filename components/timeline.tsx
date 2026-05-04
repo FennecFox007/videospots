@@ -81,6 +81,11 @@ export type TimelineCampaign = {
    *  campaign_channel row is non-null. Drives the small visual indicator
    *  on the bar. */
   hasChannelOverride: boolean;
+  /** Client approval timestamp. Null = waiting for approval — bar gets
+   *  diagonal stripes overlay so the agency sees at a glance which
+   *  campaigns the client hasn't blessed yet. Permanent once set; further
+   *  edits don't invalidate (per partner). */
+  clientApprovedAt: Date | null;
   channelId: number;
 };
 
@@ -1556,6 +1561,21 @@ function DraggableBar({
           aria-hidden
           className="absolute left-0 top-0 bottom-0 bg-black/30 pointer-events-none"
           style={{ width: `${elapsedRatio * 100}%` }}
+        />
+      )}
+      {/* Diagonal stripes — campaign hasn't been client-approved yet. The
+          stripes sit on top of the campaign colour but below the text/icons
+          (transparent layer, non-interactive). Skipped for cancelled bars
+          since their gray + line-through is already a stronger signal. */}
+      {!bar.clientApprovedAt && !isCancelled && (
+        <span
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          title="Čeká na schválení klienta"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(45deg, transparent 0, transparent 6px, rgba(255,255,255,0.32) 6px, rgba(255,255,255,0.32) 10px)",
+          }}
         />
       )}
       <span

@@ -80,6 +80,7 @@ export function FilterBar({
   const runState = searchParams.get("runState") ?? "";
   const tag = searchParams.get("tag") ?? "";
   const commType = searchParams.get("communicationType") ?? "";
+  const approval = searchParams.get("approval") ?? ""; // "" | "pending" | "approved"
 
   const hasFilters =
     !!search ||
@@ -88,7 +89,8 @@ export function FilterBar({
     !!client ||
     !!runState ||
     !!tag ||
-    !!commType;
+    !!commType ||
+    !!approval;
 
   function clearAll() {
     const params = new URLSearchParams(searchParams);
@@ -101,6 +103,7 @@ export function FilterBar({
       "status",
       "tag",
       "communicationType",
+      "approval",
     ].forEach((k) => params.delete(k));
     setSearch("");
     lastSearchRef.current = "";
@@ -144,6 +147,15 @@ export function FilterBar({
           label: ct.label,
         }))}
         placeholder={t("filter.all_comm_types")}
+      />
+      <Select
+        value={approval}
+        onChange={(v) => setParam("approval", v)}
+        options={[
+          { value: "pending", label: t("filter.approval.pending") },
+          { value: "approved", label: t("filter.approval.approved") },
+        ]}
+        placeholder={t("filter.approval.all")}
       />
       {clients.length > 0 && (
         <Select

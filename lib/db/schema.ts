@@ -168,6 +168,15 @@ export const campaigns = pgTable("campaign", {
   // Soft-delete timestamp. Non-null = "archived" (hidden from default lists,
   // restorable from /admin/archive). Null = active.
   archivedAt: timestamp("archived_at", { mode: "date" }),
+  // Client approval — set when the client clicks "Schvaluji" in a public
+  // /share/<token> view. NULL = waiting for approval (timeline shows the
+  // bar with diagonal stripes); non-null = approved (date stamped, never
+  // re-cleared by subsequent edits — partner explicitly chose "permanent
+  // approval" over "edit invalidates approval" for v1).
+  clientApprovedAt: timestamp("client_approved_at", { mode: "date" }),
+  // Optional comment the client typed alongside their approval. Free-form
+  // text. Surfaced on the detail page so the agency sees what was said.
+  clientApprovedComment: text("client_approved_comment"),
   createdById: text("created_by").references(() => users.id, {
     onDelete: "set null",
   }),

@@ -86,6 +86,9 @@ export type CampaignFilters = {
   runState?: string;
   /** Communication intent (preorder/launch/outnow/...). Matched exactly. */
   communicationType?: string;
+  /** "pending" | "approved" — filter by client approval status. Empty/undef
+   *  = both. */
+  approval?: string;
   tag?: string;
   /** Optional date window (overlap test). */
   rangeStart?: Date;
@@ -184,6 +187,11 @@ async function buildWhere(filters: CampaignFilters): Promise<{
   if (filters.communicationType) {
     conds.push(eq(campaigns.communicationType, filters.communicationType));
   }
+  if (filters.approval === "pending") {
+    conds.push(isNull(campaigns.clientApprovedAt));
+  } else if (filters.approval === "approved") {
+    conds.push(sql`${campaigns.clientApprovedAt} IS NOT NULL`);
+  }
   if (filters.tag) {
     // Postgres array contains: tags @> ARRAY['tag']
     conds.push(sql`${campaigns.tags} @> ARRAY[${filters.tag}]::text[]`);
@@ -268,6 +276,7 @@ export async function fetchTimelineCampaigns(
       color: campaigns.color,
       status: campaigns.status,
       communicationType: campaigns.communicationType,
+      clientApprovedAt: campaigns.clientApprovedAt,
       videoUrl: campaignVideos.videoUrl,
       coverUrl: products.coverUrl,
       masterStartsAt: campaigns.startsAt,
@@ -305,6 +314,7 @@ export async function fetchTimelineCampaigns(
     color: r.color,
     status: r.status,
     communicationType: r.communicationType,
+    clientApprovedAt: r.clientApprovedAt,
     videoUrl: r.videoUrl,
     coverUrl: r.coverUrl,
     // Effective: per-channel override falls back to master.

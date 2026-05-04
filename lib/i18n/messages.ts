@@ -240,6 +240,14 @@ const cs = {
   "override.indicator_title":
     "Tento řetězec má vlastní termín odlišný od kampaně.",
 
+  // Client approval
+  "approval.waiting": "Čeká na schválení",
+  "approval.approved_on": "Schváleno {date}",
+  "approval.client_said": "Klient napsal",
+  "filter.approval.all": "Schválení",
+  "filter.approval.pending": "Čeká na schválení",
+  "filter.approval.approved": "Schváleno",
+
   // Campaign form body (new + edit)
   "form.section.basic": "Základní údaje",
   "form.section.product": "Produkt",
@@ -645,6 +653,14 @@ const en: Record<keyof typeof cs, string> = {
   "override.error_end_before_start": "End cannot be before start.",
   "override.indicator_title":
     "This retailer has its own schedule, different from the campaign.",
+
+  // Client approval
+  "approval.waiting": "Waiting for approval",
+  "approval.approved_on": "Approved {date}",
+  "approval.client_said": "Client said",
+  "filter.approval.all": "Approval",
+  "filter.approval.pending": "Awaiting approval",
+  "filter.approval.approved": "Approved",
 
   // Campaign form body
   "form.section.basic": "Basics",
