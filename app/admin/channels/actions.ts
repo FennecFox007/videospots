@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
-import { db, channels, chains } from "@/lib/db/client";
+import { db, channels, chains, auditLog } from "@/lib/db/client";
 
-async function requireAuth() {
+async function requireAuth(): Promise<string> {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  return session.user.id;
 }
 
 /**
@@ -15,7 +16,7 @@ async function requireAuth() {
  * Drives the matrix UI on /admin/channels.
  */
 export async function toggleChannel(countryId: number, chainId: number) {
-  await requireAuth();
+  const userId = await requireAuth();
 
   const existing = await db
     .select({ id: channels.id })
@@ -24,9 +25,27 @@ export async function toggleChannel(countryId: number, chainId: number) {
     .limit(1);
 
   if (existing.length > 0) {
-    await db.delete(channels).where(eq(channels.id, existing[0].id));
+    const channelId = existing[0].id;
+    await db.delete(channels).where(eq(channels.id, channelId));
+    await db.insert(auditLog).values({
+      action: "deleted",
+      entity: "channel",
+      entityId: channelId,
+      userId,
+      changes: { countryId, chainId },
+    });
   } else {
-    await db.insert(channels).values({ countryId, chainId });
+    const [created] = await db
+      .insert(channels)
+      .values({ countryId, chainId })
+      .returning({ id: channels.id });
+    await db.insert(auditLog).values({
+      action: "created",
+      entity: "channel",
+      entityId: created.id,
+      userId,
+      changes: { countryId, chainId },
+    });
   }
 
   revalidatePath("/admin/channels");
@@ -42,7 +61,7 @@ export async function addChainToCountry(
   countryId: number,
   formData: FormData
 ) {
-  await requireAuth();
+  const userId = await requireAuth();
 
   const rawName = String(formData.get("chainName") ?? "").trim();
   if (!rawName) return; // empty submit — silently noop
@@ -65,6 +84,13 @@ export async function addChainToCountry(
       .values({ code, name: rawName, sortOrder: 99 })
       .returning({ id: chains.id });
     chainId = inserted.id;
+    await db.insert(auditLog).values({
+      action: "created",
+      entity: "chain",
+      entityId: chainId,
+      userId,
+      changes: { code, name: rawName, via: "addChainToCountry" },
+    });
   }
 
   // Ensure the channel exists.
@@ -75,7 +101,17 @@ export async function addChainToCountry(
     .limit(1);
 
   if (existingChannel.length === 0) {
-    await db.insert(channels).values({ countryId, chainId });
+    const [created] = await db
+      .insert(channels)
+      .values({ countryId, chainId })
+      .returning({ id: channels.id });
+    await db.insert(auditLog).values({
+      action: "created",
+      entity: "channel",
+      entityId: created.id,
+      userId,
+      changes: { countryId, chainId, via: "addChainToCountry" },
+    });
   }
 
   revalidatePath("/admin/channels");

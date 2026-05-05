@@ -125,33 +125,38 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
       : DEFAULT_PRODUCT_KIND;
 
   // Snapshot the BEFORE state so we can compute a diff for the audit log.
-  const [before] = await db
-    .select()
-    .from(campaigns)
-    .where(eq(campaigns.id, campaignId))
-    .limit(1);
+  // The three independent queries below used to be sequential awaits — on
+  // Neon HTTP each await is one round-trip, so doing them in parallel is
+  // a real latency win on slow links.
+  const [beforeRow, beforeChannelRows, beforeVideos] = await Promise.all([
+    db
+      .select()
+      .from(campaigns)
+      .where(eq(campaigns.id, campaignId))
+      .limit(1),
+    db
+      .select({ channelId: campaignChannels.channelId })
+      .from(campaignChannels)
+      .where(eq(campaignChannels.campaignId, campaignId))
+      .orderBy(asc(campaignChannels.channelId)),
+    // Snapshot existing per-country spot assignments so the audit log can
+    // show what changed. Comparing "<countryId>:<spotId>" sorted arrays is
+    // enough for "did this set of (country → spot) mappings change?".
+    db
+      .select({
+        countryId: campaignVideos.countryId,
+        spotId: campaignVideos.spotId,
+      })
+      .from(campaignVideos)
+      .where(eq(campaignVideos.campaignId, campaignId))
+      .orderBy(asc(campaignVideos.countryId)),
+  ]);
+  const before = beforeRow[0];
   if (!before) throw new Error("Kampaň neexistuje");
 
-  const beforeChannelRows = await db
-    .select({ channelId: campaignChannels.channelId })
-    .from(campaignChannels)
-    .where(eq(campaignChannels.campaignId, campaignId))
-    .orderBy(asc(campaignChannels.channelId));
   const beforeChannelIds = beforeChannelRows.map((r) => r.channelId).sort(
     (a, b) => a - b
   );
-
-  // Snapshot existing per-country spot assignments so the audit log can
-  // show what changed. Comparing "<countryId>:<spotId>" sorted arrays is
-  // enough for "did this set of (country → spot) mappings change?".
-  const beforeVideos = await db
-    .select({
-      countryId: campaignVideos.countryId,
-      spotId: campaignVideos.spotId,
-    })
-    .from(campaignVideos)
-    .where(eq(campaignVideos.campaignId, campaignId))
-    .orderBy(asc(campaignVideos.countryId));
   const beforeVideosKey = beforeVideos
     .map((v) => `${v.countryId}:${v.spotId}`)
     .sort();
@@ -159,6 +164,9 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
     .map((v) => `${v.countryId}:${v.spotId}`)
     .sort();
 
+  // The product-name lookup depends on `before.productId`, so it has to
+  // wait for the snapshot above. Still one extra round-trip, but only when
+  // the campaign actually has a product.
   let beforeProductName: string | null = null;
   if (before.productId !== null) {
     const [bp] = await db

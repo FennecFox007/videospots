@@ -110,28 +110,55 @@ export type CampaignFilters = {
  * Resolve campaign IDs that match the filters. Pulled out as a step because
  * downstream queries (campaigns + their channel rows for the timeline) need to
  * filter by the same set without duplicating join/where logic.
+ *
+ * Joins are added conditionally — most callers (e.g. /admin/archive,
+ * DashboardStats counts) only filter by campaign-table columns and don't
+ * need the 5-table join tree at all. Building only the joins each filter
+ * actually references keeps the cheap cases cheap.
  */
 export async function findCampaignIds(
   filters: CampaignFilters
 ): Promise<number[]> {
   const where = await buildWhere(filters);
+  const condition = where.expr ?? sql`true`;
 
-  // Always join through channels/countries/chains/products so any filter
-  // that references those tables resolves correctly. The DISTINCT is required
-  // because a campaign with N channels would otherwise return N rows.
-  const rows = await db
-    .selectDistinct({ id: campaigns.id })
-    .from(campaigns)
-    .leftJoin(products, eq(campaigns.productId, products.id))
-    .leftJoin(
-      campaignChannels,
-      eq(campaigns.id, campaignChannels.campaignId)
-    )
-    .leftJoin(channels, eq(campaignChannels.channelId, channels.id))
-    .leftJoin(countries, eq(channels.countryId, countries.id))
-    .leftJoin(chains, eq(channels.chainId, chains.id))
-    .where(where.expr ?? sql`true`);
+  // Only `q` reaches into products.name, only countryCode/chainCode reach
+  // into the channel tree. Skip the joins entirely when no filter needs them
+  // — the campaigns table alone is enough.
+  const needsProducts = !!filters.q;
+  const needsChannelTree = !!filters.countryCode || !!filters.chainCode;
 
+  if (!needsProducts && !needsChannelTree) {
+    const rows = await db
+      .select({ id: campaigns.id })
+      .from(campaigns)
+      .where(condition);
+    return rows.map((r) => r.id);
+  }
+
+  // Build the join tree only as wide as the active filters need. DISTINCT
+  // because the channel tree multiplies rows by N channels per campaign.
+  let qb = db.selectDistinct({ id: campaigns.id }).from(campaigns).$dynamic();
+
+  if (needsProducts) {
+    qb = qb.leftJoin(products, eq(campaigns.productId, products.id));
+  }
+  if (needsChannelTree) {
+    qb = qb
+      .leftJoin(
+        campaignChannels,
+        eq(campaigns.id, campaignChannels.campaignId)
+      )
+      .leftJoin(channels, eq(campaignChannels.channelId, channels.id));
+    if (filters.countryCode) {
+      qb = qb.leftJoin(countries, eq(channels.countryId, countries.id));
+    }
+    if (filters.chainCode) {
+      qb = qb.leftJoin(chains, eq(channels.chainId, chains.id));
+    }
+  }
+
+  const rows = await qb.where(condition);
   return rows.map((r) => r.id);
 }
 
@@ -414,13 +441,7 @@ export async function getSpotsForDrawer(): Promise<DrawerSpot[]> {
       countryFlag: countries.flagEmoji,
       countryName: countries.name,
       countrySortOrder: countries.sortOrder,
-      deployments: sql<number>`(
-        SELECT count(*)::int
-        FROM ${campaignVideos} cv
-        INNER JOIN ${campaigns} c ON c.id = cv.campaign_id
-        WHERE cv.spot_id = ${spots.id}
-          AND c.archived_at IS NULL
-      )`,
+      deployments: spotDeploymentCountSql(),
     })
     .from(spots)
     .leftJoin(products, eq(spots.productId, products.id))
@@ -439,4 +460,43 @@ export async function getSpotsForDrawer(): Promise<DrawerSpot[]> {
     countryName: r.countryName,
     deployments: r.deployments,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Shared SQL fragments for spot deployment status
+//
+// "How many non-archived campaigns currently reference this spot?" was
+// inlined in three places (this file's getSpotsForDrawer, /spots admin
+// page, dashboard "undeployed spots" tile) with subtly different shapes.
+// These helpers consolidate the correlated subquery so the answer can't
+// drift across surfaces.
+//
+// Both helpers expect to be used inside a query that has `spots` in scope
+// (typically `db.select(...).from(spots)`); they correlate on
+// `cv.spot_id = spots.id`. Outside that context the fragments compile
+// fine but reference an undefined alias.
+// ---------------------------------------------------------------------------
+
+/** Count of non-archived campaigns deploying the current row's spot. */
+export function spotDeploymentCountSql() {
+  return sql<number>`(
+    SELECT count(*)::int
+    FROM ${campaignVideos} cv
+    INNER JOIN ${campaigns} c ON c.id = cv.campaign_id
+    WHERE cv.spot_id = ${spots.id}
+      AND c.archived_at IS NULL
+  )`;
+}
+
+/** Boolean condition: spot is "undeployed" (no non-archived campaign
+ *  references it). Prefer over `spotDeploymentCountSql() = 0` because
+ *  Postgres can short-circuit on the first matching row. */
+export function spotIsUndeployedSql() {
+  return sql`NOT EXISTS (
+    SELECT 1
+    FROM ${campaignVideos} cv
+    INNER JOIN ${campaigns} c ON c.id = cv.campaign_id
+    WHERE cv.spot_id = ${spots.id}
+      AND c.archived_at IS NULL
+  )`;
 }

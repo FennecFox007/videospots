@@ -17,7 +17,6 @@ import {
   chains,
   campaigns,
   campaignChannels,
-  campaignVideos,
   spots,
 } from "@/lib/db/client";
 import {
@@ -39,6 +38,7 @@ import {
   getFilterOptions,
   fetchTimelineCampaigns,
   getSpotsForDrawer,
+  spotIsUndeployedSql,
 } from "@/lib/db/queries";
 import { listSavedViews } from "@/app/saved-views/actions";
 import { auth } from "@/auth";
@@ -763,7 +763,7 @@ async function DashboardStats() {
     59
   );
 
-  const [thisMonthCount, totalCount, topClients, awaitingRows, undeployedSpotsCount] =
+  const [thisMonthCount, totalCount, topClients, awaitingCounts, undeployedSpotsCount] =
     await Promise.all([
       db
         .select({ c: sql<number>`count(*)::int` })
@@ -794,13 +794,14 @@ async function DashboardStats() {
         .groupBy(campaigns.client)
         .orderBy(sql`count(*) desc`)
         .limit(3),
-      // "Awaiting approval" = unapproved campaigns that haven't ended yet.
-      // We pull startsAt so we can split running-now vs upcoming in JS for
-      // the StatCard's sub-text.
+      // "Awaiting approval" = unapproved campaigns that haven't ended yet,
+      // split into running-now vs upcoming. count() FILTER lets Postgres
+      // do the partition in a single row of two ints, instead of pulling
+      // every row and bucketing in JS.
       db
         .select({
-          id: campaigns.id,
-          startsAt: campaigns.startsAt,
+          running: sql<number>`count(*) FILTER (WHERE ${campaigns.startsAt} <= ${now})::int`,
+          upcoming: sql<number>`count(*) FILTER (WHERE ${campaigns.startsAt} > ${now})::int`,
         })
         .from(campaigns)
         .where(
@@ -812,32 +813,19 @@ async function DashboardStats() {
           )
         ),
       // Undeployed spots: not archived, and not currently referenced by
-      // any non-archived campaign. Sub-select counts deployments and we
-      // pick zero. Same logic the /spots page uses, just collapsed to a
-      // count for the dashboard tile.
+      // any non-archived campaign. Same logic the /spots page uses,
+      // just collapsed to a count for the dashboard tile. The NOT EXISTS
+      // fragment lives in lib/db/queries.ts so /spots, the drawer and
+      // this tile can't drift on the definition of "deployed".
       db
         .select({ c: sql<number>`count(*)::int` })
         .from(spots)
-        .where(
-          and(
-            isNull(spots.archivedAt),
-            sql`NOT EXISTS (
-              SELECT 1 FROM ${campaignVideos} cv
-              INNER JOIN ${campaigns} c ON c.id = cv.campaign_id
-              WHERE cv.spot_id = ${spots.id} AND c.archived_at IS NULL
-            )`
-          )
-        ),
+        .where(and(isNull(spots.archivedAt), spotIsUndeployedSql())),
     ]);
 
-  // Split "awaiting approval" into running-now vs upcoming.
-  let awaitingRunning = 0;
-  let awaitingUpcoming = 0;
-  for (const r of awaitingRows) {
-    if (r.startsAt <= now) awaitingRunning += 1;
-    else awaitingUpcoming += 1;
-  }
-  const awaitingTotal = awaitingRows.length;
+  const awaitingRunning = awaitingCounts[0]?.running ?? 0;
+  const awaitingUpcoming = awaitingCounts[0]?.upcoming ?? 0;
+  const awaitingTotal = awaitingRunning + awaitingUpcoming;
 
   const t = await getT();
   const localeTag = t.locale === "en" ? "en-US" : "cs-CZ";

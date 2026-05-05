@@ -305,9 +305,13 @@ DB pořád má všechny dropnuté sloupce/tabulky jako orphan storage. Kód je n
   - **NEEXTRAHOVALI jsme** `<Section>` (záměrné rozdíly mezi form section header / table grouper / country banner) a `<PrimaryButton>` (5 paddingů je per kontext, extrakce by replikovala tailwind).
 - Tranše 13: Modal pattern unification ✅ — z-index hierarchie sjednocená (drawer 60 < SidePanel 70 < modal 80 < dialog 90 < toast 95 < menu 100, viz "Z-index hierarchy" sekci). public-timeline modal backdrop /50 → /40. SpotDropModal + ChannelOverrideDialog dostaly auto-focus + restore-prior-focus. Submit button pattern dokumentovaný v "Modal pattern checklist".
 
-**⚙️ Tier 6 — Audit/perf (low priority):**
-- Tranše 14: Audit log gaps — admin user actions (createUser/updatePassword/deleteUser) nemají audit entries (security-sensitive!), admin entity actions (countries/chains/channels/products) taky ne i když schema komentář deklaruje `entity: "country"|"chain"|"channel"`.
-- Tranše 15: Perf — spot deployment count subquery 3× duplikát, `findCampaignIds` 5-table JOIN i když filtry žádný table nepotřebují, `/campaigns/[id]/edit` 5 sekvenčních awaitů (mohly by být Promise.all), `DashboardStats.awaitingRows` pulluje řádky jen pro count.
+**⚙️ Tier 6 — Audit/perf:** ✅
+- Tranše 14: Audit log gaps zaplněné. Admin user actions (`createUser`/`updatePassword`/`deleteUser`) nyní emitují audit entries s `entity: "user"`, `entityId: 0` (UUID nelze namapovat na integer column) a `changes: { userId, email, … }` aby post-mortem fungoval i po smazání targetu. Admin entity actions (`countries.create/delete`, `chains.create/delete`, `channels.toggle/addChainToCountry`, `products.create/update/delete`) emitují audit entries s `entity: "country"|"chain"|"channel"|"product"` — to co schema komentář deklaroval, ale nikdo nezapisoval. Snapshot pre-delete pro country/chain/product zachycuje data co po smazání jinak zmizí.
+- Tranše 15: Perf wins.
+  - **Spot deployment count subquery** extrahovaný do `spotDeploymentCountSql()` + `spotIsUndeployedSql()` v `lib/db/queries.ts`. 3 duplikáty → 1 zdroj pravdy.
+  - **`findCampaignIds` conditional joins** — fast path bez joinů pro callery co potřebují jen campaign-table columns (`/admin/archive` `onlyArchived`, DashboardStats counts), full join tree jen pro `q`/`countryCode`/`chainCode`. Drizzle `$dynamic()` builder pro conditional `.leftJoin()`.
+  - **`/campaigns/[id]/edit` Promise.all** — 3 sekvenční awaity (campaign snapshot, channel rows, video rows) → paralelně. Neon HTTP = každý await je RTT, takže reálná latency win na pomalém spojení.
+  - **`DashboardStats.awaitingRows`** — pulloval celé řádky jen pro count + JS bucketing running vs upcoming. Teď `count(*) FILTER (WHERE ...)` partition v SQL = 1 řádek se 2 ints místo N řádků.
 
 ## V2 — zbývající plán (z partnerovy schůzky)
 

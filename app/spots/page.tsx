@@ -27,14 +27,13 @@
 // auth-gated like the rest of the app — share recipients don't see this.
 
 import Link from "next/link";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
+import { spotDeploymentCountSql } from "@/lib/db/queries";
 import {
   db,
   spots,
   countries,
   products,
-  campaignVideos,
-  campaigns,
   users,
 } from "@/lib/db/client";
 import { kindEmoji } from "@/lib/products";
@@ -108,13 +107,7 @@ export default async function SpotsPage({
       countrySortOrder: countries.sortOrder,
       authorName: users.name,
       authorEmail: users.email,
-      deployments: sql<number>`(
-        SELECT count(*)::int
-        FROM ${campaignVideos} cv
-        INNER JOIN ${campaigns} c ON c.id = cv.campaign_id
-        WHERE cv.spot_id = ${spots.id}
-          AND c.archived_at IS NULL
-      )`,
+      deployments: spotDeploymentCountSql(),
     })
     .from(spots)
     .leftJoin(products, eq(spots.productId, products.id))

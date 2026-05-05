@@ -3,16 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { asc, eq } from "drizzle-orm";
 import { auth } from "@/auth";
-import { db, chains } from "@/lib/db/client";
+import { db, chains, auditLog } from "@/lib/db/client";
 
 async function requireAuth() {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user?.id) throw new Error("Unauthorized");
   return session.user.id;
 }
 
 export async function createChain(formData: FormData) {
-  await requireAuth();
+  const userId = await requireAuth();
 
   const code = String(formData.get("code") ?? "")
     .trim()
@@ -24,14 +24,42 @@ export async function createChain(formData: FormData) {
   if (!/^[a-z0-9-]+$/.test(code))
     throw new Error("Kód: jen malá písmena, čísla a pomlčky");
 
-  await db.insert(chains).values({ code, name, logoUrl });
+  const [created] = await db
+    .insert(chains)
+    .values({ code, name, logoUrl })
+    .returning({ id: chains.id });
+
+  await db.insert(auditLog).values({
+    action: "created",
+    entity: "chain",
+    entityId: created.id,
+    userId,
+    changes: { code, name, logoUrl },
+  });
+
   revalidatePath("/admin/chains");
   revalidatePath("/admin/channels");
 }
 
 export async function deleteChain(id: number) {
-  await requireAuth();
+  const userId = await requireAuth();
+
+  const [target] = await db
+    .select({ code: chains.code, name: chains.name })
+    .from(chains)
+    .where(eq(chains.id, id))
+    .limit(1);
+
   await db.delete(chains).where(eq(chains.id, id));
+
+  await db.insert(auditLog).values({
+    action: "deleted",
+    entity: "chain",
+    entityId: id,
+    userId,
+    changes: { code: target?.code ?? null, name: target?.name ?? null },
+  });
+
   revalidatePath("/admin/chains");
   revalidatePath("/admin/channels");
 }
