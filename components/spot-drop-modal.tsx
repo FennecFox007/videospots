@@ -21,6 +21,7 @@ import { createCampaignFromSpot } from "@/app/spots/actions";
 import { addDays, daysBetween, formatDate, pluralCs, toDateInputValue } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { useDialog } from "@/components/dialog/dialog-provider";
+import { CountryBadge } from "@/components/country-badge";
 import { Field } from "@/components/ui/field";
 
 /** Channels grouped by country — same shape as the timeline gets so we can
@@ -209,7 +210,11 @@ function ModalBody({
                 </>
               )}
               <span className="text-zinc-300 dark:text-zinc-600">·</span>
-              <span aria-hidden>{pending.countryFlag}</span>
+              <CountryBadge
+                code={pending.countryCode}
+                flag={pending.countryFlag}
+                size="xs"
+              />
               <span>{pending.countryCode}</span>
             </div>
           </div>

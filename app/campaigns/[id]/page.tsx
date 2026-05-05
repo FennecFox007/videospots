@@ -38,6 +38,7 @@ import { ShareButton } from "@/components/share-button";
 import { SaveAsTemplateButton } from "@/components/save-as-template-button";
 import { EditableCampaignTitle } from "@/components/editable-campaign-title";
 import { CommunicationBadge } from "@/components/communication-badge";
+import { CountryBadge } from "@/components/country-badge";
 import { VideoEmbed } from "@/components/video-embed";
 import { getT } from "@/lib/i18n/server";
 import { localizedCountryName } from "@/lib/i18n/country";
@@ -437,10 +438,12 @@ export default async function CampaignDetailPage({
           </div>
           {videoRows.map((v) => (
             <div key={v.countryCode}>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-base leading-none" aria-hidden>
-                  {v.countryFlag}
-                </span>
+              <div className="flex items-center gap-2 mb-2">
+                <CountryBadge
+                  code={v.countryCode}
+                  flag={v.countryFlag}
+                  size="sm"
+                />
                 <span className="text-sm font-medium">{v.countryName}</span>
                 <span className="text-xs text-zinc-500 font-mono uppercase">
                   {v.countryCode}
@@ -473,7 +476,11 @@ export default async function CampaignDetailPage({
               key={i}
               className="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-sm"
             >
-              <span>{ch.countryFlag}</span>
+              <CountryBadge
+                code={ch.countryCode}
+                flag={ch.countryFlag}
+                size="xs"
+              />
               <span className="text-zinc-500">
                 {localizedCountryName(ch.countryCode, ch.countryName, t.locale)}
               </span>

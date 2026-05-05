@@ -24,6 +24,7 @@ import { localizedCountryName } from "@/lib/i18n/country";
 import { formatDate } from "@/lib/utils";
 import { Pill } from "@/components/ui/pill";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CountryBadge } from "@/components/country-badge";
 import { SpotApprovalActions } from "@/components/spot-approval-actions";
 import {
   spotApprovalState,
@@ -126,7 +127,11 @@ export default async function SpotDetailPage({
             </Pill>
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 flex items-center gap-2 flex-wrap">
-            <span aria-hidden>{row.countryFlag}</span>
+            <CountryBadge
+              code={row.countryCode}
+              flag={row.countryFlag}
+              size="xs"
+            />
             <span>
               {localizedCountryName(
                 row.countryCode,

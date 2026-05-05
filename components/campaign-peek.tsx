@@ -32,7 +32,9 @@ import {
 import type { CampaignPeekData } from "@/app/api/campaigns/[id]/peek/route";
 import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
-import { kindEmoji, kindLabel } from "@/lib/products";
+import { kindLabel } from "@/lib/products";
+import { ProductKindIcon } from "@/components/product-kind-icon";
+import { CountryBadge } from "@/components/country-badge";
 import {
   approveCampaign,
   archiveCampaign,
@@ -310,7 +312,7 @@ export function CampaignPeek() {
                 <div className="font-medium text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 flex-wrap">
                   {product.name}
                   <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-600 dark:text-zinc-400 font-normal">
-                    <span aria-hidden>{kindEmoji(product.kind)}</span>
+                    <ProductKindIcon kind={product.kind} className="w-3 h-3" />
                     {kindLabel(product.kind)}
                   </span>
                 </div>
@@ -357,7 +359,11 @@ export function CampaignPeek() {
                   key={v.countryCode}
                   className="flex items-center gap-2 text-xs"
                 >
-                  <span aria-hidden>{v.countryFlag}</span>
+                  <CountryBadge
+                    code={v.countryCode}
+                    flag={v.countryFlag}
+                    size="xs"
+                  />
                   <span className="font-medium w-12 shrink-0">
                     {v.countryCode}
                   </span>
@@ -409,7 +415,11 @@ export function CampaignPeek() {
                 key={i}
                 className="inline-flex items-center gap-1 rounded-md bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs"
               >
-                <span aria-hidden>{ch.countryFlag}</span>
+                <CountryBadge
+                  code={ch.countryCode}
+                  flag={ch.countryFlag}
+                  size="xs"
+                />
                 <span className="text-zinc-500">
                   {localizedCountryName(
                     ch.countryCode,

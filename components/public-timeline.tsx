@@ -21,6 +21,7 @@ import {
 import { localizedCountryName } from "@/lib/i18n/country";
 import type { Locale } from "@/lib/i18n/messages";
 import { useT } from "@/lib/i18n/client";
+import { CountryBadge } from "@/components/country-badge";
 import { VideoEmbed } from "@/components/video-embed";
 
 export type PublicChannel = {
@@ -291,7 +292,7 @@ export function PublicTimeline({
           >
             <div className="flex border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
               <div className="w-32 sm:w-48 shrink-0 px-4 py-2.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
-                <span className="text-base leading-none">{g.flag}</span>
+                <CountryBadge code={g.code} flag={g.flag} size="sm" />
                 <span>{localizedCountryName(g.code, g.name, uiLocale)}</span>
               </div>
               <div className="flex-1" />
@@ -614,7 +615,11 @@ function PublicCampaignModal({
               </h2>
             </div>
             <div className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400 flex items-center gap-2 flex-wrap">
-              <span aria-hidden>{bar.countryFlag}</span>
+              <CountryBadge
+                code={bar.countryCode}
+                flag={bar.countryFlag}
+                size="xs"
+              />
               <span>
                 {localizedCountryName(
                   bar.countryCode,

@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import type { SearchResult } from "@/app/api/search/route";
 
 export function CommandPalette() {
@@ -108,9 +109,7 @@ export function CommandPalette() {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
       <div className="relative w-full max-w-xl rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
-          <span className="text-zinc-400" aria-hidden>
-            🔍
-          </span>
+          <Search aria-hidden className="w-4 h-4 text-zinc-400" strokeWidth={2} />
           <input
             autoFocus
             value={query}

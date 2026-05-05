@@ -36,7 +36,8 @@ import {
   products,
   users,
 } from "@/lib/db/client";
-import { kindEmoji } from "@/lib/products";
+import { ProductKindIcon } from "@/components/product-kind-icon";
+import { CountryBadge } from "@/components/country-badge";
 import { getT } from "@/lib/i18n/server";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { formatDate } from "@/lib/utils";
@@ -416,7 +417,7 @@ function CountrySection({
     <section className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm overflow-hidden">
       <header className="flex items-center justify-between gap-2 px-4 py-2 bg-zinc-50 dark:bg-zinc-950/40 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-          <span aria-hidden>{flag}</span>
+          <CountryBadge code={code} flag={flag} size="sm" />
           <span>{localizedCountryName(code, name, t.locale)}</span>
           <span className="text-xs font-normal text-zinc-500">
             ({rows.length})
@@ -508,8 +509,13 @@ function SpotTable({
               </td>
               <td className="px-4 py-2.5 text-zinc-700 dark:text-zinc-300">
                 {s.productName ? (
-                  <span className="inline-flex items-center gap-1">
-                    <span aria-hidden>{kindEmoji(s.productKind ?? "game")}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="text-zinc-500">
+                      <ProductKindIcon
+                        kind={s.productKind ?? "game"}
+                        className="w-3.5 h-3.5"
+                      />
+                    </span>
                     {s.productName}
                   </span>
                 ) : (
@@ -519,7 +525,11 @@ function SpotTable({
               {!hideCountryColumn && (
                 <td className="px-4 py-2.5 text-zinc-700 dark:text-zinc-300">
                   <span className="inline-flex items-center gap-1.5">
-                    <span aria-hidden>{s.countryFlag}</span>
+                    <CountryBadge
+                      code={s.countryCode}
+                      flag={s.countryFlag}
+                      size="xs"
+                    />
                     {localizedCountryName(s.countryCode, s.countryName, t.locale)}
                   </span>
                 </td>

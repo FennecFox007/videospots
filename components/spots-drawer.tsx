@@ -29,6 +29,7 @@ import {
 import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { spotApprovalState } from "@/lib/spot-approval";
+import { CountryBadge } from "@/components/country-badge";
 
 type View = "undeployed" | "all";
 
@@ -182,7 +183,7 @@ export function SpotsDrawer({ spots }: { spots: DrawerSpot[] }) {
               groups.map((g) => (
                 <section key={g.code} className="mb-3 last:mb-0">
                   <h3 className="px-2 py-1 text-[10px] uppercase tracking-wide font-semibold text-zinc-500 flex items-center gap-1.5">
-                    <span aria-hidden>{g.flag}</span>
+                    <CountryBadge code={g.code} flag={g.flag} size="xs" />
                     {localizedCountryName(g.code, g.name, t.locale)}
                     <span className="text-zinc-400 font-normal">
                       ({g.spots.length})
@@ -308,9 +309,11 @@ function SpotCard({ spot }: { spot: DrawerSpot }) {
         {/* Country flag is shown both in the section header AND on the
             card itself — when the user scrolls and the section header
             is off-screen, the per-card flag keeps the country obvious. */}
-        <span aria-hidden className="text-base leading-none shrink-0">
-          {spot.countryFlag}
-        </span>
+        <CountryBadge
+          code={spot.countryCode}
+          flag={spot.countryFlag}
+          size="xs"
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5">
             {/* Approval status dot — small visual cue without taking

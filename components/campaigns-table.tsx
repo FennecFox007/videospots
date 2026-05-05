@@ -20,7 +20,8 @@ import {
 } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
 import { CommunicationBadge } from "@/components/communication-badge";
-import { kindEmoji, kindLabel } from "@/lib/products";
+import { kindLabel } from "@/lib/products";
+import { ProductKindIcon } from "@/components/product-kind-icon";
 import {
   useDialog,
   type ConfirmOptions,
@@ -195,9 +196,12 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
                   </td>
                   <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400">
                     {r.productName ? (
-                      <span className="inline-flex items-center gap-1">
-                        <span aria-hidden title={kindLabel(r.productKind ?? "game")}>
-                          {kindEmoji(r.productKind ?? "game")}
+                      <span className="inline-flex items-center gap-1.5">
+                        <span title={kindLabel(r.productKind ?? "game")} className="text-zinc-500">
+                          <ProductKindIcon
+                            kind={r.productKind ?? "game"}
+                            className="w-3.5 h-3.5"
+                          />
                         </span>
                         {r.productName}
                       </span>

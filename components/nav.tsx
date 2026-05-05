@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { and, desc, eq } from "drizzle-orm";
+import { Search } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { db, auditLog, users, campaigns } from "@/lib/db/client";
 import { ActivityFeed } from "./activity-feed";
@@ -87,10 +88,11 @@ export async function Nav({ theme }: { theme: Theme }) {
         {session?.user && (
           <div className="flex items-center gap-1 sm:gap-2 text-sm shrink-0">
             <span
-              className="hidden lg:inline-flex items-center gap-1 text-xs text-zinc-500 border border-zinc-200 dark:border-zinc-800 rounded-md px-2 py-1"
+              className="hidden lg:inline-flex items-center gap-1.5 text-xs text-zinc-500 border border-zinc-200 dark:border-zinc-800 rounded-md px-2 py-1"
               title={t("nav.search_shortcut_tooltip")}
             >
-              🔍 <kbd className="font-mono">⌘K</kbd>
+              <Search aria-hidden className="w-3.5 h-3.5" strokeWidth={2} />
+              <kbd className="font-mono">⌘K</kbd>
             </span>
             <ActivityFeed entries={recentActivity} />
             <LocaleSwitcher />

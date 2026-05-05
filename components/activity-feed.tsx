@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Bell } from "lucide-react";
 import { formatRelative } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 
@@ -78,7 +79,7 @@ export function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
         aria-label={t("activity_feed.title")}
         aria-expanded={open}
       >
-        <span aria-hidden>🔔</span>
+        <Bell aria-hidden className="w-4 h-4" strokeWidth={2} />
         {newCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-bold rounded-full bg-red-500 text-white">
             {newCount > 9 ? "9+" : newCount}

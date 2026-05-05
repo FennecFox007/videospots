@@ -24,6 +24,7 @@ import {
   clearChannelOverride,
 } from "@/app/campaigns/[id]/actions";
 import { useDialog } from "@/components/dialog/dialog-provider";
+import { CountryBadge } from "@/components/country-badge";
 
 type Props = {
   open: boolean;
@@ -31,6 +32,7 @@ type Props = {
   channelId: number;
   /** Used in the dialog header — "Upravit pro <chain> (<country>)". */
   chainName: string;
+  countryCode: string;
   countryName: string;
   countryFlag: string | null;
   /** Bar's current effective dates (may be from override or master). */
@@ -52,6 +54,7 @@ export function ChannelOverrideDialog({
   campaignId,
   channelId,
   chainName,
+  countryCode,
   countryName,
   countryFlag,
   effectiveStartsAt,
@@ -174,7 +177,7 @@ export function ChannelOverrideDialog({
               {t("override.title")}
             </h2>
             <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-              <span aria-hidden>{countryFlag}</span>
+              <CountryBadge code={countryCode} flag={countryFlag} size="xs" />
               <span>{countryName}</span>
               <span className="text-zinc-300 dark:text-zinc-600">·</span>
               <span className="font-medium text-zinc-900 dark:text-zinc-100">

@@ -1,5 +1,6 @@
 import { asc } from "drizzle-orm";
 import { db, countries, chains, channels } from "@/lib/db/client";
+import { CountryBadge } from "@/components/country-badge";
 import { toggleChannel, addChainToCountry } from "./actions";
 
 export default async function ChannelsPage() {
@@ -46,8 +47,14 @@ export default async function ChannelsPage() {
             {allCountries.map((country) => (
               <tr key={country.id} className="border-t border-zinc-100 dark:border-zinc-800">
                 <td className="px-4 py-2 sticky left-0 bg-white dark:bg-zinc-900 font-medium">
-                  <span className="mr-1.5 text-base">{country.flagEmoji}</span>
-                  {country.name}
+                  <span className="inline-flex items-center gap-1.5">
+                    <CountryBadge
+                      code={country.code}
+                      flag={country.flagEmoji}
+                      size="xs"
+                    />
+                    {country.name}
+                  </span>
                 </td>
                 {allChains.map((chain) => {
                   const isOn = existingSet.has(`${country.id}:${chain.id}`);

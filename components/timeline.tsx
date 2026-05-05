@@ -42,6 +42,7 @@ import {
   type SpotDragPayload,
 } from "@/lib/spot-drop-store";
 import { ChannelOverrideDialog } from "@/components/channel-override-dialog";
+import { CountryBadge } from "@/components/country-badge";
 import { useDialog } from "@/components/dialog/dialog-provider";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -955,7 +956,7 @@ export function Timeline({
                 >
                   ▸
                 </span>
-                <span className="text-base leading-none">{g.flag}</span>
+                <CountryBadge code={g.code} flag={g.flag} size="sm" />
                 <span>{localizedCountryName(g.code, g.name, t.locale)}</span>
               </div>
               <div className="flex-1 flex items-center px-3">
@@ -1363,6 +1364,7 @@ export function Timeline({
         campaignId={overrideTarget.bar.campaignId}
         channelId={overrideTarget.bar.channelId}
         chainName={overrideTarget.channel.chainName}
+        countryCode={overrideTarget.country.code}
         countryName={localizedCountryName(
           overrideTarget.country.code,
           overrideTarget.country.name,
