@@ -5,6 +5,7 @@ import { db, auditLog, users, campaigns } from "@/lib/db/client";
 import { ActivityFeed } from "./activity-feed";
 import { DarkModeToggle } from "./dark-mode-toggle";
 import { LocaleSwitcher } from "./locale-switcher";
+import { NavLink } from "./nav-link";
 import { getT } from "@/lib/i18n/server";
 import type { Theme } from "@/lib/theme/server";
 
@@ -121,24 +122,3 @@ export async function Nav({ theme }: { theme: Theme }) {
   );
 }
 
-function NavLink({
-  href,
-  children,
-  className,
-}: {
-  href: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={
-        "px-2 sm:px-3 py-1.5 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900 transition-colors whitespace-nowrap inline-flex " +
-        (className ?? "")
-      }
-    >
-      {children}
-    </Link>
-  );
-}

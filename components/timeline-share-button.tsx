@@ -6,6 +6,7 @@
 
 import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
+import { Share2 } from "lucide-react";
 import { createTimelineShareLink } from "@/app/campaigns/[id]/actions";
 import { useT } from "@/lib/i18n/client";
 
@@ -62,8 +63,9 @@ export function TimelineShareButton() {
         onClick={generate}
         disabled={isPending}
         title={t("timeline_share.title")}
-        className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900 disabled:opacity-50"
+        className="rounded-md border border-zinc-300 dark:border-zinc-700 px-3.5 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900 disabled:opacity-50 inline-flex items-center gap-1.5"
       >
+        <Share2 className="w-4 h-4" strokeWidth={2} />
         {isPending ? t("share_button.generating") : t("timeline_share.label")}
       </button>
     );

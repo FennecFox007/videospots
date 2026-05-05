@@ -11,6 +11,17 @@ import {
 } from "drizzle-orm";
 import Link from "next/link";
 import {
+  Play,
+  CalendarDays,
+  Clock,
+  Activity,
+  Megaphone,
+  CheckCircle2,
+  Share2,
+  Printer,
+  Plus,
+} from "lucide-react";
+import {
   db,
   channels,
   countries,
@@ -304,19 +315,14 @@ export default async function Dashboard({
             right-side drawer is spatially adjacent to where the drawer
             appears, and the primary CTA stays rightmost. */}
         <div className="flex items-center gap-2 flex-wrap">
-          <Link
-            href="/campaigns"
-            className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
-          >
-            {t("timeline.list_link")}
-          </Link>
           <a
             href={`/print/timeline?${queryParamsForward}${queryParamsForward.toString() ? "&" : ""}from=${toDateInputValue(rangeStart)}&to=${toDateInputValue(rangeEnd)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+            className="rounded-md border border-zinc-300 dark:border-zinc-700 px-3.5 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900 inline-flex items-center gap-1.5"
             title={t("timeline.print")}
           >
+            <Printer className="w-4 h-4" strokeWidth={2} />
             {t("timeline.print")}
           </a>
           <TimelineShareButton />
@@ -333,8 +339,9 @@ export default async function Dashboard({
           <SpotsDrawer spots={drawerSpots} />
           <Link
             href="/campaigns/new"
-            className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2"
+            className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3.5 py-2 inline-flex items-center gap-1.5 shadow-sm"
           >
+            <Plus className="w-4 h-4" strokeWidth={2.5} />
             {t("timeline.new_campaign")}
           </Link>
         </div>
@@ -551,40 +558,58 @@ async function LiveRunningCard({
   const t = await getT();
   if (running.length === 0) {
     return (
-      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-2.5">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-          <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-            {t("dashboard.running.empty_title")}
-          </span>
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-3">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+            <Play
+              className="w-4 h-4 text-zinc-400 dark:text-zinc-500"
+              strokeWidth={2}
+              fill="currentColor"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              {t("dashboard.running.empty_title")}
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              {t("dashboard.running.empty_desc")}
+            </p>
+          </div>
         </div>
-        <p className="text-xs text-zinc-500 mt-1">
-          {t("dashboard.running.empty_desc")}
-        </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg ring-1 ring-emerald-200/70 dark:ring-emerald-900/60 bg-emerald-50/60 dark:bg-emerald-950/20 px-3.5 py-2.5">
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className="relative flex w-2 h-2">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
-          <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
-        </span>
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-          {t("dashboard.running.title")}
-        </span>
-        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-          · {running.length}{" "}
-          {t.plural(running.length, "unit.campaign")}
-          {channelCount > 0 && (
-            <>
-              {" · "}
-              {channelCount} {t.plural(channelCount, "unit.channel")}
-            </>
-          )}
-        </span>
+    <div className="rounded-lg ring-1 ring-emerald-200/70 dark:ring-emerald-900/60 bg-emerald-50/60 dark:bg-emerald-950/20 px-3.5 py-3">
+      <div className="flex items-start gap-3 mb-2">
+        {/* Pulsing icon — animate-ping on the bg ring keeps the
+            "active right now" cue without the dot taking up its
+            own column. */}
+        <div className="relative shrink-0 w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+          <span className="absolute inset-0 rounded-full bg-emerald-400/30 dark:bg-emerald-500/20 animate-ping" />
+          <Play
+            className="relative w-4 h-4 text-emerald-600 dark:text-emerald-400"
+            strokeWidth={2}
+            fill="currentColor"
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+            {t("dashboard.running.title")}
+          </div>
+          <div className="text-sm font-medium text-zinc-800 dark:text-zinc-100 mt-0.5">
+            {running.length} {t.plural(running.length, "unit.campaign")}
+            {channelCount > 0 && (
+              <>
+                <span className="text-zinc-400 dark:text-zinc-600 mx-1">·</span>
+                <span className="text-zinc-600 dark:text-zinc-400">
+                  {channelCount} {t.plural(channelCount, "unit.channel")}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
       </div>
       <ul className="divide-y divide-emerald-200/40 dark:divide-emerald-900/30">
         {running.map((r) => (
@@ -629,31 +654,44 @@ async function UpcomingCard({
   const t = await getT();
   if (upcoming.length === 0) {
     return (
-      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-2.5">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-          <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-            {t("dashboard.upcoming.empty_title")}
-          </span>
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-3">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+            <CalendarDays
+              className="w-4 h-4 text-zinc-400 dark:text-zinc-500"
+              strokeWidth={2}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              {t("dashboard.upcoming.empty_title")}
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              {t("dashboard.upcoming.empty_desc", { days: windowDays })}
+            </p>
+          </div>
         </div>
-        <p className="text-xs text-zinc-500 mt-1">
-          {t("dashboard.upcoming.empty_desc", { days: windowDays })}
-        </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg ring-1 ring-blue-200/70 dark:ring-blue-900/60 bg-blue-50/60 dark:bg-blue-950/20 px-3.5 py-2.5">
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className="w-2 h-2 rounded-full bg-blue-500" />
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
-          {t("dashboard.upcoming.title", { days: windowDays })}
-        </span>
-        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-          · {upcoming.length}{" "}
-          {t.plural(upcoming.length, "unit.campaign")}
-        </span>
+    <div className="rounded-lg ring-1 ring-blue-200/70 dark:ring-blue-900/60 bg-blue-50/60 dark:bg-blue-950/20 px-3.5 py-3">
+      <div className="flex items-start gap-3 mb-2">
+        <div className="shrink-0 w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+          <CalendarDays
+            className="w-4 h-4 text-blue-600 dark:text-blue-400"
+            strokeWidth={2}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+            {t("dashboard.upcoming.title", { days: windowDays })}
+          </div>
+          <div className="text-sm font-medium text-zinc-800 dark:text-zinc-100 mt-0.5">
+            {upcoming.length} {t.plural(upcoming.length, "unit.campaign")}
+          </div>
+        </div>
       </div>
       <ul className="divide-y divide-blue-200/40 dark:divide-blue-900/30">
         {upcoming.map((u) => {
@@ -709,30 +747,44 @@ async function EndingSoonCard({
   const t = await getT();
   if (ending.length === 0) {
     return (
-      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-2.5">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-          <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-            {t("dashboard.ending.empty_title")}
-          </span>
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-3">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+            <Clock
+              className="w-4 h-4 text-zinc-400 dark:text-zinc-500"
+              strokeWidth={2}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              {t("dashboard.ending.empty_title")}
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              {t("dashboard.ending.empty_desc", { days: windowDays })}
+            </p>
+          </div>
         </div>
-        <p className="text-xs text-zinc-500 mt-1">
-          {t("dashboard.ending.empty_desc", { days: windowDays })}
-        </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg ring-1 ring-amber-200/70 dark:ring-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 px-3.5 py-2.5">
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className="w-2 h-2 rounded-full bg-amber-500" />
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
-          {t("dashboard.ending.title", { days: windowDays })}
-        </span>
-        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-          · {ending.length} {t.plural(ending.length, "unit.campaign")}
-        </span>
+    <div className="rounded-lg ring-1 ring-amber-200/70 dark:ring-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 px-3.5 py-3">
+      <div className="flex items-start gap-3 mb-2">
+        <div className="shrink-0 w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+          <Clock
+            className="w-4 h-4 text-amber-600 dark:text-amber-400"
+            strokeWidth={2}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+            {t("dashboard.ending.title", { days: windowDays })}
+          </div>
+          <div className="text-sm font-medium text-zinc-800 dark:text-zinc-100 mt-0.5">
+            {ending.length} {t.plural(ending.length, "unit.campaign")}
+          </div>
+        </div>
       </div>
       <ul className="divide-y divide-amber-200/40 dark:divide-amber-900/30">
         {ending.map((e) => {
@@ -856,6 +908,8 @@ async function DashboardStats() {
         label={t("dashboard.stats.total_campaigns")}
         value={totalCount[0].c}
         sub={`${thisMonthCount[0].c} ${t("dashboard.stats.this_month", { month: monthName })}`}
+        icon={Play}
+        iconTone="emerald"
       />
       <StatCard
         label={t("dashboard.stats.awaiting_approval")}
@@ -875,6 +929,8 @@ async function DashboardStats() {
         // Click → /campaigns with the approval=pending filter. Drops
         // the user straight onto the rows that need attention.
         href={awaitingTotal > 0 ? "/campaigns?approval=pending" : undefined}
+        icon={CheckCircle2}
+        iconTone="blue"
       />
       {/* Activity pulse — replaces the previous static "Top klient" tile
           (single-client agency = constant string, no signal). New campaigns
@@ -890,6 +946,8 @@ async function DashboardStats() {
           campaigns: recentActivity[0]?.campaigns ?? 0,
           spots: recentActivity[0]?.spots ?? 0,
         })}
+        icon={Activity}
+        iconTone="violet"
       />
       {/* "Undeployed spots" — partner-driven V2 metric. The agency makes
           spots, sometimes forgets to schedule them, this tile is the
@@ -907,6 +965,8 @@ async function DashboardStats() {
             ? "/spots?view=undeployed"
             : undefined
         }
+        icon={Megaphone}
+        iconTone="pink"
       />
     </div>
   );
@@ -918,6 +978,8 @@ function StatCard({
   sub,
   small,
   href,
+  icon,
+  iconTone,
 }: {
   label: string;
   value: string | number;
@@ -928,27 +990,66 @@ function StatCard({
    *  approval → /campaigns?approval=pending, undeployed spots →
    *  /spots?view=undeployed). */
   href?: string;
+  /** Lucide icon component rendered inside the colored circle on the
+   *  left. Keep size consistent (the layout sets w-4 h-4). */
+  icon?: React.ComponentType<{
+    className?: string;
+    strokeWidth?: number;
+    fill?: string;
+  }>;
+  /** Tailwind color tone for the icon circle background + glyph color. */
+  iconTone?: "emerald" | "blue" | "violet" | "pink" | "amber" | "zinc";
 }) {
+  const TONE_BG: Record<NonNullable<typeof iconTone>, string> = {
+    emerald: "bg-emerald-100 dark:bg-emerald-900/40",
+    blue: "bg-blue-100 dark:bg-blue-900/40",
+    violet: "bg-violet-100 dark:bg-violet-900/40",
+    pink: "bg-pink-100 dark:bg-pink-900/40",
+    amber: "bg-amber-100 dark:bg-amber-900/40",
+    zinc: "bg-zinc-100 dark:bg-zinc-800",
+  };
+  const TONE_FG: Record<NonNullable<typeof iconTone>, string> = {
+    emerald: "text-emerald-600 dark:text-emerald-400",
+    blue: "text-blue-600 dark:text-blue-400",
+    violet: "text-violet-600 dark:text-violet-400",
+    pink: "text-pink-600 dark:text-pink-400",
+    amber: "text-amber-600 dark:text-amber-400",
+    zinc: "text-zinc-500 dark:text-zinc-400",
+  };
+  const Icon = icon;
+  const tone = iconTone ?? "zinc";
+
   const inner = (
-    <>
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
-        {label}
-      </div>
-      <div
-        className={
-          (small ? "text-sm " : "text-xl ") + "font-semibold truncate"
-        }
-        title={String(value)}
-      >
-        {value}
-      </div>
-      {sub && (
-        <div className="text-[11px] text-zinc-500 mt-0.5 truncate">{sub}</div>
+    <div className="flex items-start gap-3">
+      {Icon && (
+        <div
+          className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${TONE_BG[tone]}`}
+        >
+          <Icon className={`w-4 h-4 ${TONE_FG[tone]}`} strokeWidth={2} />
+        </div>
       )}
-    </>
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">
+          {label}
+        </div>
+        <div
+          className={
+            (small ? "text-sm " : "text-xl ") + "font-semibold truncate"
+          }
+          title={String(value)}
+        >
+          {value}
+        </div>
+        {sub && (
+          <div className="text-[11px] text-zinc-500 mt-0.5 truncate">
+            {sub}
+          </div>
+        )}
+      </div>
+    </div>
   );
   const baseClass =
-    "rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-2.5";
+    "rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-3";
   if (href) {
     return (
       <Link

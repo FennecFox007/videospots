@@ -19,6 +19,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { Bookmark } from "lucide-react";
 import type { DrawerSpot } from "@/lib/db/queries";
 import {
   SPOT_DRAG_MIME,
@@ -97,10 +98,10 @@ export function SpotsDrawer({ spots }: { spots: DrawerSpot[] }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded-md border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1.5 transition-colors"
+        className="rounded-md border border-zinc-300 dark:border-zinc-700 px-3.5 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1.5 transition-colors"
         title={t("spots_drawer.button_tooltip")}
       >
-        <span aria-hidden>📺</span>
+        <Bookmark className="w-4 h-4" strokeWidth={2} />
         {t("spots_drawer.button")}
         {undeployedCount > 0 && (
           <span
