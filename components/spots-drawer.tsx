@@ -27,6 +27,7 @@ import {
 } from "@/lib/spot-drop-store";
 import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
+import { spotApprovalState } from "@/lib/spot-approval";
 
 type View = "undeployed" | "all";
 
@@ -251,6 +252,7 @@ function SpotCard({ spot }: { spot: DrawerSpot }) {
     : spot.productName
       ? `${spot.productName} · ${spot.countryCode}`
       : `Spot · ${spot.countryCode}`;
+  const approval = spotApprovalState(spot);
 
   function onDragStart(e: React.DragEvent) {
     const payload: SpotDragPayload = {
@@ -310,6 +312,27 @@ function SpotCard({ spot }: { spot: DrawerSpot }) {
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5">
+            {/* Approval status dot — small visual cue without taking
+             *  another row of vertical space. Tooltip on hover gives the
+             *  full label. */}
+            <span
+              aria-hidden
+              title={t(
+                approval === "approved"
+                  ? "spots.approval.status.approved"
+                  : approval === "rejected"
+                    ? "spots.approval.status.rejected"
+                    : "spots.approval.status.pending"
+              )}
+              className={
+                "shrink-0 w-2 h-2 rounded-full " +
+                (approval === "approved"
+                  ? "bg-emerald-500"
+                  : approval === "rejected"
+                    ? "bg-red-500"
+                    : "bg-amber-500")
+              }
+            />
             <span
               className="text-sm font-medium truncate"
               title={spot.videoUrl}

@@ -319,7 +319,7 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 
 ### 🥇 Top 3 — udělat HNED (next batch ~2 dny)
 
-**A. Per-user role (admin / editor / viewer)** ✅ shipped
+**A. Per-user role (admin / editor / viewer)** ✅ shipped (commit `69ada56`, dashboard polish v `9e07b71`)
 - Schema: `users.role text NOT NULL default 'admin'` (default = 'admin' jen pro migration backfill — existující seed user se backfillne na admin; všechny `createUser` INSERTs musí specifikovat role explicitně, jinak by každý nový user dostal admin)
 - Auth pipeline: `authorize` v `auth.ts` validuje DB role přes `isValidRole`, propaguje user.role → JWT → session.user.role v `auth.config.ts` callbacks (Edge-safe, žádný DB lookup per request, role z JWT)
 - `lib/roles.ts` — Role type, ROLES const, isValidRole guard, roleAtLeast helper, ROLE_LABEL_KEY i18n mapa
@@ -379,6 +379,16 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 ### ✅ Shipped během auditu (mimo původní seznam)
 
 - Inline `<NewSpotModal>` z campaign formuláře (`<NewSpotModal>` + `<CampaignSpotPickers>` — `createSpotForPicker` returning místo redirect)
+- **Spots jako plnohodnotná entita v2** — approval workflow + richer detail (S1 + S3 + S4 z brainstormu):
+  - Schema: `spots.clientApprovedAt`, `clientApprovedComment`, `approvedById`, `rejectedAt`, `rejectionReason`, `rejectedById`. Mirror campaign approval, mutex na approve vs reject.
+  - Server actions: `approveSpot(id, comment?)`, `rejectSpot(id, reason)`, `clearSpotApproval(id)`. Každá píše do audit logu, requireEditor.
+  - Auto-invalidate při edit URL: `updateSpot` snapshot pre-update; pokud se změnila `videoUrl` a spot měl approval state, oba branche se vyčistí + audit `approvalInvalidatedByEdit: true`.
+  - `lib/spot-approval.ts` — `spotApprovalState()` derivace ze 2 timestamps + `spotApprovalTone()` Pill helper + i18n key map.
+  - **`/spots` list**: nový sloupec "Schválení" s `<Pill>` (emerald/red/amber), filter dropdown ve `<SpotsFilters>`. tabHref preserve approval param.
+  - **`/spots/[id]`**: nahoře pill vedle title + dedikovaná Approval section s informací kdo/kdy/komentářem/reason + `<SpotApprovalActions>` client component (interactive prompt na comment, REQUIRED reason na reject, confirm na clear). **Deployment history** rozšířena na past + present (archivované kampaně v sub-section). **Audit log** spotu (last 20) v dedikované sekci s humanized fragments — schválil(a) / zamítl(a) / vrátil(a) do "Čeká" / upravil(a) URL — schválení automaticky resetováno.
+  - **`<SpotsDrawer>` cards**: barevný dot (emerald/red/amber) vedle názvu spotu — instantní status bez extra řádku.
+  - **`<CampaignSpotPickers>`**: pod dropdown se zobrazí amber/red warning když picked spot je pending/rejected. V option labelu je "✓" / "✕" / nic označení podle stavu. Není blokující — editor může kampaň naplánovat i s pending spotem (schválení dorazí později).
+  - i18n klíče (CS+EN) v `lib/i18n/messages.ts`: `spots.approval.*` (~25 klíčů), `spots.col.approval`, `spots.filter.approval.*`, `spots.deployment_history.*`, `spots.audit.*`, `spot_picker.warning.*`.
 
 ## Klíčové soubory
 
@@ -388,6 +398,9 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 - `lib/i18n/{messages,server,client,country}.ts` + `lib/theme/server.ts`
 - `lib/peek-store.ts` — module-level subscriber pro peek panel
 - `lib/spot-drop-store.ts` — module-level subscriber pro drag-drop spot → timeline (PendingDrop, SPOT_DRAG_MIME) + `currentDrag` paralelní state pro live preview (HTML5 omezení v dragover)
+- `lib/spot-approval.ts` — derived approval state z (clientApprovedAt, rejectedAt) + Pill tone helper + i18n key map
+- `lib/auth-helpers.ts` — `requireUser` / `requireEditor` / `requireAdmin` / `requireRole(min)` / `getCurrentRole`
+- `lib/roles.ts` — Role union "admin"|"editor"|"viewer" + helpers
 - `lib/communication.ts`, `lib/products.ts`, `lib/colors.ts`
 - `lib/campaign-video-form.ts` — `extractSpotsByCountry(formData)` čte `spotId_<countryId>` ze submit
 - `components/timeline.tsx` — Gantt + drag + tooltip + ContextMenu + collapsible groups + play button + dashed-circle no-spot marker + density toggle + share-link copy

@@ -341,6 +341,53 @@ const cs = {
   "spots.filter.group.flat": "Plochý seznam",
   "spots.filter.group.flat_tooltip":
     "Bez seskupení — jeden seznam podle aktivního řazení.",
+  "spots.filter.approval.all": "Všechny stavy",
+  "spots.filter.approval.pending": "Čeká",
+  "spots.filter.approval.approved": "Schváleno",
+  "spots.filter.approval.rejected": "Zamítnuto",
+  "spots.col.approval": "Schválení",
+
+  // Spot approval workflow
+  "spots.approval.status.pending": "Čeká",
+  "spots.approval.status.approved": "Schváleno",
+  "spots.approval.status.rejected": "Zamítnuto",
+  "spots.approval.approve_button": "Schválit",
+  "spots.approval.reject_button": "Zamítnout",
+  "spots.approval.clear_button": "Resetovat na čeká",
+  "spots.approval.approve_prompt.title": "Schválit spot?",
+  "spots.approval.approve_prompt.message":
+    "Klient potvrdil tento spot. Můžeš přidat poznámku (volitelné).",
+  "spots.approval.approve_prompt.placeholder": "např. Schváleno e-mailem 12. 5.",
+  "spots.approval.reject_prompt.title": "Zamítnout spot?",
+  "spots.approval.reject_prompt.message":
+    "Důvod zamítnutí — co je třeba opravit, ať tým ví.",
+  "spots.approval.reject_prompt.placeholder": "např. Špatná barva produktu",
+  "spots.approval.reject_prompt.required": "Důvod je povinný.",
+  "spots.approval.clear_confirm.title": "Resetovat schválení?",
+  "spots.approval.clear_confirm.message":
+    "Spot se vrátí do stavu „Čeká na schválení\". Historie se v audit logu zachová.",
+  "spots.approval.toast.approved": "Spot schválen",
+  "spots.approval.toast.rejected": "Spot zamítnut",
+  "spots.approval.toast.cleared": "Schválení zrušeno — spot čeká",
+  "spots.approval.invalidated_by_edit":
+    "Spot byl po úpravě URL automaticky vrácen do stavu „Čeká\".",
+  "spots.approval.approved_by": "Schválil(a) {who}",
+  "spots.approval.rejected_by": "Zamítl(a) {who}",
+  "spots.approval.no_comment": "(bez poznámky)",
+  "spots.approval.section.title": "Schválení",
+  "spots.approval.section.history": "Historie schválení",
+
+  // Spot detail richer view
+  "spots.deployment_history.title": "Historie nasazení",
+  "spots.deployment_history.empty": "Spot zatím nikdy nebyl nasazen.",
+  "spots.audit.title": "Aktivita",
+  "spots.audit.empty": "Žádná zaznamenaná aktivita.",
+
+  // Campaign form spot-picker warnings
+  "spot_picker.warning.pending":
+    "⚠️ Tento spot ještě nebyl klientem schválen.",
+  "spot_picker.warning.rejected":
+    "❌ Tento spot byl klientem zamítnut. Použij jiný nebo nech pole prázdné.",
   "spots.undeployed_label": "Nenasazený",
   "spots.archived_at": "Archivováno {date}",
   "spots.play": "Přehrát",
@@ -944,6 +991,53 @@ const en: Record<keyof typeof cs, string> = {
   "spots.filter.group.flat": "Flat list",
   "spots.filter.group.flat_tooltip":
     "No grouping — single list ordered by the active sort.",
+  "spots.filter.approval.all": "All states",
+  "spots.filter.approval.pending": "Pending",
+  "spots.filter.approval.approved": "Approved",
+  "spots.filter.approval.rejected": "Rejected",
+  "spots.col.approval": "Approval",
+
+  // Spot approval workflow
+  "spots.approval.status.pending": "Pending",
+  "spots.approval.status.approved": "Approved",
+  "spots.approval.status.rejected": "Rejected",
+  "spots.approval.approve_button": "Approve",
+  "spots.approval.reject_button": "Reject",
+  "spots.approval.clear_button": "Reset to pending",
+  "spots.approval.approve_prompt.title": "Approve this spot?",
+  "spots.approval.approve_prompt.message":
+    "The client signed off on this spot. You can add an optional note.",
+  "spots.approval.approve_prompt.placeholder": "e.g. Approved via email May 12",
+  "spots.approval.reject_prompt.title": "Reject this spot?",
+  "spots.approval.reject_prompt.message":
+    "Reason for rejection — what needs fixing, so the team knows.",
+  "spots.approval.reject_prompt.placeholder": "e.g. Wrong product color",
+  "spots.approval.reject_prompt.required": "Reason is required.",
+  "spots.approval.clear_confirm.title": "Reset approval?",
+  "spots.approval.clear_confirm.message":
+    "The spot returns to \"Pending approval\". History stays in the audit log.",
+  "spots.approval.toast.approved": "Spot approved",
+  "spots.approval.toast.rejected": "Spot rejected",
+  "spots.approval.toast.cleared": "Approval reset — spot pending",
+  "spots.approval.invalidated_by_edit":
+    "After the URL changed the spot was reset to \"Pending\" automatically.",
+  "spots.approval.approved_by": "Approved by {who}",
+  "spots.approval.rejected_by": "Rejected by {who}",
+  "spots.approval.no_comment": "(no note)",
+  "spots.approval.section.title": "Approval",
+  "spots.approval.section.history": "Approval history",
+
+  // Spot detail richer view
+  "spots.deployment_history.title": "Deployment history",
+  "spots.deployment_history.empty": "Spot has never been deployed yet.",
+  "spots.audit.title": "Activity",
+  "spots.audit.empty": "No recorded activity.",
+
+  // Campaign form spot-picker warnings
+  "spot_picker.warning.pending":
+    "⚠️ This spot has not been client-approved yet.",
+  "spot_picker.warning.rejected":
+    "❌ This spot was client-rejected. Use a different one or leave the picker empty.",
   "spots.undeployed_label": "Undeployed",
   "spots.archived_at": "Archived {date}",
   "spots.play": "Play",

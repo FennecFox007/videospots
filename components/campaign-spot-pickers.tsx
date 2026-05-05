@@ -21,6 +21,7 @@ import type { SpotOption, CountryGroup } from "@/components/campaign-form-body";
 import { NewSpotModal, type CreatedSpot } from "@/components/new-spot-modal";
 import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
+import { spotApprovalState } from "@/lib/spot-approval";
 
 type Props = {
   groups: CountryGroup[];
@@ -67,7 +68,8 @@ export function CampaignSpotPickers({
 
   function handleCreated(spot: CreatedSpot) {
     // Append into the country's added list, then auto-select. Uses ids as
-    // strings to match the <select> value type.
+    // strings to match the <select> value type. Fresh spots are
+    // pending — both approval timestamps null.
     setAddedByCountry((prev) => ({
       ...prev,
       [spot.countryId]: [
@@ -76,6 +78,8 @@ export function CampaignSpotPickers({
           name: spot.name,
           videoUrl: spot.videoUrl,
           productName: spot.productName,
+          clientApprovedAt: spot.clientApprovedAt,
+          rejectedAt: spot.rejectedAt,
         },
         ...(prev[spot.countryId] ?? []),
       ],
@@ -94,52 +98,81 @@ export function CampaignSpotPickers({
         // (spots ORDER BY createdAt DESC).
         const options = [...addedOptions, ...baseOptions];
         const value = selected[g.id] ?? "";
+        // Look up the picked spot to surface an approval warning if it's
+        // pending / rejected. Editor can still submit (info-only nudge —
+        // schválení can land after the campaign is planned), so we don't
+        // disable the form, just flag it.
+        const pickedSpot = value
+          ? options.find((s) => String(s.id) === value)
+          : null;
+        const pickedState = pickedSpot
+          ? spotApprovalState(pickedSpot)
+          : null;
         return (
-          <div
-            key={g.id}
-            className="grid grid-cols-[auto_1fr_auto] items-center gap-3"
-          >
-            <span className="inline-flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300 w-20 sm:w-24 shrink-0">
-              <span className="text-base leading-none" aria-hidden>
-                {g.flag}
+          <div key={g.id} className="space-y-1">
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300 w-20 sm:w-24 shrink-0">
+                <span className="text-base leading-none" aria-hidden>
+                  {g.flag}
+                </span>
+                <span
+                  className="font-mono text-xs uppercase"
+                  title={localizedCountryName(g.code, g.name, t.locale)}
+                >
+                  {g.code}
+                </span>
               </span>
-              <span
-                className="font-mono text-xs uppercase"
-                title={localizedCountryName(g.code, g.name, t.locale)}
+              <select
+                name={`spotId_${g.id}`}
+                value={value}
+                onChange={(e) =>
+                  setSelected((prev) => ({ ...prev, [g.id]: e.target.value }))
+                }
+                className={inputClass}
               >
-                {g.code}
-              </span>
-            </span>
-            <select
-              name={`spotId_${g.id}`}
-              value={value}
-              onChange={(e) =>
-                setSelected((prev) => ({ ...prev, [g.id]: e.target.value }))
-              }
-              className={inputClass}
-            >
-              <option value="">{t("form.video.no_spot")}</option>
-              {options.map((s) => {
-                const label = s.name
-                  ? s.name
-                  : s.productName
-                    ? `${s.productName} · ${g.code}`
-                    : `Spot · ${g.code}`;
-                return (
-                  <option key={s.id} value={String(s.id)}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
-            <button
-              type="button"
-              onClick={() => openModalFor(g)}
-              className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-              title={t("form.video.new_spot_tooltip")}
-            >
-              {t("form.video.new_spot")}
-            </button>
+                <option value="">{t("form.video.no_spot")}</option>
+                {options.map((s) => {
+                  const label = s.name
+                    ? s.name
+                    : s.productName
+                      ? `${s.productName} · ${g.code}`
+                      : `Spot · ${g.code}`;
+                  // Annotate the option label with state so the picker
+                  // shows status before the user even commits.
+                  const state = spotApprovalState(s);
+                  const stateMark =
+                    state === "approved"
+                      ? " ✓"
+                      : state === "rejected"
+                        ? " ✕"
+                        : ""; // pending = no mark, default state
+                  return (
+                    <option key={s.id} value={String(s.id)}>
+                      {label}
+                      {stateMark}
+                    </option>
+                  );
+                })}
+              </select>
+              <button
+                type="button"
+                onClick={() => openModalFor(g)}
+                className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                title={t("form.video.new_spot_tooltip")}
+              >
+                {t("form.video.new_spot")}
+              </button>
+            </div>
+            {pickedState === "pending" && (
+              <p className="text-xs text-amber-700 dark:text-amber-400 ml-[5.25rem]">
+                {t("spot_picker.warning.pending")}
+              </p>
+            )}
+            {pickedState === "rejected" && (
+              <p className="text-xs text-red-700 dark:text-red-400 ml-[5.25rem]">
+                {t("spot_picker.warning.rejected")}
+              </p>
+            )}
           </div>
         );
       })}

@@ -50,15 +50,18 @@ export function SpotsFilters({ countries, products }: SpotsFiltersProps) {
 
   const country = searchParams.get("country") ?? "";
   const product = searchParams.get("product") ?? "";
+  const approval = searchParams.get("approval") ?? "";
   const sort = searchParams.get("sort") ?? "created";
   const group = searchParams.get("group") ?? "country";
 
   const hasFilters =
-    !!search || !!country || !!product || sort !== "created";
+    !!search || !!country || !!product || !!approval || sort !== "created";
 
   function clearAll() {
     const params = new URLSearchParams(searchParams);
-    ["q", "country", "product", "sort"].forEach((k) => params.delete(k));
+    ["q", "country", "product", "approval", "sort"].forEach((k) =>
+      params.delete(k)
+    );
     setSearch("");
     lastSearchRef.current = "";
     startTransition(() => {
@@ -87,6 +90,17 @@ export function SpotsFilters({ countries, products }: SpotsFiltersProps) {
         onChange={(v) => setParam("product", v)}
         options={products.map((p) => ({ value: String(p.id), label: p.name }))}
         placeholder={t("spots.filter.all_products")}
+      />
+
+      <Select
+        value={approval}
+        onChange={(v) => setParam("approval", v)}
+        options={[
+          { value: "pending", label: t("spots.filter.approval.pending") },
+          { value: "approved", label: t("spots.filter.approval.approved") },
+          { value: "rejected", label: t("spots.filter.approval.rejected") },
+        ]}
+        placeholder={t("spots.filter.approval.all")}
       />
 
       <Select

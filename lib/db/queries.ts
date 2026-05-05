@@ -390,6 +390,8 @@ export async function getSpotsByCountry(): Promise<
       countryId: spots.countryId,
       productName: products.name,
       createdAt: spots.createdAt,
+      clientApprovedAt: spots.clientApprovedAt,
+      rejectedAt: spots.rejectedAt,
     })
     .from(spots)
     .leftJoin(products, eq(spots.productId, products.id))
@@ -404,6 +406,8 @@ export async function getSpotsByCountry(): Promise<
       name: r.name,
       videoUrl: r.videoUrl,
       productName: r.productName,
+      clientApprovedAt: r.clientApprovedAt,
+      rejectedAt: r.rejectedAt,
     });
   }
   return grouped;
@@ -421,6 +425,10 @@ export type DrawerSpot = {
   /** How many non-archived campaigns currently use this spot. The drawer
    *  shows it as a badge and uses 0-vs-N to populate the "Nenasazené" tab. */
   deployments: number;
+  /** Two timestamps the drawer card uses to show approval status. Drawer
+   *  callers compute the derived state via lib/spot-approval.ts. */
+  clientApprovedAt: Date | null;
+  rejectedAt: Date | null;
 };
 
 /**
@@ -442,6 +450,8 @@ export async function getSpotsForDrawer(): Promise<DrawerSpot[]> {
       countryName: countries.name,
       countrySortOrder: countries.sortOrder,
       deployments: spotDeploymentCountSql(),
+      clientApprovedAt: spots.clientApprovedAt,
+      rejectedAt: spots.rejectedAt,
     })
     .from(spots)
     .leftJoin(products, eq(spots.productId, products.id))
@@ -459,6 +469,8 @@ export async function getSpotsForDrawer(): Promise<DrawerSpot[]> {
     countryFlag: r.countryFlag,
     countryName: r.countryName,
     deployments: r.deployments,
+    clientApprovedAt: r.clientApprovedAt,
+    rejectedAt: r.rejectedAt,
   }));
 }
 

@@ -44,12 +44,16 @@ export type CountryGroup = {
   channels: { id: number; chainName: string }[];
 };
 
-/** Lightweight spot summary for the per-country dropdown options. */
+/** Lightweight spot summary for the per-country dropdown options.
+ *  Approval timestamps so the picker can render "pending" / "rejected"
+ *  warnings without a separate fetch. */
 export type SpotOption = {
   id: number;
   name: string | null;
   videoUrl: string;
   productName: string | null;
+  clientApprovedAt: Date | null;
+  rejectedAt: Date | null;
 };
 
 type Props = {

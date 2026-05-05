@@ -43,10 +43,16 @@ import { formatDate } from "@/lib/utils";
 import { SpotsFilters } from "@/components/spots-filters";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pill } from "@/components/ui/pill";
+import {
+  spotApprovalState,
+  spotApprovalTone,
+  spotApprovalLabelKey,
+} from "@/lib/spot-approval";
 
 type View = "all" | "undeployed" | "deployed" | "archived";
 type Sort = "created" | "name" | "deployments";
 type Group = "country" | "flat";
+type ApprovalFilter = "" | "pending" | "approved" | "rejected";
 
 function parseView(v: string | undefined): View {
   if (v === "all" || v === "deployed" || v === "archived") return v;
@@ -63,6 +69,11 @@ function parseGroup(g: string | undefined): Group {
   return "country";
 }
 
+function parseApproval(a: string | undefined): ApprovalFilter {
+  if (a === "pending" || a === "approved" || a === "rejected") return a;
+  return "";
+}
+
 type SearchParams = {
   view?: string;
   q?: string;
@@ -70,6 +81,7 @@ type SearchParams = {
   product?: string;
   sort?: string;
   group?: string;
+  approval?: string;
 };
 
 export default async function SpotsPage({
@@ -84,6 +96,7 @@ export default async function SpotsPage({
   const q = (sp.q ?? "").trim().toLowerCase();
   const countryFilter = sp.country ?? "";
   const productFilter = sp.product ? Number(sp.product) : null;
+  const approvalFilter = parseApproval(sp.approval);
   const t = await getT();
 
   // Pull every spot with its product + country + author, plus a count of
@@ -108,6 +121,8 @@ export default async function SpotsPage({
       authorName: users.name,
       authorEmail: users.email,
       deployments: spotDeploymentCountSql(),
+      clientApprovedAt: spots.clientApprovedAt,
+      rejectedAt: spots.rejectedAt,
     })
     .from(spots)
     .leftJoin(products, eq(spots.productId, products.id))
@@ -124,10 +139,14 @@ export default async function SpotsPage({
     return true; // "all"
   });
 
-  // ---- Apply secondary filters (q + country + product)
+  // ---- Apply secondary filters (q + country + product + approval)
   const filtered = viewFiltered.filter((r) => {
     if (countryFilter && r.countryCode !== countryFilter) return false;
     if (productFilter !== null && r.productId !== productFilter) return false;
+    if (approvalFilter) {
+      const state = spotApprovalState(r);
+      if (state !== approvalFilter) return false;
+    }
     if (q) {
       const haystack = [
         r.name,
@@ -161,12 +180,16 @@ export default async function SpotsPage({
   });
 
   // ---- Bucket counts for the tab strip — always reflect the SECONDARY
-  // filters (q + country + product) so the user sees how many spots match
-  // their filter set within each view. The view filter itself doesn't
-  // apply to the count of view bucket X (that would be circular).
+  // filters (q + country + product + approval) so the user sees how many
+  // spots match their filter set within each view. The view filter itself
+  // doesn't apply to the count of view bucket X (that would be circular).
   const matchesSecondary = (r: (typeof rows)[number]) => {
     if (countryFilter && r.countryCode !== countryFilter) return false;
     if (productFilter !== null && r.productId !== productFilter) return false;
+    if (approvalFilter) {
+      const state = spotApprovalState(r);
+      if (state !== approvalFilter) return false;
+    }
     if (q) {
       const haystack = [
         r.name,
@@ -365,6 +388,7 @@ function tabHref(target: View, sp: SearchParams): string {
   if (sp.q) params.set("q", sp.q);
   if (sp.country) params.set("country", sp.country);
   if (sp.product) params.set("product", sp.product);
+  if (sp.approval) params.set("approval", sp.approval);
   if (sp.sort && sp.sort !== "created") params.set("sort", sp.sort);
   if (sp.group && sp.group !== "country") params.set("group", sp.group);
   const qs = params.toString();
@@ -419,6 +443,8 @@ type SpotRow = {
   authorName: string | null;
   authorEmail: string | null;
   deployments: number;
+  clientApprovedAt: Date | null;
+  rejectedAt: Date | null;
 };
 
 function SpotTable({
@@ -452,6 +478,9 @@ function SpotTable({
                 {t("spots.col.country")}
               </th>
             )}
+            <th className="text-left px-4 py-2 font-medium">
+              {t("spots.col.approval")}
+            </th>
             <th className="text-left px-4 py-2 font-medium">
               {t("spots.col.deployments")}
             </th>
@@ -496,6 +525,9 @@ function SpotTable({
                   </span>
                 </td>
               )}
+              <td className="px-4 py-2.5">
+                <ApprovalCell spot={s} t={t} />
+              </td>
               <td className="px-4 py-2.5">
                 {s.deployments > 0 ? (
                   <Pill tone="emerald">
@@ -579,5 +611,20 @@ function ViewTab({
         {count}
       </span>
     </Link>
+  );
+}
+
+function ApprovalCell({
+  spot,
+  t,
+}: {
+  spot: { clientApprovedAt: Date | null; rejectedAt: Date | null };
+  t: Awaited<ReturnType<typeof getT>>;
+}) {
+  const state = spotApprovalState(spot);
+  return (
+    <Pill size="sm" tone={spotApprovalTone(state)}>
+      {t(spotApprovalLabelKey(state))}
+    </Pill>
   );
 }
