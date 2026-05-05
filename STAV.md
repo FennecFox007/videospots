@@ -124,14 +124,13 @@ Klíčová vlastnost: **kampaň bez spotu je legitimní stav**, ne chyba. Vizuá
 - `/admin/{countries,chains,channels,products,users,templates,import,archive,audit}` — interní CRUD.
 - `/share/[token]` — public read-only (kampaň nebo timeline). **Žádné akční formuláře** — informační jen.
 - `/print/{campaigns/[id],timeline}` — printable PDF. Detail má QR kód.
-- `/tools/find-slot` — vyhledávač volných termínů (low-priority feature)
 
 ## Klíčové UX prvky
 
 - **Peek panel** (pravý drawer) — otevírá se klikem na bar v timeline / řádek v `/campaigns`. Imperativní store v `lib/peek-store.ts` (žádné intercepting routes — Turbopack je s tím nestabilní). URL sync přes `?peek=<id>` + `history.replaceState` (sdílitelné, žádný server re-render). Footer akce: Otevřít detail, Upravit, **Schvaluji**, Klonovat, Cancel, Archive. Videos sekce: "Spoty (X/Y)" + per-country play link nebo "Spot ještě nebyl přiřazen". Cancel-on-change při rychlém přepínání mezi bary.
 - **Bar context menu** — pravoklik na bar v timeline. Položky: Otevřít detail, Upravit, **Upravit jen tento řetězec**, **Schvaluji** / **Zrušit schválení**, **Sdílet odkaz** (jeden klik vygeneruje + zkopíruje share link), Posunout o týden ←/→, Klonovat, Cancel/Reactivate, Archive.
 - **Channel override dialog** — viz výše per-retailer sekce.
-- **SpotsDrawer + drag-and-drop** — toolbar tlačítko **📺 Spoty** v hlavičce timeline (s žlutým badge počtu nenasazených). Klik otevře 320 px slide-out drawer zprava: search + tabs (Nenasazené / Všechny) + spoty seskupené podle země. Karty jsou HTML5 draggable (`SPOT_DRAG_MIME`), drop targety jsou kanálové řádky v timeline. Drop validuje země: matching → otevře `<SpotDropModal>` s pre-fillem (název = jméno spotu, datum = drop position, end = +14 dní, zaškrtnutý jen ten kanál; volitelně další kanály ve stejné zemi); mismatched → toast "Spot je pro CZ, drop na SK".
+- **SpotsDrawer + drag-and-drop** — toolbar tlačítko **📺 Knihovna** v hlavičce timeline (s žlutým badge počtu nenasazených). Záměrně **jiný název než nav link "Spoty"** (který vede na `/spots` admin) — drawer je rychlá drag-onto-timeline plocha, `/spots` je manage/edit/archive. Klik otevře 320 px slide-out drawer zprava: search + tabs (Nenasazené / Všechny) + spoty seskupené podle země. Karty jsou HTML5 draggable (`SPOT_DRAG_MIME`), drop targety jsou kanálové řádky v timeline. Drop validuje země: matching → otevře `<SpotDropModal>` s pre-fillem (název = jméno spotu, datum = drop position, end = +14 dní, zaškrtnutý jen ten kanál; volitelně další kanály ve stejné zemi); mismatched → toast "Spot je pro CZ, drop na SK".
 - **Ghost preview během dragu** — když držíš spot nad cílovým kanálem, ten řádek si rezervuje extra lane vespod (transition 150 ms na `height`), kanály pod ním se posunou dolů ("dělá se místo"). V té nové lane se kreslí přerušovaný indigo bar se jménem spotu a nad ním plovoucí pilulka s daty v CZ formátu (`5. 5. 2026 – 18. 5. 2026 (14 dní)`). Country mismatch → preview se neukáže, dropEffect="none". HTML5 spec hides `dataTransfer.getData()` v `dragover`, proto držíme paralelní `currentDrag` v `lib/spot-drop-store.ts`, set v drawer `onDragStart`, read sync v timeline `onDragOver`.
 - **DateRangeSummary helper** pod `<input type="date">` v drop modalu i override dialogu — `<input type="date">` se renderuje v browser locale (často `YYYY-MM-DD` v en-US), tak pod ním vždy ukazujeme `→ 5. 5. 2026 – 18. 5. 2026 (14 dní)` v CZ formátu jako pojistku.
 - **Public campaign modal** v share-timeline view — klik na bar otevře malý modal s videem (per-country) + metadaty + approved badge (jen info).
@@ -164,7 +163,7 @@ Klíčová vlastnost: **kampaň bez spotu je legitimní stav**, ne chyba. Vizuá
 
 ## Toolbar styling discipline
 
-Všechny ovládací prvky v hlavičce timeline (zoom presety, date nav, presety, filter dropdowns, Pohledy button) jsou na **`text-sm` + `px-3 py-1.5`**. Když přidáváš další button/dropdown do toolbar řady, drž tento standard. Density toggle v rohu timeline je výjimka (`text-xs`, sekundární kontrola odsunutá od hlavního toolbaru).
+Hlavní toolbar (zoom presety, date nav, kontextové presety) zůstává na **`text-sm` + `px-3 py-1.5`** — větší cíle pro hlavní navigaci. **FilterBar řada pod ním** (search, country, chain, runState, commType, approval, missingSpot, client, tag, Pohledy) je naopak na **`text-xs` + `px-2.5 py-1`** — je to spousta kontrol, které dohromady wrapnou na několik řádků; menší font drží jeden řádek častěji a vizuálně řadí filtry pod toolbar.
 
 ## Hosting & deploy strategie
 

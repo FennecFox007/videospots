@@ -6,7 +6,7 @@
 // Coverage policy:
 //  - User-facing surfaces clients might see (timeline, detail, list, releases,
 //    share, print, nav, sign-in, dialog text) → both CS and EN.
-//  - Admin pages, edit/new forms, /tools/find-slot → Czech only for now.
+//  - Admin pages, edit/new forms → Czech only for now.
 //    Adding EN later is straightforward — just add the keys.
 //
 // When adding a key, add to BOTH dicts. TypeScript would catch missing keys
@@ -29,7 +29,6 @@ const cs = {
   "nav.list": "Seznam",
   "nav.new": "+ Nová",
   "nav.spots": "Spoty",
-  "nav.find_slot": "Volný termín",
   "nav.templates": "Šablony",
   "nav.admin": "Admin",
   "nav.activity": "Aktivita",
@@ -323,12 +322,15 @@ const cs = {
   "filter.missing_spot.tooltip":
     "Kampaně, kde alespoň jedna země ještě nemá přiřazený spot.",
 
-  // Spots drawer (toolbar button on /, slide-out panel)
-  "spots_drawer.button": "Spoty",
+  // Spots drawer (toolbar button on /, slide-out panel).
+  // Label is "Knihovna" / "Library" — distinct from the top-nav "Spoty" link
+  // which goes to the full /spots admin page. The drawer is the quick
+  // drag-onto-timeline surface; the page is the manage-edit-archive surface.
+  "spots_drawer.button": "Knihovna",
   "spots_drawer.button_tooltip":
     "Otevřít knihovnu spotů. Můžeš spot přetáhnout na timeline a vytvořit z něj kampaň.",
   "spots_drawer.aria_label": "Knihovna spotů",
-  "spots_drawer.heading": "Spoty",
+  "spots_drawer.heading": "Knihovna spotů",
   "spots_drawer.hint": "Přetáhni spot na timeline pro vytvoření kampaně.",
   "spots_drawer.search_placeholder": "Hledat spot…",
   "spots_drawer.tab.undeployed": "Nenasazené",
@@ -558,7 +560,6 @@ const en: Record<keyof typeof cs, string> = {
   "nav.list": "Campaigns",
   "nav.new": "+ New",
   "nav.spots": "Spots",
-  "nav.find_slot": "Find a slot",
   "nav.templates": "Templates",
   "nav.admin": "Admin",
   "nav.activity": "Activity",
@@ -852,12 +853,12 @@ const en: Record<keyof typeof cs, string> = {
   "filter.missing_spot.tooltip":
     "Campaigns with at least one country still waiting for a spot.",
 
-  // Spots drawer
-  "spots_drawer.button": "Spots",
+  // Spots drawer — see CS comment above for naming rationale.
+  "spots_drawer.button": "Library",
   "spots_drawer.button_tooltip":
     "Open the spot library. Drag a spot onto the timeline to create a campaign from it.",
   "spots_drawer.aria_label": "Spot library",
-  "spots_drawer.heading": "Spots",
+  "spots_drawer.heading": "Spot library",
   "spots_drawer.hint": "Drag a spot onto the timeline to create a campaign.",
   "spots_drawer.search_placeholder": "Search spots…",
   "spots_drawer.tab.undeployed": "Undeployed",

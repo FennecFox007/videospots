@@ -49,9 +49,6 @@ export async function Nav({ theme }: { theme: Theme }) {
             <NavLink href="/campaigns">{t("nav.list")}</NavLink>
             <NavLink href="/campaigns/new">{t("nav.new")}</NavLink>
             <NavLink href="/spots">{t("nav.spots")}</NavLink>
-            <NavLink href="/tools/find-slot" className="hidden md:inline-flex">
-              {t("nav.find_slot")}
-            </NavLink>
             <NavLink href="/admin/templates" className="hidden md:inline-flex">
               {t("nav.templates")}
             </NavLink>

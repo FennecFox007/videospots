@@ -121,7 +121,7 @@ export function FilterBar({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder={t("filter.search_placeholder")}
-        className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-56"
+        className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-56"
       />
 
       <Select
@@ -164,7 +164,7 @@ export function FilterBar({
         type="button"
         onClick={() => setParam("missingSpot", missingSpot ? "" : "1")}
         className={
-          "rounded-md border px-3 py-1.5 text-sm transition-colors " +
+          "rounded-md border px-2.5 py-1 text-xs transition-colors " +
           (missingSpot
             ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300"
             : "border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800")
@@ -226,7 +226,7 @@ function Select({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
     >
       <option value="">{placeholder}</option>
       {options.map((o) => (
