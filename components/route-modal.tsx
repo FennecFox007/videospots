@@ -10,6 +10,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 
 type Props = {
   title: string;
@@ -20,6 +21,7 @@ type Props = {
 
 export function RouteModal({ title, subtitle, children }: Props) {
   const router = useRouter();
+  const t = useT();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = useRef<Element | null>(null);
 
@@ -104,7 +106,7 @@ export function RouteModal({ title, subtitle, children }: Props) {
           <button
             type="button"
             onClick={() => router.back()}
-            aria-label="Zavřít"
+            aria-label={t("common.close")}
             className="shrink-0 -m-1 p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             <svg

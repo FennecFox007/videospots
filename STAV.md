@@ -255,8 +255,8 @@ Tři paralelní audity (consistency / DB / UI) prošly celou code base a vyextra
 - Tranše 9: Auth.js dead tables — `accounts`, `sessions`, `verificationTokens` tabulky jsou jen scaffolding pro DrizzleAdapter; my používáme JWT-only auth. Plus `users.emailVerified`, `users.image` dead. Volitelné — drop nebo dokumentovat jako reserved.
 - Tranše 10: Drop dead `products.igdbId/slug/rawIgdb/fetchedAt` (IGDB integrace je v "out of scope"). Volitelné.
 
-**🔵 Tier 4 — i18n gaps (CS/EN parita):**
-- Tranše 11: Hardcoded CS stringy v `saved-views-menu.tsx`, `activity-feed.tsx` (`ACTION_VERB` mapa, headers, empty state), `campaigns-table.tsx` (aria-labels checkboxů), 4× close-button `aria-label="Zavřít"` v různých modalech (klíč `common.close` už existuje), Cmd+K tooltip v `nav.tsx`.
+**🔵 Tier 4 — i18n gaps (CS/EN parita):** ✅
+- Tranše 11: Hardcoded CS stringy lokalizované — `saved-views-menu.tsx` (toast/prompt/confirm/empty/aria + summarizePayload labels), `activity-feed.tsx` (`ACTION_VERB` mapa pro CS gendered + EN simple, "Aktivita" header, "Žádná aktivita.", "Zobrazit kompletní audit log", "neznámý"), `campaigns-table.tsx` (3 aria-labels checkboxů), 3× close-button `aria-label="Zavřít"` (route-modal, public-timeline, dialog-provider) → `t("common.close")`, `nav.tsx` Cmd+K tooltip. Nové i18n klíče v `lib/i18n/messages.ts`: `nav.search_shortcut_tooltip`, `activity_feed.*`, `saved_views.*` (~30 klíčů), `campaigns_table.aria.*`.
 
 **🟣 Tier 5 — Vizuální konzistence (polish, větší rozsah):**
 - Tranše 12: UI primitivy — `<Field>` má 4 verze (text-red-500 vs 600, text-xs vs text-sm), `<Section>` má 3 verze, primární tlačítka mají 5 různých paddingů, "pill"/badge má 6 paddingů. Návrh extraktu do `components/ui/`. Subjektivní rozhodnutí — rozhodnout s partnerem.

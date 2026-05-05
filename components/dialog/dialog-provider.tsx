@@ -23,6 +23,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useT } from "@/lib/i18n/client";
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -325,6 +326,9 @@ function ToastContainer({
   toasts: Toast[];
   onDismiss: (id: number) => void;
 }) {
+  // The toast loop variable is named `t` so we use a different binding for
+  // the i18n function to avoid shadowing.
+  const tr = useT();
   if (toasts.length === 0) return null;
   return (
     <div
@@ -351,7 +355,7 @@ function ToastContainer({
             type="button"
             onClick={() => onDismiss(t.id)}
             className="shrink-0 -m-1 p-1 opacity-60 hover:opacity-100 rounded"
-            aria-label="Zavřít"
+            aria-label={tr("common.close")}
           >
             <svg
               width="14"

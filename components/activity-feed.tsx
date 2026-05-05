@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { formatRelative } from "@/lib/utils";
+import { useT } from "@/lib/i18n/client";
 
 export type ActivityEntry = {
   id: number;
@@ -18,16 +19,32 @@ export type ActivityEntry = {
   createdAt: Date;
 };
 
-const ACTION_VERB: Record<string, string> = {
-  created: "vytvořil(a)",
-  updated: "upravil(a)",
-  deleted: "smazal(a)",
-  cancelled: "zrušil(a)",
-};
-
 export function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const t = useT();
+
+  // Map an audit log action verb to its localized label. CS gendered
+  // ("vytvořil(a)") and EN simple ("created"). Unknown actions fall back
+  // to the raw verb so we don't hide them.
+  function actionVerb(action: string): string {
+    switch (action) {
+      case "created":
+        return t("activity_feed.action.created");
+      case "updated":
+        return t("activity_feed.action.updated");
+      case "deleted":
+        return t("activity_feed.action.deleted");
+      case "cancelled":
+        return t("activity_feed.action.cancelled");
+      case "approved":
+        return t("activity_feed.action.approved");
+      case "archived":
+        return t("activity_feed.action.archived");
+      default:
+        return action;
+    }
+  }
 
   // Close on outside click / Escape.
   useEffect(() => {
@@ -58,7 +75,7 @@ export function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="relative px-2 py-1 rounded-md text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-900 transition-colors"
-        aria-label="Aktivita"
+        aria-label={t("activity_feed.title")}
         aria-expanded={open}
       >
         <span aria-hidden>🔔</span>
@@ -72,12 +89,12 @@ export function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
       {open && (
         <div className="absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-1rem)] rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-lg z-50 overflow-hidden">
           <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-500 uppercase tracking-wide">
-            Aktivita
+            {t("activity_feed.title")}
           </div>
 
           {entries.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-zinc-500">
-              Žádná aktivita.
+              {t("activity_feed.empty")}
             </div>
           ) : (
             <ul className="max-h-96 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -86,7 +103,12 @@ export function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
                   key={e.id}
                   className="px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-950 text-sm"
                 >
-                  <ActivityRow entry={e} onNavigate={() => setOpen(false)} />
+                  <ActivityRow
+                    entry={e}
+                    actionVerb={actionVerb}
+                    unknownUserLabel={t("activity_feed.unknown_user")}
+                    onNavigate={() => setOpen(false)}
+                  />
                 </li>
               ))}
             </ul>
@@ -97,7 +119,7 @@ export function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
             onClick={() => setOpen(false)}
             className="block text-center text-xs font-medium text-blue-600 dark:text-blue-400 px-4 py-2 border-t border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-950"
           >
-            Zobrazit kompletní audit log →
+            {t("activity_feed.show_all")}
           </Link>
         </div>
       )}
@@ -107,13 +129,17 @@ export function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
 
 function ActivityRow({
   entry,
+  actionVerb,
+  unknownUserLabel,
   onNavigate,
 }: {
   entry: ActivityEntry;
+  actionVerb: (action: string) => string;
+  unknownUserLabel: string;
   onNavigate: () => void;
 }) {
-  const verb = ACTION_VERB[entry.action] ?? entry.action;
-  const who = entry.userName ?? entry.userEmail ?? "neznámý";
+  const verb = actionVerb(entry.action);
+  const who = entry.userName ?? entry.userEmail ?? unknownUserLabel;
   const isCampaign = entry.entity === "campaign" && entry.entityId;
 
   const target =

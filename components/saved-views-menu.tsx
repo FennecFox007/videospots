@@ -76,44 +76,47 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
       if (v) entries[k] = v;
     }
     if (Object.keys(entries).length === 0) {
-      toast.error(
-        "Není co uložit. Nejdřív nastav filtry (vyhledávání, stát, řetězec…)."
-      );
+      toast.error(t("saved_views.error_empty"));
       return;
     }
     setOpen(false);
     const name = await prompt({
-      title: "Pojmenovat pohled",
-      message: "Pohled si zapamatuje aktuálně nastavené filtry.",
-      placeholder: "např. CZ + SK aktivní",
-      confirmLabel: "Uložit",
-      validate: (v) => (v.trim() ? null : "Název nesmí být prázdný"),
+      title: t("saved_views.prompt.title"),
+      message: t("saved_views.prompt.message"),
+      placeholder: t("saved_views.prompt.placeholder"),
+      confirmLabel: t("saved_views.prompt.confirm"),
+      validate: (v) =>
+        v.trim() ? null : t("saved_views.prompt.required"),
     });
     if (!name) return;
     startTransition(async () => {
       try {
         await createSavedView(name, scope, entries);
-        toast.success("Pohled uložen");
+        toast.success(t("saved_views.toast.saved"));
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Uložení pohledu selhalo");
+        toast.error(
+          e instanceof Error ? e.message : t("saved_views.toast.save_failed")
+        );
       }
     });
   }
 
   async function removeView(v: SavedView) {
     const ok = await confirm({
-      title: `Smazat pohled „${v.name}"?`,
-      message: "Tahle akce je nevratná. Filtry se nesmažou, jen jejich uložené pojmenování.",
-      confirmLabel: "Smazat",
+      title: t("saved_views.delete.title", { name: v.name }),
+      message: t("saved_views.delete.message"),
+      confirmLabel: t("saved_views.delete.confirm"),
       destructive: true,
     });
     if (!ok) return;
     startTransition(async () => {
       try {
         await deleteSavedView(v.id);
-        toast.success("Pohled smazán");
+        toast.success(t("saved_views.toast.deleted"));
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Smazání pohledu selhalo");
+        toast.error(
+          e instanceof Error ? e.message : t("saved_views.toast.delete_failed")
+        );
       }
     });
   }
@@ -161,8 +164,7 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
         >
           {views.length === 0 ? (
             <div className="px-3 py-3 text-xs text-zinc-500">
-              Zatím žádné uložené pohledy. Nastav filtry a klikni „Uložit
-              aktuální".
+              {t("saved_views.empty_state")}
             </div>
           ) : (
             <ul className="max-h-72 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -180,7 +182,7 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
                         ? "font-medium text-blue-700 dark:text-blue-400"
                         : "")
                     }
-                    title={summarizePayload(v.payload)}
+                    title={summarizePayload(v.payload, t)}
                   >
                     {v.name}
                   </button>
@@ -188,8 +190,8 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
                     type="button"
                     onClick={() => removeView(v)}
                     className="text-xs text-zinc-400 hover:text-red-600 px-2 py-1"
-                    title="Smazat"
-                    aria-label={`Smazat pohled ${v.name}`}
+                    title={t("saved_views.delete.tooltip")}
+                    aria-label={t("saved_views.delete.aria", { name: v.name })}
                   >
                     ✕
                   </button>
@@ -213,23 +215,42 @@ export function SavedViewsMenu({ scope, destinationPath, views }: Props) {
   );
 }
 
-/** Short tooltip blurb showing what filters a view contains. */
-function summarizePayload(payload: Record<string, string>): string {
-  const labels: Record<string, string> = {
-    q: "hledání",
-    country: "stát",
-    chain: "řetězec",
-    runState: "stav",
-    approval: "schválení",
-    missingSpot: "bez spotu",
-    tag: "štítek",
-    from: "od",
-    to: "do",
+/** Short tooltip blurb showing what filters a view contains. Pulls labels
+ *  through `t` so EN users see English keys. The keys here mirror what the
+ *  saved-views allowlist permits; an unknown key falls back to the raw
+ *  param name. */
+function summarizePayload(
+  payload: Record<string, string>,
+  t: ReturnType<typeof useT>
+): string {
+  const labelKey = (k: string): string => {
+    switch (k) {
+      case "q":
+        return t("saved_views.payload.q");
+      case "country":
+        return t("saved_views.payload.country");
+      case "chain":
+        return t("saved_views.payload.chain");
+      case "runState":
+        return t("saved_views.payload.runState");
+      case "approval":
+        return t("saved_views.payload.approval");
+      case "missingSpot":
+        return t("saved_views.payload.missingSpot");
+      case "tag":
+        return t("saved_views.payload.tag");
+      case "from":
+        return t("saved_views.payload.from");
+      case "to":
+        return t("saved_views.payload.to");
+      default:
+        return k;
+    }
   };
   const parts: string[] = [];
   for (const [k, v] of Object.entries(payload)) {
     if (!v) continue;
-    parts.push(`${labels[k] ?? k}: ${v}`);
+    parts.push(`${labelKey(k)}: ${v}`);
   }
-  return parts.join(" · ") || "(prázdné)";
+  return parts.join(" · ") || t("saved_views.payload.empty");
 }

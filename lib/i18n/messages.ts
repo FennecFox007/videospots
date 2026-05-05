@@ -34,6 +34,57 @@ const cs = {
   "nav.activity": "Aktivita",
   "nav.signout": "Odhlásit",
   "nav.search_hint": "Hledat",
+  "nav.search_shortcut_tooltip":
+    "Stiskni Ctrl+K (Cmd+K na macu) pro vyhledávání",
+
+  // Activity feed (bell dropdown in nav)
+  "activity_feed.title": "Aktivita",
+  "activity_feed.empty": "Žádná aktivita.",
+  "activity_feed.show_all": "Zobrazit kompletní audit log →",
+  "activity_feed.unknown_user": "neznámý",
+  "activity_feed.action.created": "vytvořil(a)",
+  "activity_feed.action.updated": "upravil(a)",
+  "activity_feed.action.deleted": "smazal(a)",
+  "activity_feed.action.cancelled": "zrušil(a)",
+  "activity_feed.action.approved": "schválil(a)",
+  "activity_feed.action.archived": "archivoval(a)",
+
+  // Saved views menu
+  "saved_views.empty_state":
+    "Zatím žádné uložené pohledy. Nastav filtry a klikni „Uložit aktuální\".",
+  "saved_views.error_empty":
+    "Není co uložit. Nejdřív nastav filtry (vyhledávání, stát, řetězec…).",
+  "saved_views.prompt.title": "Pojmenovat pohled",
+  "saved_views.prompt.message":
+    "Pohled si zapamatuje aktuálně nastavené filtry.",
+  "saved_views.prompt.placeholder": "např. CZ + SK aktivní",
+  "saved_views.prompt.confirm": "Uložit",
+  "saved_views.prompt.required": "Název nesmí být prázdný",
+  "saved_views.toast.saved": "Pohled uložen",
+  "saved_views.toast.save_failed": "Uložení pohledu selhalo",
+  "saved_views.toast.deleted": "Pohled smazán",
+  "saved_views.toast.delete_failed": "Smazání pohledu selhalo",
+  "saved_views.delete.title": "Smazat pohled „{name}\"?",
+  "saved_views.delete.message":
+    "Tahle akce je nevratná. Filtry se nesmažou, jen jejich uložené pojmenování.",
+  "saved_views.delete.confirm": "Smazat",
+  "saved_views.delete.aria": "Smazat pohled {name}",
+  "saved_views.delete.tooltip": "Smazat",
+  "saved_views.payload.q": "hledání",
+  "saved_views.payload.country": "stát",
+  "saved_views.payload.chain": "řetězec",
+  "saved_views.payload.runState": "stav",
+  "saved_views.payload.approval": "schválení",
+  "saved_views.payload.missingSpot": "bez spotu",
+  "saved_views.payload.tag": "štítek",
+  "saved_views.payload.from": "od",
+  "saved_views.payload.to": "do",
+  "saved_views.payload.empty": "(prázdné)",
+
+  // Campaigns table aria-labels
+  "campaigns_table.aria.select_all": "Vybrat vše",
+  "campaigns_table.aria.select_one": "Vybrat {name}",
+  "campaigns_table.aria.clear_selection": "Zrušit výběr",
 
   // Sign in
   "signin.title": "videospots",
@@ -581,6 +632,57 @@ const en: Record<keyof typeof cs, string> = {
   "nav.activity": "Activity",
   "nav.signout": "Sign out",
   "nav.search_hint": "Search",
+  "nav.search_shortcut_tooltip":
+    "Press Ctrl+K (Cmd+K on Mac) to search",
+
+  // Activity feed (bell dropdown in nav)
+  "activity_feed.title": "Activity",
+  "activity_feed.empty": "No activity yet.",
+  "activity_feed.show_all": "Show full audit log →",
+  "activity_feed.unknown_user": "unknown",
+  "activity_feed.action.created": "created",
+  "activity_feed.action.updated": "updated",
+  "activity_feed.action.deleted": "deleted",
+  "activity_feed.action.cancelled": "cancelled",
+  "activity_feed.action.approved": "approved",
+  "activity_feed.action.archived": "archived",
+
+  // Saved views menu
+  "saved_views.empty_state":
+    "No saved views yet. Set up filters and click \"Save current\".",
+  "saved_views.error_empty":
+    "Nothing to save. Set up some filters first (search, country, retailer…).",
+  "saved_views.prompt.title": "Name the view",
+  "saved_views.prompt.message":
+    "The view will remember the currently active filter set.",
+  "saved_views.prompt.placeholder": "e.g. CZ + SK active",
+  "saved_views.prompt.confirm": "Save",
+  "saved_views.prompt.required": "Name can't be empty",
+  "saved_views.toast.saved": "View saved",
+  "saved_views.toast.save_failed": "Saving the view failed",
+  "saved_views.toast.deleted": "View deleted",
+  "saved_views.toast.delete_failed": "Deleting the view failed",
+  "saved_views.delete.title": "Delete view \"{name}\"?",
+  "saved_views.delete.message":
+    "This is irreversible. The filters themselves are kept — only the saved label is removed.",
+  "saved_views.delete.confirm": "Delete",
+  "saved_views.delete.aria": "Delete view {name}",
+  "saved_views.delete.tooltip": "Delete",
+  "saved_views.payload.q": "search",
+  "saved_views.payload.country": "country",
+  "saved_views.payload.chain": "retailer",
+  "saved_views.payload.runState": "state",
+  "saved_views.payload.approval": "approval",
+  "saved_views.payload.missingSpot": "missing spot",
+  "saved_views.payload.tag": "tag",
+  "saved_views.payload.from": "from",
+  "saved_views.payload.to": "to",
+  "saved_views.payload.empty": "(empty)",
+
+  // Campaigns table aria-labels
+  "campaigns_table.aria.select_all": "Select all",
+  "campaigns_table.aria.select_one": "Select {name}",
+  "campaigns_table.aria.clear_selection": "Clear selection",
 
   // Sign in
   "signin.title": "videospots",

@@ -119,7 +119,7 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
                     if (el) el.indeterminate = someSelected;
                   }}
                   onChange={toggleAll}
-                  aria-label="Vybrat vše"
+                  aria-label={t("campaigns_table.aria.select_all")}
                   className="rounded"
                 />
               </th>
@@ -152,7 +152,9 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
                       type="checkbox"
                       checked={isOn}
                       onChange={() => toggle(r.id)}
-                      aria-label={`Vybrat ${r.name}`}
+                      aria-label={t("campaigns_table.aria.select_one", {
+                        name: r.name,
+                      })}
                       className="rounded"
                     />
                   </td>
@@ -350,7 +352,7 @@ export function CampaignsTable({ rows, params, sort, order }: Props) {
             onClick={clearSelection}
             disabled={isPending}
             className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-            aria-label="Zrušit výběr"
+            aria-label={t("campaigns_table.aria.clear_selection")}
           >
             ✕
           </button>

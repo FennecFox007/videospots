@@ -20,6 +20,7 @@ import {
 } from "@/lib/communication";
 import { localizedCountryName } from "@/lib/i18n/country";
 import type { Locale } from "@/lib/i18n/messages";
+import { useT } from "@/lib/i18n/client";
 import { VideoEmbed } from "@/components/video-embed";
 
 export type PublicChannel = {
@@ -549,6 +550,7 @@ function PublicCampaignModal({
   uiLocale: Locale;
   onClose: () => void;
 }) {
+  const t = useT();
   // ESC closes.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -641,7 +643,7 @@ function PublicCampaignModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Zavřít"
+            aria-label={t("common.close")}
             className="shrink-0 -m-1 p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             <svg

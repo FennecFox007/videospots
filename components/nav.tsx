@@ -71,7 +71,7 @@ export async function Nav({ theme }: { theme: Theme }) {
           <div className="flex items-center gap-1 sm:gap-2 text-sm shrink-0">
             <span
               className="hidden lg:inline-flex items-center gap-1 text-xs text-zinc-500 border border-zinc-200 dark:border-zinc-800 rounded-md px-2 py-1"
-              title="Stiskni Ctrl+K (Cmd+K na macu) pro vyhledávání"
+              title={t("nav.search_shortcut_tooltip")}
             >
               🔍 <kbd className="font-mono">⌘K</kbd>
             </span>
