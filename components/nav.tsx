@@ -11,6 +11,13 @@ import type { Theme } from "@/lib/theme/server";
 export async function Nav({ theme }: { theme: Theme }) {
   const session = await auth();
   const t = await getT();
+  // Role gates the visibility of the /admin nav links. Viewers + editors
+  // get the user-facing surfaces; only admins see /admin/templates +
+  // /admin. (The /admin layout enforces this server-side too — this is
+  // just to avoid showing a link that 403s.)
+  const role = session?.user?.role ?? null;
+  const isAdmin = role === "admin";
+  const canMutate = role === "admin" || role === "editor";
 
   // Last 10 audit entries for the activity dropdown. Cheap to fetch on every
   // request; we render the layout per-request anyway.
@@ -58,12 +65,21 @@ export async function Nav({ theme }: { theme: Theme }) {
             <NavLink href="/">{t("nav.timeline")}</NavLink>
             <NavLink href="/releases">{t("nav.releases")}</NavLink>
             <NavLink href="/campaigns">{t("nav.list")}</NavLink>
-            <NavLink href="/campaigns/new">{t("nav.new")}</NavLink>
+            {canMutate && (
+              <NavLink href="/campaigns/new">{t("nav.new")}</NavLink>
+            )}
             <NavLink href="/spots">{t("nav.spots")}</NavLink>
-            <NavLink href="/admin/templates" className="hidden md:inline-flex">
-              {t("nav.templates")}
-            </NavLink>
-            <NavLink href="/admin">{t("nav.admin")}</NavLink>
+            {isAdmin && (
+              <>
+                <NavLink
+                  href="/admin/templates"
+                  className="hidden md:inline-flex"
+                >
+                  {t("nav.templates")}
+                </NavLink>
+                <NavLink href="/admin">{t("nav.admin")}</NavLink>
+              </>
+            )}
           </div>
         </div>
 

@@ -2,17 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { asc, eq } from "drizzle-orm";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth-helpers";
 import { db, chains, auditLog } from "@/lib/db/client";
 
-async function requireAuth() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session.user.id;
-}
-
 export async function createChain(formData: FormData) {
-  const userId = await requireAuth();
+  const userId = await requireAdmin();
 
   const code = String(formData.get("code") ?? "")
     .trim()
@@ -42,7 +36,7 @@ export async function createChain(formData: FormData) {
 }
 
 export async function deleteChain(id: number) {
-  const userId = await requireAuth();
+  const userId = await requireAdmin();
 
   const [target] = await db
     .select({ code: chains.code, name: chains.name })
@@ -74,7 +68,7 @@ export async function deleteChain(id: number) {
  * we just swap with whichever lookup returns first.
  */
 export async function reorderChain(id: number, direction: -1 | 1) {
-  await requireAuth();
+  await requireAdmin();
 
   const all = await db
     .select({ id: chains.id, sortOrder: chains.sortOrder, name: chains.name })

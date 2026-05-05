@@ -5,15 +5,9 @@
 
 import { revalidatePath } from "next/cache";
 import { inArray } from "drizzle-orm";
-import { auth } from "@/auth";
 import { db, campaigns, auditLog } from "@/lib/db/client";
 import { isValidCampaignColor, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
-
-async function requireUser() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session.user.id;
-}
+import { requireEditor as requireUser } from "@/lib/auth-helpers";
 
 function normalizeIds(ids: number[]): number[] {
   const out = ids

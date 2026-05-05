@@ -11,6 +11,7 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, users } from "@/lib/db/client";
 import { authConfig } from "./auth.config";
+import { isValidRole } from "@/lib/roles";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -40,10 +41,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
 
+        // Surface `role` so the JWT callback in auth.config can fan it
+        // out into the token + session. DB column is plain text; validate
+        // against the canonical union here so a hand-edited DB value
+        // can't smuggle a bogus role into the session. Falls back to
+        // "viewer" (least privilege) if validation fails.
         return {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: isValidRole(user.role) ? user.role : "viewer",
         };
       },
     }),

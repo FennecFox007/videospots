@@ -4,7 +4,6 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq, inArray, sql } from "drizzle-orm";
-import { auth } from "@/auth";
 import {
   db,
   spots,
@@ -18,12 +17,11 @@ import {
 import { isValidKind, DEFAULT_PRODUCT_KIND } from "@/lib/products";
 import { isValidCampaignColor, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
 import { isValidCommunicationType } from "@/lib/communication";
+import { requireEditor as requireUser } from "@/lib/auth-helpers";
 
-async function requireUser() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session.user.id;
-}
+// All spot mutations require editor+ (createSpot, update, archive, delete,
+// inline picker create, drag-onto-timeline campaign create). Viewers are
+// strictly read-only across the spot library.
 
 const upsertSchema = z.object({
   name: z.string().trim().max(200).optional(),

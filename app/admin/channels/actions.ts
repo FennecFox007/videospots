@@ -2,21 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth-helpers";
 import { db, channels, chains, auditLog } from "@/lib/db/client";
-
-async function requireAuth(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session.user.id;
-}
 
 /**
  * Toggle a channel: if it exists for this (country, chain), delete it; else create it.
  * Drives the matrix UI on /admin/channels.
  */
 export async function toggleChannel(countryId: number, chainId: number) {
-  const userId = await requireAuth();
+  const userId = await requireAdmin();
 
   const existing = await db
     .select({ id: channels.id })
@@ -61,7 +55,7 @@ export async function addChainToCountry(
   countryId: number,
   formData: FormData
 ) {
-  const userId = await requireAuth();
+  const userId = await requireAdmin();
 
   const rawName = String(formData.get("chainName") ?? "").trim();
   if (!rawName) return; // empty submit — silently noop

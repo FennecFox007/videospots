@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
-import { auth } from "@/auth";
 import {
   db,
   campaigns,
@@ -11,12 +10,7 @@ import {
   campaignTemplates,
 } from "@/lib/db/client";
 import { daysBetween } from "@/lib/utils";
-
-async function requireUser() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session.user.id;
-}
+import { requireAdmin, requireEditor } from "@/lib/auth-helpers";
 
 // Older templates (saved before the spots refactor) carry a top-level
 // `videoUrl` in their JSONB payload — we ignore it on load (per-country
@@ -48,7 +42,9 @@ export async function saveCampaignAsTemplate(
   campaignId: number,
   formData: FormData
 ) {
-  const userId = await requireUser();
+  // Reachable from any campaign detail page (the "Uložit jako šablonu"
+  // button), not only from /admin/templates — so editor+ rather than admin.
+  const userId = await requireEditor();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Pojmenuj šablonu");
   if (name.length > 80) throw new Error("Příliš dlouhý název");
@@ -97,7 +93,9 @@ export async function saveCampaignAsTemplate(
 }
 
 export async function deleteTemplate(templateId: number) {
-  await requireUser();
+  // Only reachable from /admin/templates which is admin-gated by layout,
+  // but kept admin-tier here for defense-in-depth.
+  await requireAdmin();
   await db
     .delete(campaignTemplates)
     .where(eq(campaignTemplates.id, templateId));

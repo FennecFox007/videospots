@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
-import { auth } from "@/auth";
 import {
   db,
   campaigns,
@@ -14,12 +13,11 @@ import {
   shareLinks,
   auditLog,
 } from "@/lib/db/client";
+import { requireEditor as requireUser } from "@/lib/auth-helpers";
 
-async function requireUser() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session.user.id;
-}
+// All campaign mutations are editor+. The local `requireUser` alias is kept
+// so existing call sites read the same; semantics are now "must be editor
+// or admin", which excludes the read-only viewer role.
 
 /** Cancel a campaign (kept for history; soft "delete"). */
 export async function cancelCampaign(campaignId: number) {

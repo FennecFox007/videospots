@@ -2,17 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth-helpers";
 import { db, countries, auditLog } from "@/lib/db/client";
 
-async function requireAuth() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session.user.id;
-}
-
 export async function createCountry(formData: FormData) {
-  const userId = await requireAuth();
+  const userId = await requireAdmin();
 
   const code = String(formData.get("code") ?? "")
     .trim()
@@ -42,7 +36,7 @@ export async function createCountry(formData: FormData) {
 }
 
 export async function deleteCountry(id: number) {
-  const userId = await requireAuth();
+  const userId = await requireAdmin();
 
   // Snapshot the row before deletion so the audit entry survives the row.
   // (FK is restrict, so this only succeeds when no channels reference it.)

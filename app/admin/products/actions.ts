@@ -2,15 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth-helpers";
 import { db, products, auditLog } from "@/lib/db/client";
 import { isValidKind, DEFAULT_PRODUCT_KIND } from "@/lib/products";
-
-async function requireAuth() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session.user.id;
-}
 
 function parseDateOrNull(s: string | null | undefined): Date | null {
   if (!s) return null;
@@ -21,7 +15,7 @@ function parseDateOrNull(s: string | null | undefined): Date | null {
 }
 
 export async function createProduct(formData: FormData) {
-  const userId = await requireAuth();
+  const userId = await requireAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Název je povinný");
@@ -59,7 +53,7 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function updateProduct(productId: number, formData: FormData) {
-  const userId = await requireAuth();
+  const userId = await requireAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Název je povinný");
@@ -92,7 +86,7 @@ export async function updateProduct(productId: number, formData: FormData) {
 }
 
 export async function deleteProduct(productId: number) {
-  const userId = await requireAuth();
+  const userId = await requireAdmin();
 
   // Snapshot before delete so the audit trail survives the row.
   const [target] = await db

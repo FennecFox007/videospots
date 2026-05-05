@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { sql } from "drizzle-orm";
-import { auth } from "@/auth";
+import { requireEditor } from "@/lib/auth-helpers";
 import {
   db,
   campaigns,
@@ -47,8 +47,7 @@ const schema = z
   });
 
 export async function createCampaign(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+  const userId = await requireEditor();
 
   const channelIds = formData
     .getAll("channelIds")
@@ -163,7 +162,7 @@ export async function createCampaign(formData: FormData) {
         startsAt: new Date(baseStart + offsetMs),
         endsAt: new Date(baseEnd + offsetMs),
         notes: parsed.notes || null,
-        createdById: session.user.id,
+        createdById: userId,
       })
       .returning({ id: campaigns.id });
 
@@ -188,7 +187,7 @@ export async function createCampaign(formData: FormData) {
       action: "created",
       entity: "campaign",
       entityId: created.id,
-      userId: session.user.id,
+      userId: userId,
       changes: {
         name,
         status,

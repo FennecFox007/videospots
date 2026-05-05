@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { asc, eq, sql } from "drizzle-orm";
-import { auth } from "@/auth";
+import { requireEditor } from "@/lib/auth-helpers";
 import {
   db,
   campaigns,
@@ -73,8 +73,7 @@ const schema = z
   });
 
 export async function updateCampaign(campaignId: number, formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+  const userId = await requireEditor();
 
   const channelIds = formData
     .getAll("channelIds")
@@ -318,7 +317,7 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
       action: "updated",
       entity: "campaign",
       entityId: campaignId,
-      userId: session.user.id,
+      userId,
       changes,
     });
   }

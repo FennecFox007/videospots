@@ -1,7 +1,13 @@
 import { asc } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, users } from "@/lib/db/client";
-import { createUser, updatePassword, deleteUser } from "./actions";
+import {
+  createUser,
+  updatePassword,
+  deleteUser,
+  updateUserRole,
+} from "./actions";
+import { ROLES, isValidRole, type Role } from "@/lib/roles";
 
 export default async function UsersPage() {
   const session = await auth();
@@ -13,6 +19,7 @@ export default async function UsersPage() {
       email: users.email,
       name: users.name,
       hasPassword: users.passwordHash,
+      role: users.role,
     })
     .from(users)
     .orderBy(asc(users.email));
@@ -23,7 +30,7 @@ export default async function UsersPage() {
         <h2 className="font-medium mb-3">Přidat uživatele</h2>
         <form
           action={createUser}
-          className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end"
+          className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto_auto] sm:items-end"
         >
           <Field label="E-mail / username" required>
             <input
@@ -47,6 +54,15 @@ export default async function UsersPage() {
               className={inputClass}
             />
           </Field>
+          <Field label="Role" required>
+            <select name="role" defaultValue="editor" className={inputClass} required>
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {roleLabel(r)}
+                </option>
+              ))}
+            </select>
+          </Field>
           <button
             type="submit"
             className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 h-fit"
@@ -62,6 +78,7 @@ export default async function UsersPage() {
             <tr>
               <th className="px-4 py-2 font-medium">E-mail / username</th>
               <th className="px-4 py-2 font-medium">Jméno</th>
+              <th className="px-4 py-2 font-medium">Role</th>
               <th className="px-4 py-2 font-medium">Heslo</th>
               <th className="px-4 py-2 font-medium">Reset hesla</th>
               <th className="px-4 py-2 font-medium w-20">Akce</th>
@@ -70,6 +87,7 @@ export default async function UsersPage() {
           <tbody>
             {rows.map((u) => {
               const isMe = u.id === currentUserId;
+              const role: Role = isValidRole(u.role) ? u.role : "viewer";
               return (
                 <tr
                   key={u.id}
@@ -82,6 +100,30 @@ export default async function UsersPage() {
                     )}
                   </td>
                   <td className="px-4 py-2">{u.name ?? "—"}</td>
+                  <td className="px-4 py-2">
+                    <form
+                      action={updateUserRole.bind(null, u.id)}
+                      className="flex items-center gap-2"
+                    >
+                      <select
+                        name="role"
+                        defaultValue={role}
+                        className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2 py-1 text-xs"
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {roleLabel(r)}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="submit"
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        Uložit
+                      </button>
+                    </form>
+                  </td>
                   <td className="px-4 py-2">
                     {u.hasPassword ? (
                       <span className="text-xs text-green-600">nastaveno</span>
@@ -132,7 +174,7 @@ export default async function UsersPage() {
             })}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
                   Žádní uživatelé.
                 </td>
               </tr>
@@ -142,10 +184,26 @@ export default async function UsersPage() {
       </section>
 
       <p className="text-xs text-zinc-500">
-        Tip: noví uživatelé se přihlašují svým e-mailem (nebo username) + heslem co jsi jim tady nastavil. Změna hesla se projeví okamžitě, ale stávající přihlášené uživatele neodhlásí (token je platný do dalšího sign-inu).
+        Tip: noví uživatelé se přihlašují svým e-mailem (nebo username) + heslem
+        co jsi jim tady nastavil. Změna hesla nebo role se projeví okamžitě pro
+        nové sign-iny — stávající přihlášené uživatele to neodhlásí, jejich JWT
+        platí dokud nevyprší (změna role čeká do dalšího přihlášení).
       </p>
     </div>
   );
+}
+
+/** Czech labels for roles. The /admin page is CZ-only per the i18n policy
+ *  (see lib/i18n/messages.ts top comment), so these don't go through t(). */
+function roleLabel(r: Role): string {
+  switch (r) {
+    case "admin":
+      return "Admin (vše)";
+    case "editor":
+      return "Editor (kampaně + spoty)";
+    case "viewer":
+      return "Viewer (jen čtení)";
+  }
 }
 
 function Field({

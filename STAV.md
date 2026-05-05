@@ -319,7 +319,22 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 
 ### 🥇 Top 3 — udělat HNED (next batch ~2 dny)
 
-**A. Per-user role (admin / editor / viewer)** — risk reduction. Aktuálně `/admin/*` checkuje jen "is signed in", takže jakýkoli další uživatel co někdo vytvoří dostane plný admin přístup, **včetně možnosti vytvořit dalšího admina**. Aktuálně bezpečné protože je 1 user; jakmile bude tým 2+, real risk. Schema: `users.role: "admin"|"editor"|"viewer"`. Helpers: `requireAdmin()`, `requireEditor()`. Gate `/admin/*` na admin, mutace na editor+, čtení na viewer+. Share/peek view pro viewer. ~1 den.
+**A. Per-user role (admin / editor / viewer)** ✅ shipped
+- Schema: `users.role text NOT NULL default 'admin'` (default = 'admin' jen pro migration backfill — existující seed user se backfillne na admin; všechny `createUser` INSERTs musí specifikovat role explicitně, jinak by každý nový user dostal admin)
+- Auth pipeline: `authorize` v `auth.ts` validuje DB role přes `isValidRole`, propaguje user.role → JWT → session.user.role v `auth.config.ts` callbacks (Edge-safe, žádný DB lookup per request, role z JWT)
+- `lib/roles.ts` — Role type, ROLES const, isValidRole guard, roleAtLeast helper, ROLE_LABEL_KEY i18n mapa
+- `lib/auth-helpers.ts` — `requireUser()` / `requireRole(min)` / `requireEditor()` / `requireAdmin()` / `getCurrentRole()`. Centralizované, předtím každý actions.ts měl vlastní private helper.
+- Server-side gates:
+  - `/admin/*` layout volá `getCurrentRole()` → redirect non-admin (defense-in-depth, plus všechny admin/*/actions.ts volají `requireAdmin()`)
+  - Campaign mutations (new/edit/cancel/reactivate/clone/archive/approve/override/share/comment) → `requireEditor` (alias `requireUser` pro back-compat)
+  - Spot mutations (create/update/archive/delete + drag-drop create + inline picker) → `requireEditor`
+  - Bulk campaign actions → `requireEditor`
+  - Saved views (personal bookmarks) → `requireUser` (any authed, including viewer)
+- UI gates:
+  - Nav: `/admin` + `/admin/templates` linky skryté pro non-admin; `/campaigns/new` link skrytý pro viewer
+  - `/admin/users`: role select v create formuláři (default editor) + role select per řádek s `updateUserRole(userId, formData)` server action (refuse self-demote pokud bys byl jediný admin)
+- i18n: `roles.admin/editor/viewer` (CS: "Admin"/"Editor"/"Pouze čtení", EN: same/Read-only)
+- ⚠️ **Vyžaduje `npm run db:push --force`** — tohle je ADD column (soft-removal trick z Tier 3 neplatí pro additions).
 
 **B. Stopáž smyčky** — partner-driven, konkrétní operační value. Spot má délku v sekundách. Timeline by měl ukazovat "ve smyčce máš 90s, mohlo by se hodit dalších 20s" (per-channel agregace z bars co teď běží). Schema: `spots.durationSec`. Form field. Tooltip na barech / channel summary. ~3 hod.
 

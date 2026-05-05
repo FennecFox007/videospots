@@ -1,11 +1,20 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getT } from "@/lib/i18n/server";
+import { getCurrentRole } from "@/lib/auth-helpers";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // /admin/* is admin-only. Editor/viewer bounce back to the dashboard.
+  // Unauth users go through the regular middleware redirect to /sign-in
+  // — getCurrentRole() returns null for them and we redirect here.
+  const role = await getCurrentRole();
+  if (role !== "admin") {
+    redirect(role === null ? "/sign-in" : "/");
+  }
   const t = await getT();
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">

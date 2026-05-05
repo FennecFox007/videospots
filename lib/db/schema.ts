@@ -32,6 +32,13 @@ export const users = pgTable("user", {
   email: text("email").unique().notNull(),
   // bcrypt hash for the Credentials login. Set by admin via /admin/users.
   passwordHash: text("password_hash"),
+  // Role-based access. "admin" = full app + /admin/* incl. user/role mgmt;
+  // "editor" = create/edit/delete campaigns + spots, no /admin; "viewer"
+  // = read-only (peek panel, share view, no mutations). Default is "admin"
+  // ONLY so the migration backfill makes the existing seed user an admin
+  // — every createUser INSERT must specify the role explicitly going
+  // forward. See lib/roles.ts for the canonical type + helpers.
+  role: text("role").notNull().default("admin"),
 });
 
 // =============================================================================

@@ -86,6 +86,11 @@ const cs = {
   "campaigns_table.aria.select_one": "Vybrat {name}",
   "campaigns_table.aria.clear_selection": "Zrušit výběr",
 
+  // Roles
+  "roles.admin": "Admin",
+  "roles.editor": "Editor",
+  "roles.viewer": "Pouze čtení",
+
   // Sign in
   "signin.title": "videospots",
   "signin.subtitle": "Plánování video kampaní",
@@ -683,6 +688,11 @@ const en: Record<keyof typeof cs, string> = {
   "campaigns_table.aria.select_all": "Select all",
   "campaigns_table.aria.select_one": "Select {name}",
   "campaigns_table.aria.clear_selection": "Clear selection",
+
+  // Roles
+  "roles.admin": "Admin",
+  "roles.editor": "Editor",
+  "roles.viewer": "Read-only",
 
   // Sign in
   "signin.title": "videospots",

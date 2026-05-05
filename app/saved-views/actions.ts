@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { and, asc, eq } from "drizzle-orm";
-import { auth } from "@/auth";
 import { db, savedViews } from "@/lib/db/client";
+import { requireUser } from "@/lib/auth-helpers";
 
 // Whitelist of URL params we'll persist in a saved view. Other keys (like
 // `template`, `sort`, `order` from the campaigns list) are intentionally NOT
@@ -33,11 +33,8 @@ function isScope(s: string): s is Scope {
   return s === "timeline" || s === "campaigns";
 }
 
-async function requireUser() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session.user.id;
-}
+// Saved views are personal bookmarks. Any signed-in user may save / load /
+// delete their own — viewers included, since the data is strictly per-user.
 
 /**
  * Persist the current URL filter state under a user-supplied name.
