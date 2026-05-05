@@ -351,9 +351,9 @@ const cs = {
   "spots.approval.status.approved": "Schváleno",
   "spots.approval.approve_button": "Schválit",
   "spots.approval.clear_button": "Zrušit schválení",
-  "spots.approval.approve_prompt.title": "Zaznamenat schválení klientem",
+  "spots.approval.approve_prompt.title": "Schválit spot",
   "spots.approval.approve_prompt.message":
-    "Potvrzuješ, že klient tento spot schválil. Volitelně přidej poznámku — kde a kdy bylo schváleno (e-mail, Teams, Slack, …) — ať to v audit logu dohledáš.",
+    "Schvaluji tento spot. Volitelně přidej poznámku.",
   "spots.approval.approve_prompt.placeholder":
     "např. Schváleno e-mailem od Honzy 12. 5.",
   "spots.approval.clear_confirm.title": "Zrušit schválení?",
@@ -987,9 +987,9 @@ const en: Record<keyof typeof cs, string> = {
   "spots.approval.status.approved": "Approved",
   "spots.approval.approve_button": "Approve",
   "spots.approval.clear_button": "Unapprove",
-  "spots.approval.approve_prompt.title": "Record client approval",
+  "spots.approval.approve_prompt.title": "Approve spot",
   "spots.approval.approve_prompt.message":
-    "Confirming the client signed off on this spot. Optionally add a note — where and when it was approved (email, Teams, Slack, …) — so the audit log is searchable.",
+    "I approve this spot. Optionally add a note.",
   "spots.approval.approve_prompt.placeholder":
     "e.g. Approved via email from John on May 12",
   "spots.approval.clear_confirm.title": "Unapprove this spot?",
