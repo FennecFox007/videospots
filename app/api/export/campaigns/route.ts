@@ -30,6 +30,9 @@ export async function GET(req: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  // Mirror the live FilterBar exactly — earlier this dropped `approval` and
+  // `missingSpot`, so a CSV export of "kampaně čekající na schválení" silently
+  // returned every campaign. Whatever findCampaignIds() understands, forward.
   const sp = req.nextUrl.searchParams;
   const ids = await findCampaignIds({
     q: sp.get("q") ?? undefined,
@@ -37,6 +40,8 @@ export async function GET(req: NextRequest) {
     chainCode: sp.get("chain") ?? undefined,
     status: sp.get("status") ?? undefined,
     runState: sp.get("runState") ?? undefined,
+    approval: sp.get("approval") ?? undefined,
+    missingSpot: sp.get("missingSpot") ?? undefined,
     tag: sp.get("tag") ?? undefined,
   });
 

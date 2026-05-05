@@ -614,6 +614,22 @@ function humanizeAuditEntry(action: string, changes: unknown): React.ReactNode {
   // Action-led summaries — these have no useful detail beyond the verb.
   if (action === "cancelled") return "zrušil(a) kampaň";
   if (action === "archived") return "archivoval(a) kampaň";
+  if (action === "approved") {
+    // approveCampaign writes { note: string | null }. If the user added a
+    // note when approving, show it inline so the audit log captures intent.
+    const note =
+      obj && typeof obj.note === "string" && obj.note.trim().length > 0
+        ? obj.note.trim()
+        : null;
+    return note ? (
+      <>
+        schválil(a) kampaň{" "}
+        <span className="text-zinc-500">— „{note}"</span>
+      </>
+    ) : (
+      "schválil(a) kampaň"
+    );
+  }
   if (action === "deleted") {
     const name = obj && typeof obj.name === "string" ? obj.name : null;
     return name ? (
@@ -650,6 +666,17 @@ function humanizeAuditEntry(action: string, changes: unknown): React.ReactNode {
   }
   if (obj && obj.unarchived === true) return "obnovil(a) z archivu";
   if (obj && obj.reactivated === true) return "obnovil(a) zrušenou kampaň";
+  if (obj && obj.approvalCleared === true) return "zrušil(a) schválení";
+  // Per-retailer override edits — channel-level, kept distinct from the
+  // master campaign edits. The override action body lives in setChannelOverride
+  // and clearChannelOverride; both write a small {channelOverride|channelOverrideCleared}
+  // payload that the generic-update path doesn't recognise.
+  if (obj && obj.channelOverride && typeof obj.channelOverride === "object") {
+    return "upravil(a) přepsání pro řetězec";
+  }
+  if (obj && obj.channelOverrideCleared) {
+    return "smazal(a) přepsání pro řetězec";
+  }
   if (obj && obj.renamed && isDiff(obj.renamed)) {
     return (
       <>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { auth, signOut } from "@/auth";
 import { db, auditLog, users, campaigns } from "@/lib/db/client";
 import { ActivityFeed } from "./activity-feed";
@@ -14,6 +14,11 @@ export async function Nav({ theme }: { theme: Theme }) {
 
   // Last 10 audit entries for the activity dropdown. Cheap to fetch on every
   // request; we render the layout per-request anyway.
+  //
+  // entityId is polymorphic — same numeric id can refer to a campaign or a
+  // spot or a user. The campaigns join must filter by entity='campaign'
+  // or a spot/user with a colliding id would attach the wrong campaign
+  // name to the audit row.
   const recentActivity = session?.user
     ? await db
         .select({
@@ -28,7 +33,13 @@ export async function Nav({ theme }: { theme: Theme }) {
         })
         .from(auditLog)
         .leftJoin(users, eq(auditLog.userId, users.id))
-        .leftJoin(campaigns, eq(auditLog.entityId, campaigns.id))
+        .leftJoin(
+          campaigns,
+          and(
+            eq(auditLog.entity, "campaign"),
+            eq(auditLog.entityId, campaigns.id)
+          )
+        )
         .orderBy(desc(auditLog.createdAt))
         .limit(10)
     : [];

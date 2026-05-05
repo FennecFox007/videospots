@@ -44,6 +44,8 @@ type SearchParams = {
   chain?: string;
   status?: string;
   runState?: string;
+  approval?: string;
+  missingSpot?: string;
   tag?: string;
 };
 
@@ -109,13 +111,17 @@ export default async function PrintTimelinePage({
   }
   const groups = Array.from(groupMap.values());
 
-  // Apply same filters as the live dashboard.
+  // Apply same filters as the live dashboard. Earlier this dropped `approval`
+  // and `missingSpot`, so a print of "kampaně čekající na schválení" silently
+  // showed everything.
   const ids = await findCampaignIds({
     q: params.q,
     countryCode: params.country,
     chainCode: params.chain,
     status: params.status,
     runState: params.runState,
+    approval: params.approval,
+    missingSpot: params.missingSpot,
     tag: params.tag,
     rangeStart,
     rangeEnd,

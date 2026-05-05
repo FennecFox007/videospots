@@ -235,6 +235,37 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
 
 4. **toDateInputValue timezone fix** ✅ commit `cd3c75b` — předtím `toISOString().slice(0,10)` v non-UTC timezone shiftoval datumy o den. Teď používá lokální `getFullYear/Month/Date`.
 
+## Audit + plán vylepšení (2026-05)
+
+Tři paralelní audity (consistency / DB / UI) prošly celou code base a vyextrahovali ~40 reálných issues. Plán je rozdělený na tranše seřazené podle priority. Detail viz commity, tady jen přehled stavu.
+
+**🔴 Tier 1 — Kritické bugy (data-integrity, audit, filter-forwarding):**
+- Tranše 1: `auditLog ⟕ campaigns` JOIN bez `entity='campaign'` filtru → AI digest ukáže špatný campaign name vedle non-campaign audit entry. `channels.country_id` + `chain_id` cascade-deletujou všechny campaign_channels při smazání země.
+- Tranše 2: Audit log humanization — `action="approved"` se renderuje jako raw "approved" string. `clearCampaignApproval` / `setChannelOverride` / `clearChannelOverride` audit entries jsou v detail page neviditelné (humanizer nezná jejich `changes` shape).
+- Tranše 3: Filter forwarding — `/api/export/campaigns`, `/print/timeline`, `/share/[token]` nepředávají `approval` ani `missingSpot` filtry. CSV/print ignoruje aktivní filtry.
+
+**🟡 Tier 2 — Cleanup (high yield, low risk):**
+- Tranše 4: Saved-views `ALLOWED_PARAMS` + `createTimelineShareLink` ALLOWED list — drop dead `client`/`communicationType`, **add missing `approval`/`missingSpot`** (reálný bug: ukládání Pohledu silently dropuje tyhle dva filtry).
+- Tranše 5: Dead code/files — `scripts/migrate-video-urls.ts` (legacy migrace, dnes by hodila SQL error), `components/video-player-modal.tsx` (žádný import), `lib/db/schema.ts:135 export const games` alias, `lib/utils.ts dateRangesOverlap`.
+- Tranše 6: Stale comments — schema.ts:269-271 "spotId nullable during migration" (backfill je dávno hotový, sloupec NOT NULL), schema.ts:341 saved_view payload obsahuje `communicationType`, queries.ts:119 "games" místo "products".
+- Tranše 7: Server action revalidation — `cancelCampaign`/`reactivateCampaign` chybí `revalidatePath("/campaigns")`, `deleteProduct` chybí `revalidatePath("/")` + `/campaigns`.
+
+**🟢 Tier 3 — Schema hygiena (vyžaduje migraci):**
+- Tranše 8: Drop dead `campaigns.videoUrl` column. Píše se vždy `null`, čte ho jen CSV (vrací prázdný string) a templates (vždy null). Per-country URLs jsou na `spots`. Zahrnuje DROP COLUMN migraci, remove z CSV/templates/insert+update.
+- Tranše 9: Auth.js dead tables — `accounts`, `sessions`, `verificationTokens` tabulky jsou jen scaffolding pro DrizzleAdapter; my používáme JWT-only auth. Plus `users.emailVerified`, `users.image` dead. Volitelné — drop nebo dokumentovat jako reserved.
+- Tranše 10: Drop dead `products.igdbId/slug/rawIgdb/fetchedAt` (IGDB integrace je v "out of scope"). Volitelné.
+
+**🔵 Tier 4 — i18n gaps (CS/EN parita):**
+- Tranše 11: Hardcoded CS stringy v `saved-views-menu.tsx`, `activity-feed.tsx` (`ACTION_VERB` mapa, headers, empty state), `campaigns-table.tsx` (aria-labels checkboxů), 4× close-button `aria-label="Zavřít"` v různých modalech (klíč `common.close` už existuje), Cmd+K tooltip v `nav.tsx`.
+
+**🟣 Tier 5 — Vizuální konzistence (polish, větší rozsah):**
+- Tranše 12: UI primitivy — `<Field>` má 4 verze (text-red-500 vs 600, text-xs vs text-sm), `<Section>` má 3 verze, primární tlačítka mají 5 různých paddingů, "pill"/badge má 6 paddingů. Návrh extraktu do `components/ui/`. Subjektivní rozhodnutí — rozhodnout s partnerem.
+- Tranše 13: Modal pattern unification — z-index drift (SidePanel z-[80] koliduje s SpotDropModal z-[80]; STAV říká drawer 60, modals 70+), backdrop opacity drift (bg-black/40 vs /50 vs /70), focus management drift, submit button placement drift.
+
+**⚙️ Tier 6 — Audit/perf (low priority):**
+- Tranše 14: Audit log gaps — admin user actions (createUser/updatePassword/deleteUser) nemají audit entries (security-sensitive!), admin entity actions (countries/chains/channels/products) taky ne i když schema komentář deklaruje `entity: "country"|"chain"|"channel"`.
+- Tranše 15: Perf — spot deployment count subquery 3× duplikát, `findCampaignIds` 5-table JOIN i když filtry žádný table nepotřebují, `/campaigns/[id]/edit` 5 sekvenčních awaitů (mohly by být Promise.all), `DashboardStats.awaitingRows` pulluje řádky jen pro count.
+
 ## V2 — zbývající plán (z partnerovy schůzky)
 
 **Diskutované, partner+kolega potvrdili odložit:**

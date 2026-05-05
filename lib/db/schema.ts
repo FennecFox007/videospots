@@ -96,16 +96,23 @@ export const chains = pgTable("chain", {
 // Channel = (Country × Chain) virtual broadcast unit.
 // All screens of "Datart in CZ" play the same content, so we plan at this
 // level — never per individual screen.
+//
+// FK behaviour: country + chain are `restrict` on delete. Cascading would
+// silently nuke every channel when an admin deletes a country or chain,
+// which then cascades down to campaign_channels (also cascade) — so a
+// single misclick in /admin/countries could drop a working campaign's
+// retailer assignments. Restrict forces the admin to delete the channels
+// (and any blocking campaigns) explicitly first.
 export const channels = pgTable(
   "channel",
   {
     id: serial("id").primaryKey(),
     countryId: integer("country_id")
       .notNull()
-      .references(() => countries.id, { onDelete: "cascade" }),
+      .references(() => countries.id, { onDelete: "restrict" }),
     chainId: integer("chain_id")
       .notNull()
-      .references(() => chains.id, { onDelete: "cascade" }),
+      .references(() => chains.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => [uniqueIndex("channel_country_chain_idx").on(t.countryId, t.chainId)]
@@ -245,9 +252,13 @@ export const spots = pgTable("spot", {
   productId: integer("product_id").references(() => products.id, {
     onDelete: "set null",
   }),
+  // restrict for the same reason channels.country_id is restrict — deleting
+  // a country shouldn't silently take spots with it, and campaign_video.spotId
+  // would block such a delete with `restrict` anyway. Better to fail loudly
+  // at the country level.
   countryId: integer("country_id")
     .notNull()
-    .references(() => countries.id, { onDelete: "cascade" }),
+    .references(() => countries.id, { onDelete: "restrict" }),
   videoUrl: text("video_url").notNull(),
   // Optional human-readable name. When null, UI synthesises one from the
   // joined product name + country code ("Saros · CZ").

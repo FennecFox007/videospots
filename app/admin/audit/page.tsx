@@ -85,7 +85,15 @@ export default async function AuditPage({
       })
       .from(auditLog)
       .leftJoin(users, eq(auditLog.userId, users.id))
-      .leftJoin(campaigns, eq(auditLog.entityId, campaigns.id))
+      // Polymorphic entityId — the campaigns join must include entity='campaign'
+      // or a spot/user audit row with a colliding id picks up the wrong name.
+      .leftJoin(
+        campaigns,
+        and(
+          eq(auditLog.entity, "campaign"),
+          eq(auditLog.entityId, campaigns.id)
+        )
+      )
       .where(conds.length > 0 ? and(...conds) : sql`true`)
       .orderBy(desc(auditLog.createdAt))
       .limit(PAGE_SIZE),

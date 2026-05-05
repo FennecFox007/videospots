@@ -362,12 +362,17 @@ async function TimelineSharePage({
   // Campaigns matching the saved filters within the saved range.
   // (client + communicationType were filterable in earlier versions; old
   // share links may still carry them in the snapshot — silently ignored.)
+  // approval + missingSpot only show up in NEW share links once the
+  // createTimelineShareLink allowlist is widened (Tranše 4); forwarding
+  // them here is harmless when missing and correct when present.
   const ids = await findCampaignIds({
     q: filters.q,
     countryCode: filters.country,
     chainCode: filters.chain,
     status: filters.status,
     runState: filters.runState,
+    approval: filters.approval,
+    missingSpot: filters.missingSpot,
     tag: filters.tag,
     rangeStart,
     rangeEnd,

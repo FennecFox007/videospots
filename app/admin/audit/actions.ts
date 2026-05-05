@@ -6,7 +6,7 @@
 // (small) audit-log payload.
 
 import Anthropic from "@anthropic-ai/sdk";
-import { desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, auditLog, users, campaigns } from "@/lib/db/client";
 
@@ -51,6 +51,10 @@ export async function summarizeRecentActivity(
   const safeDays = Math.max(1, Math.min(90, Math.round(daysBack)));
   const since = new Date(Date.now() - safeDays * 86_400_000);
 
+  // entityId is polymorphic (campaign / spot / user / …) so the join to
+  // campaigns must include `entity = 'campaign'` — without it a spot id
+  // colliding with a campaign id would attach the wrong campaign name to
+  // the audit row in the digest.
   const rows = await db
     .select({
       action: auditLog.action,
@@ -64,7 +68,13 @@ export async function summarizeRecentActivity(
     })
     .from(auditLog)
     .leftJoin(users, eq(auditLog.userId, users.id))
-    .leftJoin(campaigns, eq(auditLog.entityId, campaigns.id))
+    .leftJoin(
+      campaigns,
+      and(
+        eq(auditLog.entity, "campaign"),
+        eq(auditLog.entityId, campaigns.id)
+      )
+    )
     .where(gte(auditLog.createdAt, since))
     .orderBy(desc(auditLog.createdAt))
     .limit(500);
