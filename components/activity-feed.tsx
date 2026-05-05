@@ -42,6 +42,10 @@ export function ActivityFeed({ entries }: { entries: ActivityEntry[] }) {
         return t("activity_feed.action.approved");
       case "archived":
         return t("activity_feed.action.archived");
+      case "revoked":
+        return t("activity_feed.action.revoked");
+      case "extended":
+        return t("activity_feed.action.extended");
       default:
         return action;
     }

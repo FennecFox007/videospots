@@ -126,32 +126,84 @@ export async function deleteComment(commentId: number) {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_SHARE_EXPIRY_DAYS = 30;
+// Allowed expiry presets exposed in the create UI. Hard-coded list (not
+// arbitrary user-supplied number) so a) the chip is always one-of-N and
+// b) we can't accidentally accept absurd values like "1000 days" through
+// a URL crafted by a leaker. "Bez expirace" is intentionally NOT here:
+// every public link ought to have a natural sunset given the NDA-laden
+// content on /share. Editors can extend an active link instead.
+const ALLOWED_SHARE_EXPIRY_DAYS = [7, 30, 90] as const;
+type AllowedExpiryDays = (typeof ALLOWED_SHARE_EXPIRY_DAYS)[number];
 
-/**
- * Create a public read-only link for a campaign. Returns the absolute URL.
- * No login required to view; expires after `expiresInDays` (default 30).
- */
-export async function createCampaignShareLink(
-  campaignId: number,
-  expiresInDays: number = DEFAULT_SHARE_EXPIRY_DAYS
-): Promise<string> {
-  const userId = await requireUser();
+function normaliseExpiryDays(input: number | undefined): AllowedExpiryDays {
+  // Accept the type at compile time; defend at runtime so we can't poison
+  // the DB if a stale client sends something exotic. Falls back to 30.
+  return (
+    (ALLOWED_SHARE_EXPIRY_DAYS as readonly number[]).includes(input ?? -1)
+      ? (input as AllowedExpiryDays)
+      : DEFAULT_SHARE_EXPIRY_DAYS
+  ) as AllowedExpiryDays;
+}
 
-  const token = crypto.randomBytes(16).toString("hex");
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+function normaliseLabel(input: string | null | undefined): string | null {
+  // Trim + length-cap. Empty string becomes null (cleaner DB rows + simpler
+  // "show label only if set" rendering).
+  if (!input) return null;
+  const trimmed = input.trim().slice(0, 80);
+  return trimmed.length > 0 ? trimmed : null;
+}
 
-  await db.insert(shareLinks).values({
-    token,
-    payload: { type: "campaign", campaignId },
-    expiresAt,
-    createdById: userId,
-  });
-
+async function buildShareUrl(token: string): Promise<string> {
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("host") ?? "localhost:3000";
   return `${proto}://${host}/share/${token}`;
+}
+
+/**
+ * Create a public read-only link for a campaign. Returns the absolute URL.
+ * No login required to view; expires after `expiresInDays` (default 30).
+ *
+ * Multiple links can coexist on the same campaign — re-clicking "Sdílet"
+ * generates a new token rather than reusing an existing one. That way an
+ * editor can hand different links to different recipients (with different
+ * expirations / labels) and revoke one without nuking the others.
+ */
+export async function createCampaignShareLink(
+  campaignId: number,
+  options?: { expiresInDays?: number; label?: string | null }
+): Promise<string> {
+  const userId = await requireUser();
+
+  const days = normaliseExpiryDays(options?.expiresInDays);
+  const label = normaliseLabel(options?.label);
+
+  const token = crypto.randomBytes(16).toString("hex");
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + days);
+
+  const [created] = await db
+    .insert(shareLinks)
+    .values({
+      token,
+      payload: { type: "campaign", campaignId },
+      label,
+      expiresAt,
+      createdById: userId,
+    })
+    .returning({ id: shareLinks.id });
+
+  await db.insert(auditLog).values({
+    action: "created",
+    entity: "shareLink",
+    entityId: created.id,
+    userId,
+    changes: { campaignId, expiresInDays: days, label, type: "campaign" },
+  });
+
+  revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath("/admin/share-links");
+  return await buildShareUrl(token);
 }
 
 /**
@@ -164,7 +216,7 @@ export async function createCampaignShareLink(
  */
 export async function createTimelineShareLink(
   filters: Record<string, string>,
-  expiresInDays: number = DEFAULT_SHARE_EXPIRY_DAYS
+  options?: { expiresInDays?: number; label?: string | null }
 ): Promise<string> {
   const userId = await requireUser();
 
@@ -191,21 +243,168 @@ export async function createTimelineShareLink(
     if (typeof v === "string" && v.trim()) safe[k] = v;
   }
 
+  const days = normaliseExpiryDays(options?.expiresInDays);
+  const label = normaliseLabel(options?.label);
+
   const token = crypto.randomBytes(16).toString("hex");
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+  expiresAt.setDate(expiresAt.getDate() + days);
 
-  await db.insert(shareLinks).values({
-    token,
-    payload: { type: "timeline", filters: safe },
-    expiresAt,
-    createdById: userId,
+  const [created] = await db
+    .insert(shareLinks)
+    .values({
+      token,
+      payload: { type: "timeline", filters: safe },
+      label,
+      expiresAt,
+      createdById: userId,
+    })
+    .returning({ id: shareLinks.id });
+
+  await db.insert(auditLog).values({
+    action: "created",
+    entity: "shareLink",
+    entityId: created.id,
+    userId,
+    changes: {
+      type: "timeline",
+      expiresInDays: days,
+      label,
+      filters: safe,
+    },
   });
 
-  const h = await headers();
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const host = h.get("host") ?? "localhost:3000";
-  return `${proto}://${host}/share/${token}`;
+  revalidatePath("/admin/share-links");
+  return await buildShareUrl(token);
+}
+
+/**
+ * Soft-revoke a share link: marks `revokedAt` so /share/[token] starts
+ * returning 404 immediately. The row stays in the DB for audit history
+ * (so we can answer "kdo komu poslal odkaz na 'Saros launch'?" months
+ * later). Different from natural expiry — that's just the timestamp
+ * passing; this is an editor's explicit intent.
+ *
+ * Idempotent: revoking an already-revoked link is a no-op (no second
+ * audit entry, no error). Saves us a confirm() round-trip in the UI
+ * if someone double-clicks.
+ */
+export async function revokeShareLink(linkId: number): Promise<void> {
+  const userId = await requireUser();
+
+  const [existing] = await db
+    .select({
+      id: shareLinks.id,
+      payload: shareLinks.payload,
+      revokedAt: shareLinks.revokedAt,
+      label: shareLinks.label,
+    })
+    .from(shareLinks)
+    .where(eq(shareLinks.id, linkId))
+    .limit(1);
+  if (!existing) throw new Error("Share link not found");
+  if (existing.revokedAt) return; // already revoked
+
+  await db
+    .update(shareLinks)
+    .set({ revokedAt: new Date(), revokedById: userId })
+    .where(eq(shareLinks.id, linkId));
+
+  // Surface enough context in the audit log that you can answer
+  // "kdo deaktivoval odkaz na kampaň X" without a JOIN to share_link
+  // (which might itself get GC'd in some future cleanup).
+  const payload = existing.payload as
+    | { type: "campaign"; campaignId: number }
+    | { type: "timeline"; filters: Record<string, string> };
+  await db.insert(auditLog).values({
+    action: "revoked",
+    entity: "shareLink",
+    entityId: linkId,
+    userId,
+    changes: {
+      type: payload.type,
+      label: existing.label,
+      ...(payload.type === "campaign"
+        ? { campaignId: payload.campaignId }
+        : {}),
+    },
+  });
+
+  // Re-render anywhere the link list might appear.
+  if (payload.type === "campaign") {
+    revalidatePath(`/campaigns/${payload.campaignId}`);
+  }
+  revalidatePath("/admin/share-links");
+}
+
+/**
+ * Push a share link's natural expiry forward by `days`. If the link is
+ * already revoked, this is a no-op + throws (an editor probably meant
+ * to recreate, not "un-revoke" — that would feel surprising). Capped at
+ * `now + 90 days` to match the create UI's longest preset; otherwise an
+ * editor could quietly grow a 30-day link into a forever link via the
+ * extend button.
+ */
+export async function extendShareLink(
+  linkId: number,
+  days: number
+): Promise<void> {
+  const userId = await requireUser();
+
+  if (!ALLOWED_SHARE_EXPIRY_DAYS.includes(days as AllowedExpiryDays)) {
+    throw new Error("Invalid extension period");
+  }
+
+  const [existing] = await db
+    .select({
+      id: shareLinks.id,
+      payload: shareLinks.payload,
+      revokedAt: shareLinks.revokedAt,
+      expiresAt: shareLinks.expiresAt,
+    })
+    .from(shareLinks)
+    .where(eq(shareLinks.id, linkId))
+    .limit(1);
+  if (!existing) throw new Error("Share link not found");
+  if (existing.revokedAt) {
+    throw new Error("Cannot extend a revoked link — create a new one");
+  }
+
+  // Extend FROM the larger of (current expiry, now). If a link expired
+  // yesterday and we extend by 7 days, the new expiry is 7 days from
+  // today, not 7 days from when it was supposed to die. Otherwise an
+  // editor extending a long-dead link would have a paradoxically dead-
+  // on-arrival "extended" link.
+  const now = new Date();
+  const base =
+    existing.expiresAt && existing.expiresAt > now ? existing.expiresAt : now;
+  const newExpiresAt = new Date(base);
+  newExpiresAt.setDate(newExpiresAt.getDate() + days);
+
+  await db
+    .update(shareLinks)
+    .set({ expiresAt: newExpiresAt })
+    .where(eq(shareLinks.id, linkId));
+
+  await db.insert(auditLog).values({
+    action: "extended",
+    entity: "shareLink",
+    entityId: linkId,
+    userId,
+    changes: {
+      previousExpiresAt: existing.expiresAt?.toISOString() ?? null,
+      newExpiresAt: newExpiresAt.toISOString(),
+      days,
+    },
+  });
+
+  const payload = existing.payload as
+    | { type: "campaign"; campaignId: number }
+    | { type: "timeline" };
+  if (payload.type === "campaign") {
+    revalidatePath(`/campaigns/${payload.campaignId}`);
+  }
+  revalidatePath("/admin/share-links");
 }
 
 /**

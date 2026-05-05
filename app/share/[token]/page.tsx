@@ -7,7 +7,7 @@
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { eq, and, asc, gt, isNull, or, inArray } from "drizzle-orm";
+import { eq, and, asc, inArray } from "drizzle-orm";
 import {
   db,
   shareLinks,
@@ -20,6 +20,7 @@ import {
   chains,
   products,
 } from "@/lib/db/client";
+import { shareLinkIsActive } from "@/lib/db/queries";
 import { kindLabel, kindEmoji } from "@/lib/products";
 import {
   formatDate,
@@ -67,12 +68,7 @@ export default async function PublicSharePage({
   const [link] = await db
     .select()
     .from(shareLinks)
-    .where(
-      and(
-        eq(shareLinks.token, token),
-        or(isNull(shareLinks.expiresAt), gt(shareLinks.expiresAt, now))!
-      )
-    )
+    .where(and(eq(shareLinks.token, token), shareLinkIsActive(now)))
     .limit(1);
   if (!link) notFound();
 

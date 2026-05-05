@@ -23,6 +23,7 @@ import {
   campaignVideos,
   spots,
   products,
+  shareLinks,
 } from "./client";
 import type { SpotOption } from "@/components/campaign-form-body";
 import type { CountryGroup } from "@/components/campaign-form-body";
@@ -506,4 +507,41 @@ export function spotIsUndeployedSql() {
     WHERE cv.spot_id = ${spots.id}
       AND c.archived_at IS NULL
   )`;
+}
+
+// ---------------------------------------------------------------------------
+// Share link helpers — single source of truth for the "active" predicate.
+// A link is active iff it hasn't been explicitly revoked AND hasn't passed
+// its natural expiry. Used by the public /share/[token] lookup AND the
+// per-campaign + admin management lists, so they all agree on what "active"
+// means.
+// ---------------------------------------------------------------------------
+
+/**
+ * Drizzle predicate for "share link is currently active": not revoked AND
+ * (no expiry OR expiry in the future). Pass `now` so callers can use a
+ * consistent timestamp across multiple queries in the same request.
+ */
+export function shareLinkIsActive(now: Date) {
+  return and(
+    isNull(shareLinks.revokedAt),
+    or(isNull(shareLinks.expiresAt), sql`${shareLinks.expiresAt} > ${now}`)
+  )!;
+}
+
+/**
+ * Coarse status for UI rendering. Centralised so admin list + per-campaign
+ * list agree: "active" (still valid), "expired" (expiresAt passed naturally),
+ * "revoked" (an editor disabled it explicitly — wins over expired if both,
+ * because an editor's intent is the more informative signal).
+ */
+export type ShareLinkStatus = "active" | "expired" | "revoked";
+
+export function shareLinkStatus(
+  link: { expiresAt: Date | null; revokedAt: Date | null },
+  now: Date = new Date()
+): ShareLinkStatus {
+  if (link.revokedAt) return "revoked";
+  if (link.expiresAt && link.expiresAt <= now) return "expired";
+  return "active";
 }

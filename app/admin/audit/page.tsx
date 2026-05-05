@@ -32,6 +32,19 @@ const ACTION_LABELS: Record<string, { label: string; className: string }> = {
     className:
       "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300",
   },
+  // Share-link lifecycle. "revoked" + "extended" are dedicated verbs to
+  // distinguish editor-disabled-it from natural-expiry (the latter never
+  // produces an audit row — it's just a timestamp passing).
+  revoked: {
+    label: "deaktivoval(a)",
+    className:
+      "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300",
+  },
+  extended: {
+    label: "prodloužil(a)",
+    className:
+      "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300",
+  },
 };
 
 type SearchParams = {

@@ -48,6 +48,8 @@ const cs = {
   "activity_feed.action.cancelled": "zrušil(a)",
   "activity_feed.action.approved": "schválil(a)",
   "activity_feed.action.archived": "archivoval(a)",
+  "activity_feed.action.revoked": "deaktivoval(a)",
+  "activity_feed.action.extended": "prodloužil(a)",
 
   // Saved views menu
   "saved_views.empty_state":
@@ -562,9 +564,28 @@ const cs = {
   "admin.tab.products": "Produkty",
   "admin.tab.users": "Uživatelé",
   "admin.tab.templates": "Šablony",
+  "admin.tab.share_links": "Sdílené odkazy",
   "admin.tab.import": "Import CSV",
   "admin.tab.archive": "Archiv",
   "admin.tab.audit": "Audit log",
+  "admin.share_links.description":
+    "Všechny veřejné odkazy vytvořené v systému. Aktivní = klient ho právě může otevřít. Expirované = doběhla doba platnosti. Deaktivované = editor je zrušil ručně před expirací.",
+  "admin.share_links.filter.active": "Aktivní",
+  "admin.share_links.filter.expired": "Expirované",
+  "admin.share_links.filter.revoked": "Deaktivované",
+  "admin.share_links.filter.all": "Všechny",
+  "admin.share_links.empty.title": "Žádné odkazy",
+  "admin.share_links.empty.description":
+    "V této kategorii zatím není žádný sdílený odkaz.",
+  "admin.share_links.col.status": "Stav",
+  "admin.share_links.col.target": "Cíl",
+  "admin.share_links.col.label": "Štítek",
+  "admin.share_links.col.created": "Vytvořeno",
+  "admin.share_links.col.expires": "Platnost",
+  "admin.share_links.col.actions": "Akce",
+  "admin.share_links.target_timeline": "Timeline",
+  "admin.share_links.campaign_unnamed": "Kampaň #{id}",
+  "admin.share_links.campaign_deleted": "(kampaň odstraněna)",
   "admin.card.countries.desc":
     "Trhy, kde provozujeme kampaně. CZ, SK, HU, PL — přidat lze libovolný.",
   "admin.card.chains.desc":
@@ -590,13 +611,39 @@ const cs = {
   "share_button.copy": "Kopírovat",
   "share_button.copied": "✓ Zkopírováno",
   "share_button.note":
-    "Platnost 30 dní. Kdokoli s odkazem uvidí kampaň bez přihlášení.",
+    "Kdokoli s odkazem uvidí kampaň bez přihlášení. Spravovat odkazy můžeš níže.",
   "share_button.expires_30d": "Vytvořit odkaz (30 dní)",
+  "share_button.revoke_confirm_inline": "Opravdu deaktivovat tento odkaz?",
+  "share_form.expiry_label": "Platnost",
+  "share_form.expiry_n_days": "{n} dní",
+  "share_form.label_label": "Štítek",
+  "share_form.label_optional": "volitelný",
+  "share_form.label_placeholder": "např. Pre-launch preview pro Maňáska",
+  "share_form.create": "Vytvořit",
   "timeline_share.label": "Sdílet timeline",
   "timeline_share.title":
     "Vytvořit veřejný odkaz na aktuálně viditelnou timeline",
   "timeline_share.note":
-    "Platnost 30 dní. Klient uvidí celou timeline ve stejném rozsahu a s aplikovanými filtry, bez přihlášení a bez editačních tlačítek.",
+    "Klient uvidí celou timeline ve stejném rozsahu a s aplikovanými filtry, bez přihlášení a bez editačních tlačítek.",
+  "share_links.section_title": "Sdílené odkazy",
+  "share_links.empty": "Tato kampaň zatím nemá žádný sdílený odkaz.",
+  "share_links.no_active":
+    "Žádný aktivní odkaz. Klikni na „Sdílet“ pro vytvoření.",
+  "share_links.show_inactive": "Zobrazit neaktivní ({n})",
+  "share_links.status.active": "Aktivní",
+  "share_links.status.expired": "Expirovaný",
+  "share_links.status.revoked": "Deaktivovaný",
+  "share_links.expires_at": "platnost do {date}",
+  "share_links.expired_at": "expiroval {date}",
+  "share_links.revoked_at": "deaktivoval {by} {date}",
+  "share_links.no_expiry": "bez expirace",
+  "share_links.created_at": "vytvořil {by} · {date}",
+  "share_links.revoke_confirm":
+    "Opravdu deaktivovat tento odkaz? Klient s ním ztratí přístup okamžitě.",
+  "share_links.action.copy": "Kopírovat",
+  "share_links.action.extend": "Prodloužit",
+  "share_links.action.extend_tooltip": "Prodloužit platnost o 30 dní",
+  "share_links.action.revoke": "Deaktivovat",
   "save_template.label": "Uložit jako šablonu",
   "save_template.prompt_title": "Pojmenovat šablonu",
   "save_template.prompt_message":
@@ -684,6 +731,8 @@ const en: Record<keyof typeof cs, string> = {
   "activity_feed.action.cancelled": "cancelled",
   "activity_feed.action.approved": "approved",
   "activity_feed.action.archived": "archived",
+  "activity_feed.action.revoked": "revoked",
+  "activity_feed.action.extended": "extended",
 
   // Saved views menu
   "saved_views.empty_state":
@@ -1195,9 +1244,28 @@ const en: Record<keyof typeof cs, string> = {
   "admin.tab.products": "Products",
   "admin.tab.users": "Users",
   "admin.tab.templates": "Templates",
+  "admin.tab.share_links": "Share links",
   "admin.tab.import": "CSV import",
   "admin.tab.archive": "Archive",
   "admin.tab.audit": "Audit log",
+  "admin.share_links.description":
+    "All public share links across the system. Active = a client can open it right now. Expired = its validity ran out. Revoked = an editor disabled it manually before expiry.",
+  "admin.share_links.filter.active": "Active",
+  "admin.share_links.filter.expired": "Expired",
+  "admin.share_links.filter.revoked": "Revoked",
+  "admin.share_links.filter.all": "All",
+  "admin.share_links.empty.title": "No links",
+  "admin.share_links.empty.description":
+    "Nothing in this bucket yet.",
+  "admin.share_links.col.status": "Status",
+  "admin.share_links.col.target": "Target",
+  "admin.share_links.col.label": "Label",
+  "admin.share_links.col.created": "Created",
+  "admin.share_links.col.expires": "Validity",
+  "admin.share_links.col.actions": "Actions",
+  "admin.share_links.target_timeline": "Timeline",
+  "admin.share_links.campaign_unnamed": "Campaign #{id}",
+  "admin.share_links.campaign_deleted": "(campaign deleted)",
   "admin.card.countries.desc":
     "Markets we operate campaigns in. CZ, SK, HU, PL — any can be added.",
   "admin.card.chains.desc":
@@ -1223,13 +1291,39 @@ const en: Record<keyof typeof cs, string> = {
   "share_button.copy": "Copy",
   "share_button.copied": "✓ Copied",
   "share_button.note":
-    "Valid for 30 days. Anyone with the link can view the campaign without signing in.",
+    "Anyone with the link can view the campaign without signing in. Manage links below.",
   "share_button.expires_30d": "Create link (30 days)",
+  "share_button.revoke_confirm_inline": "Revoke this link?",
+  "share_form.expiry_label": "Validity",
+  "share_form.expiry_n_days": "{n} days",
+  "share_form.label_label": "Label",
+  "share_form.label_optional": "optional",
+  "share_form.label_placeholder": "e.g. Pre-launch preview for Manak",
+  "share_form.create": "Create",
   "timeline_share.label": "Share timeline",
   "timeline_share.title":
     "Create a public link to the currently visible timeline",
   "timeline_share.note":
-    "Valid for 30 days. Recipients see the full timeline at the same range and active filters, without signing in and without edit controls.",
+    "Recipients see the full timeline at the same range and active filters, without signing in and without edit controls.",
+  "share_links.section_title": "Share links",
+  "share_links.empty": "This campaign has no share links yet.",
+  "share_links.no_active":
+    "No active link. Click “Share” to create one.",
+  "share_links.show_inactive": "Show inactive ({n})",
+  "share_links.status.active": "Active",
+  "share_links.status.expired": "Expired",
+  "share_links.status.revoked": "Revoked",
+  "share_links.expires_at": "valid until {date}",
+  "share_links.expired_at": "expired {date}",
+  "share_links.revoked_at": "revoked by {by} on {date}",
+  "share_links.no_expiry": "no expiry",
+  "share_links.created_at": "created by {by} · {date}",
+  "share_links.revoke_confirm":
+    "Revoke this link? The recipient loses access immediately.",
+  "share_links.action.copy": "Copy",
+  "share_links.action.extend": "Extend",
+  "share_links.action.extend_tooltip": "Extend validity by 30 days",
+  "share_links.action.revoke": "Revoke",
   "save_template.label": "Save as template",
   "save_template.prompt_title": "Name the template",
   "save_template.prompt_message":

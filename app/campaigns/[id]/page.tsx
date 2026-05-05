@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { and, eq, asc, desc } from "drizzle-orm";
+import { headers } from "next/headers";
+import { and, eq, asc, desc, sql } from "drizzle-orm";
 import {
   db,
   campaigns,
@@ -14,7 +15,9 @@ import {
   comments,
   users,
   auditLog,
+  shareLinks,
 } from "@/lib/db/client";
+import { alias } from "drizzle-orm/pg-core";
 import { kindLabel, kindEmoji } from "@/lib/products";
 import { auth } from "@/auth";
 import {
@@ -39,6 +42,10 @@ import { SaveAsTemplateButton } from "@/components/save-as-template-button";
 import { EditableCampaignTitle } from "@/components/editable-campaign-title";
 import { CommunicationBadge } from "@/components/communication-badge";
 import { CountryBadge } from "@/components/country-badge";
+import {
+  CampaignShareLinks,
+  type CampaignShareLinkRow,
+} from "@/components/campaign-share-links";
 import { VideoEmbed } from "@/components/video-embed";
 import { getT } from "@/lib/i18n/server";
 import { localizedCountryName } from "@/lib/i18n/country";
@@ -146,6 +153,48 @@ export default async function CampaignDetailPage({
     )
     .orderBy(desc(auditLog.createdAt))
     .limit(50);
+
+  // Active + recently-revoked/expired share links for this campaign. We
+  // double-join `users` (creator + revoker), so they need distinct aliases.
+  // The component expects ALL links (it segments active vs inactive client-
+  // side under a collapsed <details>); 20 is a generous cap to keep the
+  // payload small even on a heavily-shared campaign.
+  const shareCreatedBy = alias(users, "share_created_by");
+  const shareRevokedBy = alias(users, "share_revoked_by");
+  const shareLinkRows: CampaignShareLinkRow[] = await db
+    .select({
+      id: shareLinks.id,
+      token: shareLinks.token,
+      label: shareLinks.label,
+      expiresAt: shareLinks.expiresAt,
+      revokedAt: shareLinks.revokedAt,
+      revokedByName: shareRevokedBy.name,
+      createdAt: shareLinks.createdAt,
+      createdByName: shareCreatedBy.name,
+    })
+    .from(shareLinks)
+    .leftJoin(shareCreatedBy, eq(shareLinks.createdById, shareCreatedBy.id))
+    .leftJoin(shareRevokedBy, eq(shareLinks.revokedById, shareRevokedBy.id))
+    .where(
+      // JSONB filter: payload->>'type' = 'campaign' AND
+      // (payload->>'campaignId')::int = id. Guards against the (currently
+      // impossible, but cheap to defend) case of a timeline link with a
+      // numeric collision in payload.
+      and(
+        sql`${shareLinks.payload}->>'type' = 'campaign'`,
+        sql`(${shareLinks.payload}->>'campaignId')::int = ${campaignId}`
+      )
+    )
+    .orderBy(desc(shareLinks.createdAt))
+    .limit(20);
+
+  // Origin used to render absolute /share/<token> URLs in the management
+  // list. Server-rendered so the rows have copyable URLs even before any
+  // client-side window.location is read.
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const host = h.get("host") ?? "localhost:3000";
+  const origin = `${proto}://${host}`;
 
   // List of usernames/emails for @mention highlighting in comments.
   const knownHandles = await db
@@ -502,6 +551,16 @@ export default async function CampaignDetailPage({
           </p>
         </div>
       )}
+
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
+        <h2 className="font-medium mb-3">
+          {t("share_links.section_title")}{" "}
+          <span className="text-sm font-normal text-zinc-500">
+            ({shareLinkRows.filter((r) => !r.revokedAt && (!r.expiresAt || r.expiresAt > new Date())).length})
+          </span>
+        </h2>
+        <CampaignShareLinks rows={shareLinkRows} origin={origin} />
+      </div>
 
       <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h2 className="font-medium mb-3">

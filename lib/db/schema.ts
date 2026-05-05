@@ -300,14 +300,32 @@ export const auditLog = pgTable("audit_log", {
 
 // Read-only public links to share a campaign or a date-range view with a
 // client. Token is checked at /share/[token]; no login required.
+//
+// Lifecycle: a link is "active" iff `revokedAt IS NULL AND (expiresAt IS NULL
+// OR expiresAt > now)`. Centralised in `lib/db/queries.ts` (`shareLinkIsActive
+// Sql`) so the predicate lives in one place. Soft-revocation (instead of DELETE)
+// preserves audit trail: kdo revoknul, kdy, jaká kampaň byla sdílená — useful
+// when an agent receives a leaked link from a client and wants to know
+// who originally shared it.
 export const shareLinks = pgTable("share_link", {
   id: serial("id").primaryKey(),
   token: text("token").notNull().unique(),
   // What the link reveals. One of:
   //   - { type: "campaign", campaignId: N }
-  //   - { type: "timeline", from: "...", to: "..." }
+  //   - { type: "timeline", filters: { from, to, q, country, ... } }
   payload: jsonb("payload").notNull(),
+  // Optional human note shown in the management list — "Pre-launch preview
+  // pro Maňáska", "Q3 campaign roundup". Helps tell links apart when an
+  // editor has 5 active for the same campaign.
+  label: text("label"),
   expiresAt: timestamp("expires_at", { mode: "date" }),
+  // Set when an editor explicitly disables the link before its natural
+  // expiry. Null = active (subject to expiresAt). Once set, the row stays
+  // for audit purposes; the lookup at /share/[token] treats it as 404.
+  revokedAt: timestamp("revoked_at", { mode: "date" }),
+  revokedById: text("revoked_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
   createdById: text("created_by").references(() => users.id, {
     onDelete: "set null",
   }),
