@@ -1790,6 +1790,11 @@ function DraggableBar({
         color: "white",
         textDecoration: isCancelled ? "line-through" : undefined,
         touchAction: "none",
+        // Slight desaturation gives the timeline a calmer, less "Slack
+        // notification"-y tone. 92% saturation pulls the colors back
+        // without losing the per-campaign palette signal. Cancelled bars
+        // (already gray) skip — saturating gray is a no-op anyway.
+        filter: isCancelled ? undefined : "saturate(0.92)",
       }}
       aria-label={`${bar.name}${statusTitle} · ${formatDate(start)} – ${formatDate(end)}${commLabel ? ` · ${commLabel}` : ""}`}
     >
@@ -1804,7 +1809,10 @@ function DraggableBar({
       {/* Diagonal stripes — campaign hasn't been client-approved yet. The
           stripes sit on top of the campaign colour but below the text/icons
           (transparent layer, non-interactive). Skipped for cancelled bars
-          since their gray + line-through is already a stronger signal. */}
+          since their gray + line-through is already a stronger signal.
+          Softened from rgba(...,0.32) → 0.18 + wider transparent gap
+          (8px → 12px) so the bar reads as the campaign first, "pending"
+          second — less "fabric pattern", more "subtle hatch". */}
       {!bar.clientApprovedAt && !isCancelled && (
         <span
           aria-hidden
@@ -1812,7 +1820,7 @@ function DraggableBar({
           title="Čeká na schválení klienta"
           style={{
             backgroundImage:
-              "repeating-linear-gradient(45deg, transparent 0, transparent 6px, rgba(255,255,255,0.32) 6px, rgba(255,255,255,0.32) 10px)",
+              "repeating-linear-gradient(45deg, transparent 0, transparent 8px, rgba(255,255,255,0.18) 8px, rgba(255,255,255,0.18) 12px)",
           }}
         />
       )}

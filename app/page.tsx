@@ -282,11 +282,14 @@ export default async function Dashboard({
   return (
     <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
+        <div className="min-w-0">
+          {/* Title + meta line. Tighter hierarchy than before — h1 still
+              the visual anchor, but the meta sub-text is now xs/zinc-500
+              so it reads as auxiliary chrome, not a second-level heading. */}
+          <h1 className="text-2xl font-semibold tracking-tight">
             {t("timeline.heading")}
           </h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
             {formatDate(rangeStart)} – {formatDate(addDays(rangeEnd, -1))} ·{" "}
             {distinctCampaignCount}{" "}
             {t.plural(distinctCampaignCount, "unit.campaign")} ·{" "}
@@ -548,14 +551,14 @@ async function LiveRunningCard({
   const t = await getT();
   if (running.length === 0) {
     return (
-      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-4 py-3">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-          <span className="font-medium text-sm text-zinc-500">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-2.5">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+          <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
             {t("dashboard.running.empty_title")}
           </span>
         </div>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-zinc-500 mt-1">
           {t("dashboard.running.empty_desc")}
         </p>
       </div>
@@ -563,14 +566,17 @@ async function LiveRunningCard({
   }
 
   return (
-    <div className="rounded-lg border border-emerald-300 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 px-4 py-3">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="relative flex w-2.5 h-2.5">
+    <div className="rounded-lg ring-1 ring-emerald-200/70 dark:ring-emerald-900/60 bg-emerald-50/60 dark:bg-emerald-950/20 px-3.5 py-2.5">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="relative flex w-2 h-2">
           <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
-          <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-emerald-500" />
+          <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
         </span>
-        <span className="font-medium text-sm text-emerald-900 dark:text-emerald-200">
-          {t("dashboard.running.title")}: {running.length}{" "}
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+          {t("dashboard.running.title")}
+        </span>
+        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          · {running.length}{" "}
           {t.plural(running.length, "unit.campaign")}
           {channelCount > 0 && (
             <>
@@ -580,19 +586,19 @@ async function LiveRunningCard({
           )}
         </span>
       </div>
-      <ul className="divide-y divide-emerald-200/60 dark:divide-emerald-900/40">
+      <ul className="divide-y divide-emerald-200/40 dark:divide-emerald-900/30">
         {running.map((r) => (
           <li key={r.id}>
             <Link
               href={`/campaigns/${r.id}`}
-              className="flex items-center gap-2 py-1.5 text-xs hover:underline"
+              className="flex items-center gap-2 py-1 text-xs hover:underline"
             >
               <span
-                className="w-2 h-2 rounded-full shrink-0"
+                className="w-1.5 h-1.5 rounded-full shrink-0"
                 style={{ background: r.color }}
               />
               <span className="font-medium truncate flex-1">{r.name}</span>
-              <span className="text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+              <span className="text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                 {channelCountByCampaign.get(r.id) ?? 0}×{" "}
                 {t("common.channels").toLowerCase()} ·{" "}
                 {t("dashboard.until", { date: formatDate(r.endsAt) })}
@@ -623,14 +629,14 @@ async function UpcomingCard({
   const t = await getT();
   if (upcoming.length === 0) {
     return (
-      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-4 py-3">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-          <span className="font-medium text-sm text-zinc-500">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-2.5">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+          <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
             {t("dashboard.upcoming.empty_title")}
           </span>
         </div>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-zinc-500 mt-1">
           {t("dashboard.upcoming.empty_desc", { days: windowDays })}
         </p>
       </div>
@@ -638,15 +644,18 @@ async function UpcomingCard({
   }
 
   return (
-    <div className="rounded-lg border border-blue-300 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 px-4 py-3">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-        <span className="font-medium text-sm text-blue-900 dark:text-blue-200">
-          {t("dashboard.upcoming.title", { days: windowDays })}: {upcoming.length}{" "}
+    <div className="rounded-lg ring-1 ring-blue-200/70 dark:ring-blue-900/60 bg-blue-50/60 dark:bg-blue-950/20 px-3.5 py-2.5">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="w-2 h-2 rounded-full bg-blue-500" />
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+          {t("dashboard.upcoming.title", { days: windowDays })}
+        </span>
+        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          · {upcoming.length}{" "}
           {t.plural(upcoming.length, "unit.campaign")}
         </span>
       </div>
-      <ul className="divide-y divide-blue-200/60 dark:divide-blue-900/40">
+      <ul className="divide-y divide-blue-200/40 dark:divide-blue-900/30">
         {upcoming.map((u) => {
           const daysUntil = Math.max(
             1,
@@ -658,14 +667,14 @@ async function UpcomingCard({
             <li key={u.id}>
               <Link
                 href={`/campaigns/${u.id}`}
-                className="flex items-center gap-2 py-1.5 text-xs hover:underline"
+                className="flex items-center gap-2 py-1 text-xs hover:underline"
               >
                 <span
-                  className="w-2 h-2 rounded-full shrink-0"
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{ background: u.color }}
                 />
                 <span className="font-medium truncate flex-1">{u.name}</span>
-                <span className="text-blue-700 dark:text-blue-400 whitespace-nowrap">
+                <span className="text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                   {channelCountByCampaign.get(u.id) ?? 0}×{" "}
                   {t("common.channels").toLowerCase()} ·{" "}
                   {t("dashboard.in_days", {
@@ -700,14 +709,14 @@ async function EndingSoonCard({
   const t = await getT();
   if (ending.length === 0) {
     return (
-      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-4 py-3">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-          <span className="font-medium text-sm text-zinc-500">
+      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-2.5">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+          <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
             {t("dashboard.ending.empty_title")}
           </span>
         </div>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-zinc-500 mt-1">
           {t("dashboard.ending.empty_desc", { days: windowDays })}
         </p>
       </div>
@@ -715,15 +724,17 @@ async function EndingSoonCard({
   }
 
   return (
-    <div className="rounded-lg border border-amber-300 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-        <span className="font-medium text-sm text-amber-900 dark:text-amber-200">
-          {t("dashboard.ending.title", { days: windowDays })}: {ending.length}{" "}
-          {t.plural(ending.length, "unit.campaign")}
+    <div className="rounded-lg ring-1 ring-amber-200/70 dark:ring-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 px-3.5 py-2.5">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="w-2 h-2 rounded-full bg-amber-500" />
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+          {t("dashboard.ending.title", { days: windowDays })}
+        </span>
+        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          · {ending.length} {t.plural(ending.length, "unit.campaign")}
         </span>
       </div>
-      <ul className="divide-y divide-amber-200/60 dark:divide-amber-900/40">
+      <ul className="divide-y divide-amber-200/40 dark:divide-amber-900/30">
         {ending.map((e) => {
           const daysLeft = Math.max(
             0,
@@ -735,14 +746,14 @@ async function EndingSoonCard({
             <li key={e.id}>
               <Link
                 href={`/campaigns/${e.id}`}
-                className="flex items-center gap-2 py-1.5 text-xs hover:underline"
+                className="flex items-center gap-2 py-1 text-xs hover:underline"
               >
                 <span
-                  className="w-2 h-2 rounded-full shrink-0"
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{ background: e.color }}
                 />
                 <span className="font-medium truncate flex-1">{e.name}</span>
-                <span className="text-amber-700 dark:text-amber-400 whitespace-nowrap">
+                <span className="text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                   {channelCountByCampaign.get(e.id) ?? 0}×{" "}
                   {t("common.channels").toLowerCase()} ·{" "}
                   {daysLeft === 0
@@ -920,24 +931,24 @@ function StatCard({
 }) {
   const inner = (
     <>
-      <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">
+      <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
         {label}
       </div>
       <div
         className={
-          (small ? "text-base " : "text-2xl ") + "font-semibold truncate"
+          (small ? "text-sm " : "text-xl ") + "font-semibold truncate"
         }
         title={String(value)}
       >
         {value}
       </div>
       {sub && (
-        <div className="text-xs text-zinc-500 mt-1 truncate">{sub}</div>
+        <div className="text-[11px] text-zinc-500 mt-0.5 truncate">{sub}</div>
       )}
     </>
   );
   const baseClass =
-    "rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-4";
+    "rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-3.5 py-2.5";
   if (href) {
     return (
       <Link
