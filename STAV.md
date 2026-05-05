@@ -336,7 +336,7 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 - i18n: `roles.admin/editor/viewer` (CS: "Admin"/"Editor"/"Pouze čtení", EN: same/Read-only)
 - ⚠️ **Vyžaduje `npm run db:push --force`** — tohle je ADD column (soft-removal trick z Tier 3 neplatí pro additions).
 
-**B. Stopáž smyčky** — partner-driven, konkrétní operační value. Spot má délku v sekundách. Timeline by měl ukazovat "ve smyčce máš 90s, mohlo by se hodit dalších 20s" (per-channel agregace z bars co teď běží). Schema: `spots.durationSec`. Form field. Tooltip na barech / channel summary. ~3 hod.
+**B. Stopáž smyčky** ❌ vyřazeno — partner explicitně řekl "není teď důležité". Pokud někdy přijde, schema `spots.durationSec` + tooltip na barech.
 
 **C. Re-approval po edit** — partner-driven, řeší reálný concern. Aktuálně schválení (`clientApprovedAt`) zůstává po jakékoli editaci kampaně — klient možná schválil verzi A, agent edituje na verzi B, klient o tom neví. Snapshot fields {name, startsAt, endsAt, channelIds, spotsByCountry}, na update porovnat se schváleným snapshotem, kdyby se "podstatně" změnilo → invalidate `clientApprovedAt` + audit entry. ~3 hod.
 
@@ -379,6 +379,11 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 ### ✅ Shipped během auditu (mimo původní seznam)
 
 - Inline `<NewSpotModal>` z campaign formuláře (`<NewSpotModal>` + `<CampaignSpotPickers>` — `createSpotForPicker` returning místo redirect)
+- **Dashboard polish** (commit `9e07b71`):
+  - **Toolbar reorder** — `[Seznam] [Tisk / PDF] [Sdílet timeline]` ⎮ `[📺 Knihovna] [+ Nová kampaň]`. Dvě skupiny oddělené tenkým dividerem: vlevo read-only navigace, vpravo creation surfaces. Knihovna sedí vedle drawer co otvírá (předtím byla úplně vlevo = oddělená od svého výsledku).
+  - **"Aktivita za 7 dní" tile** nahradil statický "Top klient" (jediný klient = konstanta, žádný signal). Sečte campaigns + spots created v posledních 7 dnech přes auditLog `count(*) FILTER` partition v jednom query.
+  - **Dismissible `<TimelineTip>`** — dvouřádkový "Tip: drag = posun…" banner má teď `✕` napravo, dismiss persistuje v localStorage `videospots:dismissed:timeline-tip`. SSR-safe (první render ukáže, useEffect pak skryje pokud dismissed). Zpátky přes clear localStorage.
+  - **Clickable stat tiles** — "Čeká na schválení" → `/campaigns?approval=pending`, "Nenasazené spoty" → `/spots?view=undeployed`. Jen když count > 0, hover ring + shadow lift = vizuální cue.
 - **Spots jako plnohodnotná entita v2** — approval workflow + richer detail (S1 + S3 + S4 z brainstormu):
   - **Dvoustavový workflow**: spot je `pending` (čeká na schválení) nebo `approved`. Žádný "rejected" stav — partner workflow je "spoty se musí schválit před nasazením", takže když klient chce změnu, tým nahraje nové URL (což auto-invaliduje schválení).
   - Schema: `spots.clientApprovedAt`, `clientApprovedComment`, `approvedById`. (Dřívější draft měl ještě `rejectedAt`/`rejectionReason`/`rejectedById` pro 3-state flow — partner odmítl, sloupce zůstaly v DB jako orphan storage per Tier 3 soft-removal pattern.)
