@@ -313,6 +313,51 @@ Při `db:push --force` pro share-link lifecycle (commit `190ac48`) drizzle-kit d
 
 Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority list, který kombinuje (a) původní partner-driven roadmapu, (b) věci, které jsem v auditu objevil, ale na seznamu nebyly. Partner schválil tuhle reorderaci.
 
+### 🚨 PRIORITA Č. 1 (parkováno, čeká na rozhodnutí partnera) — Sony as in-app user
+
+**Kontext.** Dosud appka modeluje "schvaluje klient" jako abstraktní stav (`spots.clientApprovedAt` + `campaigns.clientApprovedAt`), ale klient (Sony) v appce reálně přihlášený nikdy nebyl — všechno schvaloval kdokoli z agentury jako "editor". To je sémantická lež. Partner po jednání se Sony usoudil, že **Sony se s agenturou v appce reálně potkají**, ale ještě **nejsou dohodnuti, kdo tam co bude dělat**:
+
+- Možná agentura připraví kampaně podle mailového briefu od Sony, Sony jen schvaluje spoty.
+- Možná Sony bude kampaně tvořit sám a agentura jen dodává spoty.
+- **Pevný bod:** *spot vždy schvaluje Sony*. Schválení kampaně je otevřená otázka.
+
+Living-product strategy — appka má dovolit oba flowy a počkat, který se přirozeně usadí.
+
+**Můj doporučený model (potvrdit s partnerem)** — dvě ortogonální osy uživatele:
+
+1. `users.role ∈ {admin, editor, viewer}` (existuje) — *co kdo umí dělat*
+2. `users.isClient` boolean (NEW, default `false`) — *za kým kdo stojí*
+
+Kombinace pokryjí všechny scénáře bez `client_editor` hybrid role:
+
+| Persona | role | isClient | Power |
+|---|---|---|---|
+| Agency admin | admin | false | Vše kromě "Schvaluji" |
+| Agency editor/projekťák | editor | false | Editovat, **ne schvalovat** |
+| Sony reviewer | viewer | true | Číst + komentovat + **schvalovat** |
+| Sony power-user | editor | true | Vytvářet/editovat + **schvalovat** |
+
+**Server-action gates:**
+- `approveSpot`/`unapproveSpot`/`approveCampaign`/`clearCampaignApproval` → nový `requireClient()` helper (ověří `isClient = true`). **Ne `requireEditor()`** jako dnes.
+- Ostatní mutace → `requireEditor()` jako dnes (nezávislé na `isClient`).
+- `/admin/*` → `requireAdmin()` jako dnes.
+
+**UI:** "Schvaluji" button se renderuje **jen** pro `isClient = true`. Agentura vidí jen aktuální stav (Pill "Čeká"/"Schváleno"), button vůbec ne.
+
+**Schvalování kampaně (`campaigns.clientApprovedAt`)** — nemusí se rozhodovat hned. Stačí, že `approveCampaign` taky půjde přes `requireClient()`. Pak se workflow buď přirozeně používá (Sony to klikne), nebo přirozeně odumře (Sony to ignoruje, šrafy zůstanou věčně, později vyhozeno jako Tier 3 soft-removal). Žádné předčasné lock-down rozhodnutí.
+
+**Co se nemění:**
+- DB sloupce `clientApprovedAt` zůstávají s tímhle názvem (sémanticky teď konečně sedí — "klient" = Sony reálně v appce).
+- i18n labels "Schvaluji tento spot. Volitelně přidej poznámku." (z předchozí iterace) sedí — Sony to čte ze své perspektivy.
+- `requireEditor()` u všech ostatních mutací zůstává.
+
+**Otevřené otázky pro callu s kolegou** (partnerova práce, ne moje):
+1. Sony users vidí `/admin/audit`? Default `ne` (interní agency reporting).
+2. Sony users vidí cizí kampaně? Default `ano` (jedna agentura, žádný multi-tenant).
+3. Komentáře — Sony bude komentovat, @mention agent? Default `ano`, "just works" v aktuálním kódu.
+
+**Implementační odhad** (až bude zelená): ~3 hod čisté práce. Schema migrace (`isClient` ADD column, vyžaduje `db:push --force`), `lib/auth-helpers.ts` extension (nová `requireClient`), `lib/roles.ts` doplnění typu, `auth.config.ts` JWT propagace `isClient`, server actions update (4 server actions přepnout na `requireClient`), UI gates (4 míst kde se "Schvaluji" button renderuje), `/admin/users` create/edit form rozšířit o checkbox, audit log — žádné změny (entries už dnes mají userId, kdo vidí kdo schválil).
+
 ### 🥇 Top 3 — udělat HNED (next batch ~2 dny)
 
 **A. Per-user role (admin / editor / viewer)** ✅ shipped (commit `69ada56`, dashboard polish v `9e07b71`)
