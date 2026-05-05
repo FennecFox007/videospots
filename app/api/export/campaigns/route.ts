@@ -35,7 +35,6 @@ export async function GET(req: NextRequest) {
     q: sp.get("q") ?? undefined,
     countryCode: sp.get("country") ?? undefined,
     chainCode: sp.get("chain") ?? undefined,
-    client: sp.get("client") ?? undefined,
     status: sp.get("status") ?? undefined,
     runState: sp.get("runState") ?? undefined,
     tag: sp.get("tag") ?? undefined,

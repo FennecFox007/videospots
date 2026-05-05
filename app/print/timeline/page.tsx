@@ -42,11 +42,9 @@ type SearchParams = {
   q?: string;
   country?: string;
   chain?: string;
-  client?: string;
   status?: string;
   runState?: string;
   tag?: string;
-  communicationType?: string;
 };
 
 export default async function PrintTimelinePage({
@@ -116,10 +114,8 @@ export default async function PrintTimelinePage({
     q: params.q,
     countryCode: params.country,
     chainCode: params.chain,
-    client: params.client,
     status: params.status,
     runState: params.runState,
-    communicationType: params.communicationType,
     tag: params.tag,
     rangeStart,
     rangeEnd,

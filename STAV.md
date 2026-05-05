@@ -27,7 +27,7 @@ Next.js 16 aplikace pro plánování video spotů v retail zobrazovačích PlayS
 2. **Per-retailer overrides.** Datart vyprodal? Pravoklik na bar → "Upravit jen tento řetězec" → vlastní termín nebo cancellation just for that channel. Master kampaň ostatní řetězce neovlivní. Bary s override jsou italic + ✱ + non-draggable (drag by silently shiftnul master).
 3. **Spoty jako first-class entity.** Spot = (product × country × URL). Existuje samostatně v knihovně `/spots`, kampaně ho jen referencují přes `campaign_video.spot_id`. **Kampaň může existovat bez spotu** — plánuje se měsíce dopředu, spoty se vyrábí později a doplňují přes edit form.
 4. **Žádný judging timing / nudge.** App neříká "tady něco chybí". `/releases` ukazuje co vychází bez označení "bez kampaně". Žádné lifecycle classification ("Pre-launch / Out now"), žádné "naked launch" warnings. **Výjimka:** "spot pending" stav je viditelný (dashed kroužek na baru, amber box v detailu), ale vyloženě jako informace, ne jako chyba.
-5. **URL = filter state.** `?q`, `?country`, `?chain`, `?client`, `?runState`, `?communicationType`, `?approval`, `?missingSpot`, `?tag`, `?from`, `?to`, `?sort`, `?order`. Stránky jsou bookmarkable.
+5. **URL = filter state.** `?q`, `?country`, `?chain`, `?runState`, `?approval`, `?missingSpot`, `?tag`, `?from`, `?to`, `?sort`, `?order`. Stránky jsou bookmarkable. (`?client` a `?communicationType` byly v dřívějších verzích — partner je odstranil, řada filtrů se zjednodušila. Sloupce na campaigns zůstávají, jen už podle nich nefiltrujeme.)
 6. **Server-rendered first.** Client islands jen kde nutné (drag, kontextové menu, filter bar, command palette, tooltip, dialogs, peek panel).
 7. **Lokalizace:** CZ labels, EN error messages, `pluralKey` v dictionary. Country names přes `Intl.DisplayNames`.
 8. **Žádné mutace mimo Server Actions.** API routes jen pro reads (peek, search).
@@ -163,7 +163,7 @@ Klíčová vlastnost: **kampaň bez spotu je legitimní stav**, ne chyba. Vizuá
 
 ## Toolbar styling discipline
 
-Hlavní toolbar (zoom presety, date nav, kontextové presety) zůstává na **`text-sm` + `px-3 py-1.5`** — větší cíle pro hlavní navigaci. **FilterBar řada pod ním** (search, country, chain, runState, commType, approval, missingSpot, client, tag, Pohledy) je naopak na **`text-xs` + `px-2.5 py-1`** — je to spousta kontrol, které dohromady wrapnou na několik řádků; menší font drží jeden řádek častěji a vizuálně řadí filtry pod toolbar.
+Hlavní toolbar (zoom presety, date nav, kontextové presety) zůstává na **`text-sm` + `px-3 py-1.5`** — větší cíle pro hlavní navigaci. **FilterBar řada pod ním** (search, country, chain, runState, approval, missingSpot, tag, Pohledy) je naopak na **`text-xs` + `px-2.5 py-1`** — sub-úroveň pod toolbarem, drží jeden řádek častěji.
 
 ## Hosting & deploy strategie
 

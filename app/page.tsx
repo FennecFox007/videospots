@@ -74,11 +74,9 @@ type SearchParams = {
   q?: string;
   country?: string;
   chain?: string;
-  client?: string;
   status?: string;
   runState?: string;
   tag?: string;
-  communicationType?: string;
   approval?: string;
   missingSpot?: string;
 };
@@ -147,10 +145,8 @@ export default async function Dashboard({
     q: params.q,
     countryCode: params.country,
     chainCode: params.chain,
-    client: params.client,
     status: params.status,
     runState: params.runState,
-    communicationType: params.communicationType,
     approval: params.approval,
     missingSpot: params.missingSpot,
     tag: params.tag,
@@ -481,7 +477,6 @@ export default async function Dashboard({
       <FilterBar
         countries={filterOpts.countries}
         chains={filterOpts.chains}
-        clients={filterOpts.clients}
         tags={filterOpts.tags}
         savedViews={{
           scope: "timeline",

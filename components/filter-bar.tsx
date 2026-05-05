@@ -7,10 +7,14 @@
 // Search is debounced to avoid spamming router.push on every keystroke; selects
 // fire immediately. Existing range params (?from=&to=) are preserved on every
 // update.
+//
+// Note: `client` and `communicationType` are still columns on campaigns
+// (set in the form, shown in detail/peek) but we deliberately don't expose
+// filters for them — partner said the row was getting noisy and those two
+// criteria weren't actually used to slice the list.
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { COMMUNICATION_TYPES } from "@/lib/communication";
 import {
   SavedViewsMenu,
   type SavedView,
@@ -22,7 +26,6 @@ type Option = { value: string; label: string };
 type Props = {
   countries: Option[]; // value = code (CZ/SK/…)
   chains: Option[]; // value = code (alza/…)
-  clients: string[]; // distinct client strings
   tags: string[]; // distinct tag strings
   /** Saved-views support. When omitted, the "Pohledy" menu is hidden. */
   savedViews?: {
@@ -35,7 +38,6 @@ type Props = {
 export function FilterBar({
   countries,
   chains,
-  clients,
   tags,
   savedViews,
 }: Props) {
@@ -76,10 +78,8 @@ export function FilterBar({
 
   const country = searchParams.get("country") ?? "";
   const chain = searchParams.get("chain") ?? "";
-  const client = searchParams.get("client") ?? "";
   const runState = searchParams.get("runState") ?? "";
   const tag = searchParams.get("tag") ?? "";
-  const commType = searchParams.get("communicationType") ?? "";
   const approval = searchParams.get("approval") ?? ""; // "" | "pending" | "approved"
   const missingSpot = searchParams.get("missingSpot") === "1";
 
@@ -87,15 +87,17 @@ export function FilterBar({
     !!search ||
     !!country ||
     !!chain ||
-    !!client ||
     !!runState ||
     !!tag ||
-    !!commType ||
     !!approval ||
     missingSpot;
 
   function clearAll() {
     const params = new URLSearchParams(searchParams);
+    // `client` + `communicationType` listed for back-compat: old saved
+    // views or bookmarks may still carry them. Filtering doesn't honour
+    // them anymore, but Clear should still wipe them from the URL so the
+    // address bar matches the active filter set.
     [
       "q",
       "country",
@@ -143,15 +145,6 @@ export function FilterBar({
         placeholder={t("filter.all_states")}
       />
       <Select
-        value={commType}
-        onChange={(v) => setParam("communicationType", v)}
-        options={COMMUNICATION_TYPES.map((ct) => ({
-          value: ct.value,
-          label: ct.label,
-        }))}
-        placeholder={t("filter.all_comm_types")}
-      />
-      <Select
         value={approval}
         onChange={(v) => setParam("approval", v)}
         options={[
@@ -173,14 +166,6 @@ export function FilterBar({
       >
         {t("filter.missing_spot.label")}
       </button>
-      {clients.length > 0 && (
-        <Select
-          value={client}
-          onChange={(v) => setParam("client", v)}
-          options={clients.map((c) => ({ value: c, label: c }))}
-          placeholder={t("filter.all_clients")}
-        />
-      )}
       {tags.length > 0 && (
         <Select
           value={tag}

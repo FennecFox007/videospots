@@ -19,11 +19,9 @@ type SearchParams = {
   q?: string;
   country?: string;
   chain?: string;
-  client?: string;
   status?: string;
   runState?: string;
   tag?: string;
-  communicationType?: string;
   sort?: string; // "starts" | "name" | "client" | "status" | "duration"
   order?: string; // "asc" | "desc"
 };
@@ -41,10 +39,8 @@ export default async function CampaignsListPage({
     q: params.q,
     countryCode: params.country,
     chainCode: params.chain,
-    client: params.client,
     status: params.status,
     runState: params.runState,
-    communicationType: params.communicationType,
     tag: params.tag,
   });
 
@@ -150,7 +146,6 @@ export default async function CampaignsListPage({
       <FilterBar
         countries={filterOpts.countries}
         chains={filterOpts.chains}
-        clients={filterOpts.clients}
         tags={filterOpts.tags}
         savedViews={{
           scope: "campaigns",

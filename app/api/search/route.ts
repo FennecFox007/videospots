@@ -1,5 +1,10 @@
 // Backend for the Cmd+K search palette. Returns ranked matches across the
-// most-likely jump targets: campaigns, games, clients (distinct strings).
+// most-likely jump targets: campaigns and products.
+//
+// Used to also surface distinct client strings as a separate row type
+// linking to `/campaigns?client=<name>`, but the `?client=` filter was
+// removed. Typing a client name still finds matching campaigns directly
+// because the campaign query ILIKEs both name AND client.
 
 import { NextRequest, NextResponse } from "next/server";
 import { desc, eq, ilike, or, sql } from "drizzle-orm";
@@ -8,7 +13,7 @@ import { db, campaigns, products } from "@/lib/db/client";
 import { kindLabel } from "@/lib/products";
 
 export type SearchResult = {
-  type: "campaign" | "product" | "client";
+  type: "campaign" | "product";
   id?: number;
   label: string;
   /** Optional secondary line (client / kind / status). */
@@ -28,7 +33,7 @@ export async function GET(req: NextRequest) {
 
   const like = `%${q}%`;
 
-  const [campaignRows, productRows, clientRows] = await Promise.all([
+  const [campaignRows, productRows] = await Promise.all([
     db
       .select({
         id: campaigns.id,
@@ -46,11 +51,6 @@ export async function GET(req: NextRequest) {
       .select({ id: products.id, name: products.name, kind: products.kind })
       .from(products)
       .where(ilike(products.name, like))
-      .limit(4),
-    db
-      .selectDistinct({ client: campaigns.client })
-      .from(campaigns)
-      .where(ilike(campaigns.client, like))
       .limit(4),
   ]);
 
@@ -76,16 +76,6 @@ export async function GET(req: NextRequest) {
         href: `/campaigns?q=${encodeURIComponent(p.name)}`,
       })
     ),
-    ...clientRows
-      .filter((c) => c.client)
-      .map(
-        (c): SearchResult => ({
-          type: "client",
-          label: c.client!,
-          sub: "klient",
-          href: `/campaigns?client=${encodeURIComponent(c.client!)}`,
-        })
-      ),
   ];
 
   return NextResponse.json(out);

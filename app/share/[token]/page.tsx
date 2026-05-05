@@ -360,14 +360,14 @@ async function TimelineSharePage({
   const groups = Array.from(groupMap.values());
 
   // Campaigns matching the saved filters within the saved range.
+  // (client + communicationType were filterable in earlier versions; old
+  // share links may still carry them in the snapshot — silently ignored.)
   const ids = await findCampaignIds({
     q: filters.q,
     countryCode: filters.country,
     chainCode: filters.chain,
-    client: filters.client,
     status: filters.status,
     runState: filters.runState,
-    communicationType: filters.communicationType,
     tag: filters.tag,
     rangeStart,
     rangeEnd,
@@ -424,7 +424,6 @@ function describeFilters(f: Record<string, string>): string[] {
   if (f.q) out.push(`hledání: "${f.q}"`);
   if (f.country) out.push(`stát: ${f.country}`);
   if (f.chain) out.push(`řetězec: ${f.chain}`);
-  if (f.client) out.push(`klient: ${f.client}`);
   if (f.runState) out.push(`stav: ${f.runState}`);
   if (f.tag) out.push(`štítek: ${f.tag}`);
   return out;

@@ -77,18 +77,18 @@ export async function getChannelGroups(): Promise<CountryGroup[]> {
 // ---------------------------------------------------------------------------
 
 export type CampaignFilters = {
-  /** Free-text search over name + client + game name (ILIKE %q%). */
+  /** Free-text search over name + client + game name (ILIKE %q%). The
+   *  client column is still searched here so typing an agency name in
+   *  Cmd+K / search bar still finds matching campaigns — just the
+   *  dedicated `?client=` filter dropdown was removed. */
   q?: string;
   countryCode?: string;
   chainCode?: string;
-  client?: string;
   /** Stored campaign.status value ("approved" | "cancelled"). Mostly legacy. */
   status?: string;
   /** Computed run state — translates to date+status SQL conditions.
    *  Values: "running" | "upcoming" | "done" | "cancelled". */
   runState?: string;
-  /** Communication intent (preorder/launch/outnow/...). Matched exactly. */
-  communicationType?: string;
   /** "pending" | "approved" — filter by client approval status. Empty/undef
    *  = both. */
   approval?: string;
@@ -164,9 +164,6 @@ async function buildWhere(filters: CampaignFilters): Promise<{
   if (filters.chainCode) {
     conds.push(eq(chains.code, filters.chainCode));
   }
-  if (filters.client) {
-    conds.push(eq(campaigns.client, filters.client));
-  }
   if (filters.status) {
     conds.push(eq(campaigns.status, filters.status));
   }
@@ -190,9 +187,6 @@ async function buildWhere(filters: CampaignFilters): Promise<{
         conds.push(eq(campaigns.status, "cancelled"));
         break;
     }
-  }
-  if (filters.communicationType) {
-    conds.push(eq(campaigns.communicationType, filters.communicationType));
   }
   if (filters.approval === "pending") {
     conds.push(isNull(campaigns.clientApprovedAt));
@@ -233,15 +227,16 @@ async function buildWhere(filters: CampaignFilters): Promise<{
  * to compute on every page load given our row counts. Country names are
  * localized for the current UI locale (the DB only stores Czech names but
  * we resolve via Intl.DisplayNames for English).
+ *
+ * `clients` and `communicationType` aren't returned anymore — those filters
+ * were removed from the FilterBar (partner said the row was too noisy).
+ * The columns themselves still exist on campaigns and are shown in detail
+ * / table cells; just no longer slicing the list by them.
  */
 export async function getFilterOptions() {
-  const [allCountries, allChains, clientRows, tagRows] = await Promise.all([
+  const [allCountries, allChains, tagRows] = await Promise.all([
     db.select().from(countries).orderBy(asc(countries.sortOrder)),
     db.select().from(chains).orderBy(asc(chains.sortOrder)),
-    db
-      .selectDistinct({ client: campaigns.client })
-      .from(campaigns)
-      .where(sql`${campaigns.client} IS NOT NULL`),
     db.execute<{ tag: string }>(
       sql`SELECT DISTINCT unnest(${campaigns.tags}) AS tag FROM ${campaigns} WHERE ${campaigns.tags} IS NOT NULL ORDER BY tag`
     ),
@@ -255,10 +250,6 @@ export async function getFilterOptions() {
       label: `${c.flagEmoji ?? ""} ${localizedCountryName(c.code, c.name, locale)}`.trim(),
     })),
     chains: allChains.map((c) => ({ value: c.code, label: c.name })),
-    clients: clientRows
-      .map((r) => r.client)
-      .filter((c): c is string => !!c)
-      .sort(),
     tags: (tagRows.rows ?? []).map((r) => r.tag).filter(Boolean),
   };
 }
