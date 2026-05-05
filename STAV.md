@@ -395,6 +395,16 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
   - **`<SpotsDrawer>` cards**: barevný dot (emerald/amber) vedle názvu spotu — instantní status bez extra řádku.
   - **`<CampaignSpotPickers>`**: pod dropdown se zobrazí amber warning když picked spot je `pending`. V option labelu je "✓" pro approved, nic pro pending. Není blokující — editor může kampaň naplánovat i s pending spotem (schválení dorazí později).
   - i18n klíče (CS+EN) v `lib/i18n/messages.ts`: `spots.approval.*` (~12 klíčů, simplified z původních ~25), `spots.col.approval`, `spots.filter.approval.*`, `spots.deployment_history.*`, `spots.audit.*`, `spot_picker.warning.pending`.
+- **Dashboard polish v1** (commit `51db5b3`) — pure-cosmetic refresh:
+  - Header: title `text-3xl → text-2xl`, sub-line `text-sm → text-xs/zinc-500`, `mt-1 → mt-0.5`. Min-w-0 na title cluster.
+  - Status trio (LiveRunning/Upcoming/EndingSoon): padding `px-4 py-3 → px-3.5 py-2.5`, header line restructured z "Title: count" do uppercase label + muted count, `border-` → `ring-`, bg saturation backed off `/60`, list items `w-2 → w-1.5` dot, `py-1.5 → py-1`. Right-side meta neutral zinc místo amplifying card's color.
+  - Timeline bars: `filter: saturate(0.92)` na bar style — calmer palette bez ztráty identity. Diagonal stripes pro pending: alpha `0.32 → 0.18`, spacing `6/10 → 8/12` — místo "fabric pattern" subtle hatch overlay.
+  - StatCard tiles: padding sjednocené, label `text-xs → text-[10px]` tracking-wider, value `text-2xl → text-xl`, sub `text-xs → text-[11px]`.
+- **Dashboard polish v2** (commit `f977dc6`) — Lucide ikonky napříč chrome:
+  - Status trio: 9×9 colored icon circle vlevo (Play emerald / CalendarDays blue / Clock amber). Animate-ping přesunut z dot na bg kruhu Running tile. Header restruktura na uppercase label + larger count stack.
+  - StatCard získal volitelné `icon` + `iconTone` props (emerald/blue/violet/pink/amber/zinc). Wired up: Celkem=Play emerald, Čeká=CheckCircle2 blue, Aktivita=Activity violet, Nenasazené=Megaphone pink.
+  - Toolbar: "Seznam" odstraněn (duplikát s top nav), Tisk dostal `Printer`, "+ Nová kampaň" `Plus`, Sdílet `Share2`. SpotsDrawer 📺 emoji → `Bookmark` icon (konzistentní s Lucide stroke aesthetikou).
+  - **Top nav active state** v `components/nav-link.tsx`: NavLink přesunut do client componentu s `usePathname()`. Active = bolder text + blue `border-b-2`. Inactive = `border-transparent`, na hoveru jemné `border-zinc-200`. Fixovat po commitu `933634d`: původní absolute-positioned underline na `bottom: -7px` poukazoval pod link; kontejner s `overflow-x-auto` (mobile horizontal scroll) automaticky forsil `overflow-y: auto` a underline trčící ven triggeroval vertical scrollbar v navu. `border-b-2` na linku to fixuje (žádný absolute trick).
 
 ## Klíčové soubory
 
