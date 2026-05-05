@@ -131,6 +131,8 @@ Klíčová vlastnost: **kampaň bez spotu je legitimní stav**, ne chyba. Vizuá
 - **Peek panel** (pravý drawer) — otevírá se klikem na bar v timeline / řádek v `/campaigns`. Imperativní store v `lib/peek-store.ts` (žádné intercepting routes — Turbopack je s tím nestabilní). URL sync přes `?peek=<id>` + `history.replaceState` (sdílitelné, žádný server re-render). Footer akce: Otevřít detail, Upravit, **Schvaluji**, Klonovat, Cancel, Archive. Videos sekce: "Spoty (X/Y)" + per-country play link nebo "Spot ještě nebyl přiřazen". Cancel-on-change při rychlém přepínání mezi bary.
 - **Bar context menu** — pravoklik na bar v timeline. Položky: Otevřít detail, Upravit, **Upravit jen tento řetězec**, **Schvaluji** / **Zrušit schválení**, **Sdílet odkaz** (jeden klik vygeneruje + zkopíruje share link), Posunout o týden ←/→, Klonovat, Cancel/Reactivate, Archive.
 - **Channel override dialog** — viz výše per-retailer sekce.
+- **SpotsDrawer + drag-and-drop** — toolbar tlačítko **📺 Spoty** v hlavičce timeline (s žlutým badge počtu nenasazených). Klik otevře 320 px slide-out drawer zprava: search + tabs (Nenasazené / Všechny) + spoty seskupené podle země. Karty jsou HTML5 draggable (`SPOT_DRAG_MIME`), drop targety jsou kanálové řádky v timeline. Drop validuje země: matching → otevře `<SpotDropModal>` s pre-fillem (název = jméno spotu, datum = drop position, end = +14 dní, zaškrtnutý jen ten kanál; volitelně další kanály ve stejné zemi); mismatched → toast "Spot je pro CZ, drop na SK".
+- **DateRangeSummary helper** pod `<input type="date">` v drop modalu i override dialogu — `<input type="date">` se renderuje v browser locale (často `YYYY-MM-DD` v en-US), tak pod ním vždy ukazujeme `→ 5. 5. 2026 – 18. 5. 2026 (14 dní)` v CZ formátu jako pojistku.
 - **Public campaign modal** v share-timeline view — klik na bar otevře malý modal s videem (per-country) + metadaty + approved badge (jen info).
 - **Timeline drag pan**: chytni hlavičku → posun v čase, **shift+drag** = snap na pondělí, **dvojklik** = skok na dnešek
 - **Collapsible country groups**: per-user, localStorage persist
@@ -220,20 +222,30 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
    - "Spot pending" je viditelný stav (dashed kroužek na barech, amber box v detailu)
    - Migrace dat proběhla idempotentně (1× per DB, scripts už smazaný)
 
+2. **Drag-and-drop spot → timeline → kampaň** ✅ commit `b660c7a`
+   - `<SpotsDrawer>` toolbar tlačítko + 320 px slide-out s search + tabs + draggable kartičky (`lib/spot-drop-store.ts` + `SPOT_DRAG_MIME`)
+   - Drop targety na každém kanálovém řádku v timeline (`onDragOver` + `onDrop` v `components/timeline.tsx`)
+   - `<SpotDropModal>` s pre-fillem (drop date, +14 dní, zaškrtnutý drop kanál + opt-in další ze stejné země, "Schválit hned" toggle)
+   - Server action `createCampaignFromSpot(formData)` v `app/spots/actions.ts` (validuje že vybrané kanály jsou v zemi spotu, vytvoří campaign + campaign_channels + campaign_video pro tu zemi)
+   - Mismatched země → toast, žádný silent fail
+
+3. **Czech-formatted datum hint** ✅ commit `6d0d815` — `<DateRangeSummary>` pod `<input type="date">` v drop modalu + override dialogu (browser-locale-independent CZ display + dn validace).
+
+4. **toDateInputValue timezone fix** ✅ commit `cd3c75b` — předtím `toISOString().slice(0,10)` v non-UTC timezone shiftoval datumy o den. Teď používá lokální `getFullYear/Month/Date`.
+
 ## V2 — zbývající plán (z partnerovy schůzky)
 
 **Diskutované, partner+kolega potvrdili odložit:**
 
-1. **Drag-and-drop spotu z `/spots` do timeline** — partnerova vize. Cross-page DnD, vytvoří kampaň z přetaženého spotu. Velmi vizuální demo feature.
-2. **Inline modal pro `/spots/new`** z campaign formuláře — místo "otevřít v nové záložce + refresh" by se otevřel modal, po uložení by se nový spot rovnou objevil v dropdownu. Hezčí UX.
-3. **NAS sync** — automatický pull spotů z NAS adresáře (jmenná konvence pro country/chain mapping). Závislé na hosting strategii.
-4. **E-mailové notifikace** — SMTP (Atlas/Mailgun/Resend), upozornění na blížící se kampaně, schválení čeká, atd. _V V1 máme jen vizuální nudges (šrafování, dashed kroužky, filter chips, dashboard tiles, activity feed) — to partner akceptuje._
-5. **Release → Campaign hierarchie** — release jako parent kampaní (více kampaní per release: Pre-order, Launch, …). Aktuálně jsou kampaně samostatné, release = product.releaseDate informativně.
-6. **Stopáž smyčky** — spot má délku v sekundách, timeline ukazuje "ve smyčce máš 90s, mohlo by se hodit dalších 20s".
-7. **Re-approval po edit** — schválení je teď trvalé, V2 možná snapshot + invalidate.
-8. **Multi-PDF export** (víc kampaní v jednom souboru)
-9. **Per-user permissions / role**
-10. **Tisk / banner kampaně** — rozšíření modelu mimo video.
+1. **Inline modal pro `/spots/new`** z campaign formuláře — místo "otevřít v nové záložce + refresh" by se otevřel modal, po uložení by se nový spot rovnou objevil v dropdownu. Hezčí UX.
+2. **NAS sync** — automatický pull spotů z NAS adresáře (jmenná konvence pro country/chain mapping). Závislé na hosting strategii.
+3. **E-mailové notifikace** — SMTP (Atlas/Mailgun/Resend), upozornění na blížící se kampaně, schválení čeká, atd. _V V1 máme jen vizuální nudges (šrafování, dashed kroužky, filter chips, dashboard tiles, activity feed) — to partner akceptuje._
+4. **Release → Campaign hierarchie** — release jako parent kampaní (více kampaní per release: Pre-order, Launch, …). Aktuálně jsou kampaně samostatné, release = product.releaseDate informativně.
+5. **Stopáž smyčky** — spot má délku v sekundách, timeline ukazuje "ve smyčce máš 90s, mohlo by se hodit dalších 20s".
+6. **Re-approval po edit** — schválení je teď trvalé, V2 možná snapshot + invalidate.
+7. **Multi-PDF export** (víc kampaní v jednom souboru)
+8. **Per-user permissions / role**
+9. **Tisk / banner kampaně** — rozšíření modelu mimo video.
 
 **Wow upgrades pro klientské demo (volitelné):**
 
@@ -246,10 +258,11 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
 ## Klíčové soubory
 
 - `lib/db/schema.ts` — domain model (campaigns + spots + campaignVideos + campaignChannels s overrides + savedViews + ...)
-- `lib/db/queries.ts` — `findCampaignIds(filters)` (handles `approval` + `missingSpot`), `fetchTimelineCampaigns` (joinuje channels → countries → campaignVideos → spots → products + JS-side coalesce overrides), `getSpotsByCountry()` (form picker), `getFilterOptions`
+- `lib/db/queries.ts` — `findCampaignIds(filters)` (handles `approval` + `missingSpot`), `fetchTimelineCampaigns` (joinuje channels → countries → campaignVideos → spots → products + JS-side coalesce overrides), `getSpotsByCountry()` (form picker), `getSpotsForDrawer()` (timeline drawer flat list s deployment counts), `getFilterOptions`
 - `lib/utils.ts` — formátování, `computedRunState`, `snapToMondayStart`, locale-aware `formatMonthName`
 - `lib/i18n/{messages,server,client,country}.ts` + `lib/theme/server.ts`
 - `lib/peek-store.ts` — module-level subscriber pro peek panel
+- `lib/spot-drop-store.ts` — module-level subscriber pro drag-drop spot → timeline (PendingDrop, SPOT_DRAG_MIME)
 - `lib/communication.ts`, `lib/products.ts`, `lib/colors.ts`
 - `lib/campaign-video-form.ts` — `extractSpotsByCountry(formData)` čte `spotId_<countryId>` ze submit
 - `components/timeline.tsx` — Gantt + drag + tooltip + ContextMenu + collapsible groups + play button + dashed-circle no-spot marker + density toggle + share-link copy
@@ -259,6 +272,8 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
 - `components/channel-override-dialog.tsx` — per-retailer override editor
 - `components/campaign-form-body.tsx` — sdílený `/new` + `/edit` form (per-country spot dropdown)
 - `components/spot-form-body.tsx` — sdílený form pro `/spots/new` + `/spots/[id]`
+- `components/spots-drawer.tsx` — toolbar tlačítko + slide-out s draggable spot kartičkami
+- `components/spot-drop-modal.tsx` — modal po drop spotu na timeline (vytvoří kampaň)
 - `components/filter-bar.tsx` — URL-driven filtry + saved views + approval + missingSpot
 - `components/saved-views-menu.tsx`
 - `components/communication-badge.tsx`, `components/status-badge.tsx`
@@ -292,6 +307,8 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
 - **React 19 warning na `<script>` tagy** — proto je dark mode kompletně server-side (cookie + className), žádný inline FOUC script.
 - **Drizzle Date parsing** — auto-parsuje sloupce s `mode: "date"`, ne raw `sql<Date>` template. Kdykoliv potřebuješ COALESCE dvou date sloupců, dělej to v JS po `await db.select(...)`.
 - **Stale dev server** — když změníš schema.ts a dev server běží, runtime má cached prepared statementy a vidí "column does not exist" i když migrace prošla. Restart dev serveru to vyřeší.
+- **Date → "YYYY-MM-DD" musí být LOKÁLNÍ.** `toDateInputValue` v `lib/utils.ts` formátuje přes `getFullYear/Month/Date`, NE přes `toISOString()`. Předchozí ISO verze v non-UTC timezone (CEST = UTC+2) shiftovala lokální půlnoc o den dřív v UTC, takže výstup byl o den vedle. Postihovalo URL params, form pre-fill, drop modal — viz commit `cd3c75b`. Pravidlo: každá funkce která bere lokální Date a vrací string pro zobrazení nebo URL **musí používat lokální komponenty**.
+- **`<input type="date">` se rendruje v browser locale**, ne v naší aplikační locale. CZ uživatel s en-US Chrome vidí `2026-05-05`, ne `5. 5. 2026`. Můžeme dát `lang="cs-CZ"` jako hint (browsery to často ignorují) a/nebo přidat Czech-formatted helper line pod input (`<DateRangeSummary>` v drop modalu + override dialogu) — to je co děláme dnes.
 
 ## Patterns / konvence pro mutace
 
