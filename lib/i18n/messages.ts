@@ -272,6 +272,19 @@ const cs = {
   "spots.col.created": "Vytvořeno",
   "spots.empty.undeployed": "Žádné nenasazené spoty — všechno běží.",
   "spots.empty.generic": "Žádné spoty v této kategorii.",
+  "spots.empty.filtered":
+    "Žádný spot neodpovídá nastaveným filtrům. Zkus filtr uvolnit nebo Vymazat filtry.",
+  "spots.filter.search_placeholder": "Hledat (název, produkt, URL)…",
+  "spots.filter.all_products": "Všechny produkty",
+  "spots.filter.sort.created": "Nejnovější",
+  "spots.filter.sort.name": "Abecedně",
+  "spots.filter.sort.deployments": "Podle nasazení",
+  "spots.filter.group.country": "Po zemích",
+  "spots.filter.group.country_tooltip":
+    "Skupiny podle země — výchozí pro velkou knihovnu.",
+  "spots.filter.group.flat": "Plochý seznam",
+  "spots.filter.group.flat_tooltip":
+    "Bez seskupení — jeden seznam podle aktivního řazení.",
   "spots.undeployed_label": "Nenasazený",
   "spots.archived_at": "Archivováno {date}",
   "spots.play": "Přehrát",
@@ -801,6 +814,19 @@ const en: Record<keyof typeof cs, string> = {
   "spots.col.created": "Created",
   "spots.empty.undeployed": "No undeployed spots — everything's scheduled.",
   "spots.empty.generic": "No spots in this view.",
+  "spots.empty.filtered":
+    "No spot matches the current filters. Try relaxing them or click Clear filters.",
+  "spots.filter.search_placeholder": "Search (name, product, URL)…",
+  "spots.filter.all_products": "All products",
+  "spots.filter.sort.created": "Newest first",
+  "spots.filter.sort.name": "By name",
+  "spots.filter.sort.deployments": "By deployments",
+  "spots.filter.group.country": "Group by country",
+  "spots.filter.group.country_tooltip":
+    "Sections per country — default for a large library.",
+  "spots.filter.group.flat": "Flat list",
+  "spots.filter.group.flat_tooltip":
+    "No grouping — single list ordered by the active sort.",
   "spots.undeployed_label": "Undeployed",
   "spots.archived_at": "Archived {date}",
   "spots.play": "Play",

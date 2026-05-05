@@ -118,7 +118,7 @@ Klíčová vlastnost: **kampaň bez spotu je legitimní stav**, ne chyba. Vizuá
 - `/campaigns` — tabulka s filtry, hromadné akce, CSV export, saved views. Klik na řádek otevře peek (modifier-klik = nová záložka)
 - `/campaigns/[id]` — detail (kanály, per-country videa, komentáře, audit log, share, print, **approval state v hlavičce**). Pending země mají dashed amber box místo embedu + link "Přiřadit spoty".
 - `/campaigns/new`, `/campaigns/[id]/edit` — formuláře. `/new` se otevírá v modalu (intercepting routes) když navigovaný z `/` nebo `/campaigns`. **Per-country dropdown z knihovny spotů** + odkaz "+ Nový spot" (otevře `/spots/new` v nové záložce). "— žádný spot —" je validní volba pro plán-bez-produkce.
-- **`/spots`** — knihovna spotů, 4 záložky (**Nenasazené** | Nasazené | Všechny | Archiv). Default landing = Nenasazené. Tabulka: jméno + URL, produkt, země, deployment count, autor.
+- **`/spots`** — knihovna spotů. Primární přepínač: 4 záložky (**Nenasazené** | Nasazené | Všechny | Archiv) — default landing = Nenasazené. Pod nimi **filtrová řada** (search + země + produkt + sort + group toggle, URL-driven přes `?q=&country=&product=&sort=&group=`). Default zobrazení = **group by country** (collapsible sekce per země), volitelně přepínatelné na plochý seznam. Sort: nejnovější (default) | abecedně | podle počtu nasazení. Žádné složky — facetové filtry + auto-grouping nahrazují manuální hierarchii a škálují i na 100+ spotů bez maintenance burden.
 - **`/spots/new`** — registrace nového spotu (jméno volitelné, produkt find-or-create, země radio chips, URL).
 - **`/spots/[id]`** — detail s embed přehrávačem, seznam aktivních kampaní, edit, archivace, smazání (jen když není v žádné kampani).
 - `/admin/{countries,chains,channels,products,users,templates,import,archive,audit}` — interní CRUD.
@@ -214,7 +214,7 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
 1. **Spoty jako samostatná entita** ✅ commits `e39627d`, `0021d3e`, `a3383bd`, `cd61579`
    - Schema: `spots` table (product × country × URL + name + archive)
    - `campaign_video.spot_id NOT NULL` (refaktor z `video_url`)
-   - `/spots` admin (4 záložky: Nenasazené default, Nasazené, Všechny, Archiv)
+   - `/spots` admin (4 záložky: Nenasazené default, Nasazené, Všechny, Archiv) + filter řada (search, country, product, sort) + group-by-country toggle (default ON) — škáluje na 100+ spotů bez složek
    - `/spots/new`, `/spots/[id]` edit/archive/delete
    - Campaign formulář má per-country **dropdown z knihovny** + "+ Nový spot" link
    - Dashboard tile "Nenasazené spoty"
@@ -276,6 +276,7 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
 - `components/spot-form-body.tsx` — sdílený form pro `/spots/new` + `/spots/[id]`
 - `components/spots-drawer.tsx` — toolbar tlačítko + slide-out s draggable spot kartičkami
 - `components/spot-drop-modal.tsx` — modal po drop spotu na timeline (vytvoří kampaň)
+- `components/spots-filters.tsx` — URL-driven filtry pro `/spots` (search + country + product + sort + group toggle)
 - `components/filter-bar.tsx` — URL-driven filtry + saved views + approval + missingSpot
 - `components/saved-views-menu.tsx`
 - `components/communication-badge.tsx`, `components/status-badge.tsx`
