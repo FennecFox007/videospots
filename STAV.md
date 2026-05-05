@@ -132,6 +132,7 @@ Klíčová vlastnost: **kampaň bez spotu je legitimní stav**, ne chyba. Vizuá
 - **Bar context menu** — pravoklik na bar v timeline. Položky: Otevřít detail, Upravit, **Upravit jen tento řetězec**, **Schvaluji** / **Zrušit schválení**, **Sdílet odkaz** (jeden klik vygeneruje + zkopíruje share link), Posunout o týden ←/→, Klonovat, Cancel/Reactivate, Archive.
 - **Channel override dialog** — viz výše per-retailer sekce.
 - **SpotsDrawer + drag-and-drop** — toolbar tlačítko **📺 Spoty** v hlavičce timeline (s žlutým badge počtu nenasazených). Klik otevře 320 px slide-out drawer zprava: search + tabs (Nenasazené / Všechny) + spoty seskupené podle země. Karty jsou HTML5 draggable (`SPOT_DRAG_MIME`), drop targety jsou kanálové řádky v timeline. Drop validuje země: matching → otevře `<SpotDropModal>` s pre-fillem (název = jméno spotu, datum = drop position, end = +14 dní, zaškrtnutý jen ten kanál; volitelně další kanály ve stejné zemi); mismatched → toast "Spot je pro CZ, drop na SK".
+- **Ghost preview během dragu** — když držíš spot nad cílovým kanálem, ten řádek si rezervuje extra lane vespod (transition 150 ms na `height`), kanály pod ním se posunou dolů ("dělá se místo"). V té nové lane se kreslí přerušovaný indigo bar se jménem spotu a nad ním plovoucí pilulka s daty v CZ formátu (`5. 5. 2026 – 18. 5. 2026 (14 dní)`). Country mismatch → preview se neukáže, dropEffect="none". HTML5 spec hides `dataTransfer.getData()` v `dragover`, proto držíme paralelní `currentDrag` v `lib/spot-drop-store.ts`, set v drawer `onDragStart`, read sync v timeline `onDragOver`.
 - **DateRangeSummary helper** pod `<input type="date">` v drop modalu i override dialogu — `<input type="date">` se renderuje v browser locale (často `YYYY-MM-DD` v en-US), tak pod ním vždy ukazujeme `→ 5. 5. 2026 – 18. 5. 2026 (14 dní)` v CZ formátu jako pojistku.
 - **Public campaign modal** v share-timeline view — klik na bar otevře malý modal s videem (per-country) + metadaty + approved badge (jen info).
 - **Timeline drag pan**: chytni hlavičku → posun v čase, **shift+drag** = snap na pondělí, **dvojklik** = skok na dnešek
@@ -222,9 +223,11 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
    - "Spot pending" je viditelný stav (dashed kroužek na barech, amber box v detailu)
    - Migrace dat proběhla idempotentně (1× per DB, scripts už smazaný)
 
-2. **Drag-and-drop spot → timeline → kampaň** ✅ commit `b660c7a`
+2. **Drag-and-drop spot → timeline → kampaň** ✅ commits `b660c7a`, `f86d992`, `d19d63f`
    - `<SpotsDrawer>` toolbar tlačítko + 320 px slide-out s search + tabs + draggable kartičky (`lib/spot-drop-store.ts` + `SPOT_DRAG_MIME`)
    - Drop targety na každém kanálovém řádku v timeline (`onDragOver` + `onDrop` v `components/timeline.tsx`)
+   - **Ghost preview během dragu**: cílový kanál si nafoukne výšku o jednu lane (CSS transition), v té lane se kreslí přerušovaný indigo bar + plovoucí pilulka s CZ daty. Kanály pod cílem se posunou dolů. Country mismatch → preview se neukáže, dropEffect="none".
+   - Workaround pro HTML5 spec: `dataTransfer.getData()` není přístupný v `dragover`, proto držíme paralelní `currentDrag` modul state, set v drawer `onDragStart`, read sync v timeline `onDragOver`.
    - `<SpotDropModal>` s pre-fillem (drop date, +14 dní, zaškrtnutý drop kanál + opt-in další ze stejné země, "Schválit hned" toggle)
    - Server action `createCampaignFromSpot(formData)` v `app/spots/actions.ts` (validuje že vybrané kanály jsou v zemi spotu, vytvoří campaign + campaign_channels + campaign_video pro tu zemi)
    - Mismatched země → toast, žádný silent fail
@@ -262,7 +265,7 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
 - `lib/utils.ts` — formátování, `computedRunState`, `snapToMondayStart`, locale-aware `formatMonthName`
 - `lib/i18n/{messages,server,client,country}.ts` + `lib/theme/server.ts`
 - `lib/peek-store.ts` — module-level subscriber pro peek panel
-- `lib/spot-drop-store.ts` — module-level subscriber pro drag-drop spot → timeline (PendingDrop, SPOT_DRAG_MIME)
+- `lib/spot-drop-store.ts` — module-level subscriber pro drag-drop spot → timeline (PendingDrop, SPOT_DRAG_MIME) + `currentDrag` paralelní state pro live preview (HTML5 omezení v dragover)
 - `lib/communication.ts`, `lib/products.ts`, `lib/colors.ts`
 - `lib/campaign-video-form.ts` — `extractSpotsByCountry(formData)` čte `spotId_<countryId>` ze submit
 - `components/timeline.tsx` — Gantt + drag + tooltip + ContextMenu + collapsible groups + play button + dashed-circle no-spot marker + density toggle + share-link copy
