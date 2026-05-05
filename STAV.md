@@ -43,7 +43,8 @@ Next.js 16 aplikace pro plánování video spotů v retail zobrazovačích PlayS
 - **`campaignChannels`** — junction (campaign × channel) **+ overrides**: `startsAt`, `endsAt`, `cancelledAt` (všechny nullable; null = inherit master). Per-retailer schedule.
 - **`campaignVideos`** — junction (campaign × country) → `spot_id` NOT NULL. Připojuje konkrétní spot k tomu, jak ho kampaň v dané zemi nasazuje. Pokud je tahle row pro (kampaň, země) chybí = "spot ještě nepřiřazen" (kampaň je naplánovaná, čeká se na produkci).
 - `savedViews` — per-user pojmenované filter bookmarks (scope: timeline | campaigns)
-- `auditLog` (userId nullable — historicky pro public approve, dnes vždy auth), `comments`, `shareLinks`, `campaignTemplates`
+- `auditLog` (userId nullable — historicky pro public approve, dnes vždy auth), `comments`, `campaignTemplates`
+- `shareLinks` — public read-only odkazy (`/share/[token]`). Lifecycle: `expiresAt` (nullable, ale UI nabízí jen 7/30/90 dnů — žádné "bez expirace") + `revokedAt`/`revokedById` pro soft-revoke + volitelný `label` text pro orientaci v management listu. Aktivní = `revokedAt IS NULL AND (expiresAt IS NULL OR expiresAt > now)`. Centralizováno v `lib/db/queries.ts:shareLinkIsActive(now)` + `shareLinkStatus({...})`.
 
 ## Schvalovací flow
 
@@ -121,7 +122,8 @@ Klíčová vlastnost: **kampaň bez spotu je legitimní stav**, ne chyba. Vizuá
 - **`/spots`** — knihovna spotů. Primární přepínač: 4 záložky (**Nenasazené** | Nasazené | Všechny | Archiv) — default landing = Nenasazené. Pod nimi **filtrová řada** (search + země + produkt + sort + group toggle, URL-driven přes `?q=&country=&product=&sort=&group=`). Default zobrazení = **group by country** (collapsible sekce per země), volitelně přepínatelné na plochý seznam. Sort: nejnovější (default) | abecedně | podle počtu nasazení. Žádné složky — facetové filtry + auto-grouping nahrazují manuální hierarchii a škálují i na 100+ spotů bez maintenance burden.
 - **`/spots/new`** — registrace nového spotu (jméno volitelné, produkt find-or-create, země radio chips, URL).
 - **`/spots/[id]`** — detail s embed přehrávačem, seznam aktivních kampaní, edit, archivace, smazání (jen když není v žádné kampani).
-- `/admin/{countries,chains,channels,products,users,templates,import,archive,audit}` — interní CRUD.
+- `/admin/{countries,chains,channels,products,users,templates,share-links,import,archive,audit}` — interní CRUD.
+- **`/admin/share-links`** — globální přehled veřejných sdílených odkazů. Status filter chips (Aktivní / Expirované / Deaktivované / Všechny) s počtem v každém bucketu (přes `count(*) FILTER`). Sloupce: stav, cíl (kampaň-typovaný link je clickable na detail; timeline-typovaný ukazuje stručný preview filterů), štítek, vytvořeno (kdy + kdo), platnost, akce (Kopírovat / Prodloužit / Deaktivovat).
 - `/share/[token]` — public read-only (kampaň nebo timeline). **Žádné akční formuláře** — informační jen.
 - `/print/{campaigns/[id],timeline}` — printable PDF. Detail má QR kód.
 
@@ -282,17 +284,11 @@ Tři paralelní audity (consistency / DB / UI) prošly celou code base a vyextra
 - Tranše 9: Dropnuto z `schema.ts`: `accounts`, `sessions`, `verificationTokens` tabulky (Auth.js Drizzle adapter scaffolding — my používáme JWT-only Credentials, žádný DB session backend) + `users.emailVerified`, `users.image` sloupce. Drizzle relations pro accounts/sessions taky odstraněné.
 - Tranše 10: Dropnuto z `schema.ts`: `products.igdbId/slug/rawIgdb/fetchedAt` — IGDB integrace je explicitně v "out of scope".
 
-## Schema drift (Tier 3 soft-removal)
+## Schema drift (Tier 3 soft-removal) — vyřešeno (2026-05)
 
-DB pořád má všechny dropnuté sloupce/tabulky jako orphan storage. Kód je nikdy nereferencuje, takže INSERT/UPDATE/SELECT je ignorují (drizzle generuje queries z deklarací, ne z `SELECT *`). Důvod soft-removal: vyhnout se DB migraci v dev/Cloudflare Tunnel režimu kde to není pain-point.
+Při `db:push --force` pro share-link lifecycle (commit `190ac48`) drizzle-kit detekoval všechny Tier 3 orphan sloupce a tabulky a vyhodil je: `account` / `session` / `verificationToken` tabulky, `user.emailVerified` + `image`, `campaign.video_url`, `game.igdb_id` / `slug` / `raw_igdb` / `fetched_at`, `spot.rejected_at` / `rejection_reason` / `rejected_by_id`. **Schéma + DB jsou teď v plném souladu.**
 
-**Co to znamená v praxi:**
-- `psql` proti DB ukáže navíc: `account`, `session`, `verificationToken` tabulky; `user.emailVerified`, `user.image` sloupce; `campaign.video_url`; `game.igdb_id`, `game.slug`, `game.raw_igdb`, `game.fetched_at`. Jsou prázdné nebo z dávných writes.
-- App nic z toho nečte ani nepíše. Funkčně to neovlivní.
-- `npm run db:push` v budoucnu detekuje drift a navrhne `DROP COLUMN/TABLE`. V tu chvíli to potvrdíš a DB se sjednotí.
-- **Recovery**: kdybys někdy chtěl IGDB / Auth.js DB sessions / atd., vrátíš deklarace do `schema.ts` z gitové historie (`git show HEAD~N:lib/db/schema.ts`). DB sloupce/tabulky tam sedí, takže žádná migrace nepotřeba.
-
-**Až přijde produkční nasazení:** v rámci first deploy migrace pustit `npm run db:push --force` proti prod DB. Drizzle-kit detekuje drift, navrhne `DROP COLUMN/TABLE` pro orphans, ty potvrdíš, prod DB se sjednotí se schématem.
+**Recovery při znovuvzniku potřeby**: deklarace v `schema.ts` z gitové historie (`git show HEAD~N:lib/db/schema.ts`) + nový `db:push` znovu vytvoří sloupce/tabulky. Data ze starých orphans jsou pryč, ale ty stejně nikdo nepoužíval.
 
 **🔵 Tier 4 — i18n gaps (CS/EN parita):** ✅
 - Tranše 11: Hardcoded CS stringy lokalizované — `saved-views-menu.tsx` (toast/prompt/confirm/empty/aria + summarizePayload labels), `activity-feed.tsx` (`ACTION_VERB` mapa pro CS gendered + EN simple, "Aktivita" header, "Žádná aktivita.", "Zobrazit kompletní audit log", "neznámý"), `campaigns-table.tsx` (3 aria-labels checkboxů), 3× close-button `aria-label="Zavřít"` (route-modal, public-timeline, dialog-provider) → `t("common.close")`, `nav.tsx` Cmd+K tooltip. Nové i18n klíče v `lib/i18n/messages.ts`: `nav.search_shortcut_tooltip`, `activity_feed.*`, `saved_views.*` (~30 klíčů), `campaigns_table.aria.*`.
@@ -405,6 +401,18 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
   - StatCard získal volitelné `icon` + `iconTone` props (emerald/blue/violet/pink/amber/zinc). Wired up: Celkem=Play emerald, Čeká=CheckCircle2 blue, Aktivita=Activity violet, Nenasazené=Megaphone pink.
   - Toolbar: "Seznam" odstraněn (duplikát s top nav), Tisk dostal `Printer`, "+ Nová kampaň" `Plus`, Sdílet `Share2`. SpotsDrawer 📺 emoji → `Bookmark` icon (konzistentní s Lucide stroke aesthetikou).
   - **Top nav active state** v `components/nav-link.tsx`: NavLink přesunut do client componentu s `usePathname()`. Active = bolder text + blue `border-b-2`. Inactive = `border-transparent`, na hoveru jemné `border-zinc-200`. Fixovat po commitu `933634d`: původní absolute-positioned underline na `bottom: -7px` poukazoval pod link; kontejner s `overflow-x-auto` (mobile horizontal scroll) automaticky forsil `overflow-y: auto` a underline trčící ven triggeroval vertical scrollbar v navu. `border-b-2` na linku to fixuje (žádný absolute trick).
+- **Share link lifecycle** (commits `190ac48` + `64c0221`) — odkazy `/share/[token]` jsou teď first-class objekty s explicitním lifecycle.
+  - **Schema** (`db:push --force`): `share_link.label` TEXT, `share_link.revoked_at` + `revoked_by`. Soft-revoke (řádek zůstává pro audit trail "kdo revoknul, kdy, jaký link"). Bonusem `db:push` uklidil všechny Tier 3 soft-removal orphans, schéma + DB jsou teď synchronizované.
+  - **Server actions** v `app/campaigns/[id]/actions.ts`:
+    - `createCampaignShareLink(campaignId, { expiresInDays?, label? })` + `createTimelineShareLink(filters, { expiresInDays?, label? })` — povolené presety **7 / 30 / 90 dní**, default 30. Žádné "bez expirace" volby (NDA — každý public link má mít sunset). `normaliseExpiryDays()` defenduje runtime input proti exotickým hodnotám.
+    - `revokeShareLink(id)` — idempotentní (revoke už revoknutého linku = no-op + žádný druhý audit row). Audit `changes` payload zaznamená type/label/campaignId, takže entry přežije i když by `share_link` row někdy byl GC'd.
+    - `extendShareLink(id, days)` — extenduje od `max(now, currentExpiry)`, takže prodloužení dlouho mrtvého linku dá realnou validitu místo DOA timestampu. Odmítá revoked rows ("vytvoř nový místo unrevoke").
+  - **Centralizovaný "active" predikát** v `lib/db/queries.ts`: `shareLinkIsActive(now)` (Drizzle WHERE fragment) + `shareLinkStatus({...}, now)` (active|expired|revoked) — single source of truth, používá `/share/[token]` lookup, per-campaign list i admin page.
+  - **UI primitivy**:
+    - `<ShareCreateForm>` — sdílený popover (22rem wide, absolutně poziciovaný pod trigger) s expiry chips na jednom řádku + label input. Outside-click + Esc dismiss. `align="left|right"` pro správné anchorování (right pro TimelineShareButton vpravo v toolbaru, jinak left).
+    - `<ShareButton>` + `<TimelineShareButton>` mají 3-state machine (idle → configuring → showing). Trigger v configuring stavu zmodří. Předtím inline-flex stlačoval form na ~150px na úzkém toolbaru — popover refaktor v `64c0221` to opravil.
+  - **Per-campaign management** — nová sekce "Sdílené odkazy" na `/campaigns/[id]` s `<CampaignShareLinks>` (klient): seznam aktivních odkazů s **Kopírovat / Prodloužit (+30d) / Deaktivovat**, neaktivní pod `<details>` toggle. Server queries do detail page přidají LEFT JOINy pro creator + revoker user (alias `users` table dvakrát).
+  - **Audit log**: nové verby `revoked` → "deaktivoval(a)" + `extended` → "prodloužil(a)" v `/admin/audit` ACTION_LABELS i v activity-feed dropdown verb mapě. i18n CS+EN parita v `share_form.*`, `share_links.*`, `admin.share_links.*`, `admin.tab.share_links`, `activity_feed.action.{revoked,extended}`.
 - **Chrome ikony polish** (commit `b1af27b`) — sjednocení emoji glyphů s Lucide stroke vocabulary v chrome surfaces. Žádné DB ani behavior změny.
   - **Nové primitivy:**
     - `components/country-badge.tsx` — `<CountryBadge code flag size="xs|sm|md">`. Emoji vlajka v malém zaobleném chipu (`bg-zinc-50 ring-1 ring-zinc-200`). Fallback na 🌐 dot když `flag === null` (nezhroutí layout). Tooltip = ISO kód, `aria-hidden` (název země zůstává v sousedním textu).
@@ -417,7 +425,7 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 ## Klíčové soubory
 
 - `lib/db/schema.ts` — domain model (campaigns + spots + campaignVideos + campaignChannels s overrides + savedViews + ...)
-- `lib/db/queries.ts` — `findCampaignIds(filters)` (handles `approval` + `missingSpot`), `fetchTimelineCampaigns` (joinuje channels → countries → campaignVideos → spots → products + JS-side coalesce overrides), `getSpotsByCountry()` (form picker), `getSpotsForDrawer()` (timeline drawer flat list s deployment counts), `getFilterOptions`
+- `lib/db/queries.ts` — `findCampaignIds(filters)` (handles `approval` + `missingSpot`), `fetchTimelineCampaigns` (joinuje channels → countries → campaignVideos → spots → products + JS-side coalesce overrides), `getSpotsByCountry()` (form picker), `getSpotsForDrawer()` (timeline drawer flat list s deployment counts), `getFilterOptions`, `shareLinkIsActive(now)` + `shareLinkStatus({...})` (centralizovaný share-link active/expired/revoked predikát)
 - `lib/utils.ts` — formátování, `computedRunState`, `snapToMondayStart`, locale-aware `formatMonthName`
 - `lib/i18n/{messages,server,client,country}.ts` + `lib/theme/server.ts`
 - `lib/peek-store.ts` — module-level subscriber pro peek panel
@@ -444,18 +452,22 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 - `components/communication-badge.tsx`, `components/status-badge.tsx`
 - `components/country-badge.tsx` — emoji vlajka v rounded chipu (`xs/sm/md`), fallback 🌐 když flag null
 - `components/product-kind-icon.tsx` — Lucide ikona pro product kind (Gamepad2/Monitor/Joystick/Headphones/ShoppingBag/Package)
+- `components/share-create-form.tsx` — popover formulář pro vytvoření share linku (expiry chips 7/30/90 + volitelný label), sdílený mezi `<ShareButton>` + `<TimelineShareButton>`. `align="left|right"` určuje anchor edge.
+- `components/campaign-share-links.tsx` — per-campaign management list pod ShareButton na `/campaigns/[id]` (Kopírovat / Prodloužit / Deaktivovat, neaktivní v `<details>` toggle).
+- `components/share-link-admin-actions.tsx` — per-row akce na `/admin/share-links` (mirror `<CampaignShareLinks>` ale server-rendered do tabulkové buňky).
 - `components/route-modal.tsx` — generic shell pro intercepting-route modaly
 - `components/dialog/dialog-provider.tsx` — Toast + Confirm + Prompt
 - `components/locale-switcher.tsx`, `components/dark-mode-toggle.tsx`
 - `components/video-embed.tsx`
 - `app/@modal/(.)campaigns/new/page.tsx` — intercepting modal pro novou kampaň (jen `/new` zůstal po předchozí stabilizaci)
 - `app/api/campaigns/[id]/peek/route.ts` — JSON endpoint pro peek panel (vrací all-countries-with-optional-spot tvar)
-- `app/campaigns/[id]/actions.ts` — server actions (clone/cancel/move/archive/**approveCampaign**/**clearCampaignApproval**/**setChannelOverride**/**clearChannelOverride**/**createCampaignShareLink**/...)
+- `app/campaigns/[id]/actions.ts` — server actions (clone/cancel/move/archive/**approveCampaign**/**clearCampaignApproval**/**setChannelOverride**/**clearChannelOverride**/**createCampaignShareLink**/**createTimelineShareLink**/**revokeShareLink**/**extendShareLink**/...)
 - `app/campaigns/[id]/edit/actions.ts` — `updateCampaign` s diff audit logem (audit klíč `videos` porovnává `<countryId>:<spotId>` arrays)
 - `app/campaigns/[id]/page.tsx` — detail + humanizeAuditEntry + approval pill/buttons + per-country spot pending boxes
 - `app/spots/{page,actions}.tsx` — knihovna spotů + create/update/archive/unarchive/delete server actions
 - `app/spots/{new,[id]}/page.tsx` — create + detail/edit pages
 - `app/saved-views/actions.ts`
+- `app/admin/share-links/page.tsx` — globální admin přehled veřejných odkazů (status filter chips, status counts cez `count(*) FILTER`, payload type rendering, click-through na kampaň pro campaign-typed odkazy)
 - `app/actions/{set-locale,set-theme}.ts`
 - `auth.config.ts` — public allow-list (`/sign-in`, `/api/auth`, `/share/`, `/favicon.ico`). **Žádný `/api/share/`** — všechny mutace jsou auth-gated.
 - `public/file.svg`, `public/globe.svg`, `public/next.svg`, `public/vercel.svg`, `public/window.svg` — defaults. **Žádný `/public/theme-init.js`** (přesunuto na cookie).
