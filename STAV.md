@@ -346,7 +346,7 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 
 **E. Test infrastructure foundation** — vitest setup, 5-7 smoke testů pro kritické server actions: `createCampaignFromSpot`, `approveCampaign`, `setChannelOverride`, `createSpotForPicker`, `deleteUser`, `updateCampaign`. Nepokrývá vše, ale zachytí regresi v hlavních flowech (drag-drop ghost bug, audit join bug, filter forwarding bug — vše bychom měli teoreticky testem chytit). ~půlden.
 
-**F. Cmd+K → spoty + admin entities** — search palette teď indexuje jen kampaně + produkty. Hledat "SAROS" by mělo najít i spoty. Hledat "Datart" → channels admin. Extend `app/api/search/route.ts` o spot + admin branches. ~1 hod.
+**F. Cmd+K → spoty + admin entities** ✅ částečně shipped — Cmd+K teď hledá v spotech (name / product name / videoUrl / country code). Match limit: 6 kampaní + 6 spotů + 3 produkty. Spot result má dot v emerald (schváleno) / amber (čeká) — instantní status v palette. Stále chybí: hledání admin entities (channels / chains / countries) — odložené, nízká priorita.
 
 ### 🥉 Polish, až bude prostor
 

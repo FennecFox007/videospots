@@ -116,7 +116,7 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onInputKey}
-            placeholder="Hledat kampaně, hry, klienty…"
+            placeholder="Hledat kampaně, spoty, produkty…"
             className="flex-1 bg-transparent text-sm focus:outline-none"
           />
           <kbd className="text-[10px] text-zinc-400 border border-zinc-200 dark:border-zinc-700 rounded px-1 py-0.5">
@@ -126,7 +126,7 @@ export function CommandPalette() {
         <div className="max-h-96 overflow-y-auto">
           {!query.trim() && (
             <div className="px-4 py-8 text-center text-sm text-zinc-500">
-              Začni psát… (například „Saros", „SIE", „PS5")
+              Začni psát… (například „Saros", „SIE", „CZ", „youtu")
             </div>
           )}
           {query.trim() && results.length === 0 && (
@@ -170,9 +170,9 @@ export function CommandPalette() {
                   <span className="text-[10px] text-zinc-400 uppercase tracking-wide">
                     {r.type === "campaign"
                       ? "kampaň"
-                      : r.type === "product"
-                        ? "produkt"
-                        : "klient"}
+                      : r.type === "spot"
+                        ? "spot"
+                        : "produkt"}
                   </span>
                 </button>
               </li>
