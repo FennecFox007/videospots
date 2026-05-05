@@ -24,16 +24,6 @@ export function toDateInputValue(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Inclusive overlap test: do [aStart,aEnd] and [bStart,bEnd] share any time? */
-export function dateRangesOverlap(
-  aStart: Date,
-  aEnd: Date,
-  bStart: Date,
-  bEnd: Date
-): boolean {
-  return aStart < bEnd && aEnd > bStart;
-}
-
 // ---------------------------------------------------------------------------
 // Date formatting (Czech locale)
 // ---------------------------------------------------------------------------

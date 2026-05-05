@@ -9,15 +9,20 @@ import { db, savedViews } from "@/lib/db/client";
 // `template`, `sort`, `order` from the campaigns list) are intentionally NOT
 // included — sort order especially is a per-session preference, not a saved
 // filter intent.
+//
+// Must mirror what FilterBar can produce. Earlier this list was missing
+// `approval` + `missingSpot` (silently dropped on save) and still carried
+// `client` + `communicationType` after those filters were removed (saved
+// dead keys). Now: only the live FilterBar params.
 const ALLOWED_PARAMS = [
   "q",
   "country",
   "chain",
-  "client",
   "status",
   "runState",
+  "approval",
+  "missingSpot",
   "tag",
-  "communicationType",
   "from",
   "to",
 ] as const;

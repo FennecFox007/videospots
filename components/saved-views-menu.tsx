@@ -4,7 +4,8 @@
 // offers an "Uložit aktuální" action. Lives inside the FilterBar.
 //
 // Saved-view = a named bookmark of URL filter params (q, country, chain,
-// runState, communicationType, …). Click loads it via router.push, so it
+// runState, approval, missingSpot, tag, …). Canonical allowlist lives in
+// app/saved-views/actions.ts. Click loads it via router.push, so it
 // behaves identically to navigating to a typed URL.
 
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -218,9 +219,9 @@ function summarizePayload(payload: Record<string, string>): string {
     q: "hledání",
     country: "stát",
     chain: "řetězec",
-    client: "klient",
     runState: "stav",
-    communicationType: "typ",
+    approval: "schválení",
+    missingSpot: "bez spotu",
     tag: "štítek",
     from: "od",
     to: "do",

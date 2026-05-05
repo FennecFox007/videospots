@@ -79,4 +79,8 @@ export async function deleteProduct(productId: number) {
   await db.delete(products).where(eq(products.id, productId));
   revalidatePath("/admin/products");
   revalidatePath("/releases");
+  // Timeline + list both display the product name on each campaign card,
+  // so a deleted product needs to flush those too.
+  revalidatePath("/");
+  revalidatePath("/campaigns");
 }

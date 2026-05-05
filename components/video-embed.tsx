@@ -5,7 +5,6 @@
 // Used on:
 //  - /campaigns/[id] detail page (Video section)
 //  - /share/[token] public campaign view
-//  - <VideoPlayerModal> opened from timeline play button
 //
 // Note: we DO want autoplay in modal context but NOT in inline detail page —
 // callers can pass `autoplay` to control. Default = no autoplay (safer).

@@ -116,8 +116,8 @@ export async function findCampaignIds(
 ): Promise<number[]> {
   const where = await buildWhere(filters);
 
-  // Always join through channels/countries/chains/games so any filter that
-  // references those tables resolves correctly. The DISTINCT is required
+  // Always join through channels/countries/chains/products so any filter
+  // that references those tables resolves correctly. The DISTINCT is required
   // because a campaign with N channels would otherwise return N rows.
   const rows = await db
     .selectDistinct({ id: campaigns.id })

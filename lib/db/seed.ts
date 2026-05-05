@@ -20,7 +20,6 @@ import {
   chains,
   channels,
   users,
-  campaigns,
 } from "./client";
 
 const DESIRED_COUNTRIES = [
@@ -119,13 +118,6 @@ async function main() {
       passwordHash: bcrypt.hashSync("admin", 10),
     })
     .onConflictDoNothing();
-
-  // Approval workflow was removed — promote any leftover drafts.
-  console.log("→ Promoting any leftover draft campaigns to approved...");
-  await db
-    .update(campaigns)
-    .set({ status: "approved" })
-    .where(eq(campaigns.status, "draft"));
 
   const finalChannels = await db.select().from(channels);
   console.log(

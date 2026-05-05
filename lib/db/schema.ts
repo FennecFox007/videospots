@@ -138,9 +138,6 @@ export const products = pgTable("game", {
   fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
 });
 
-/** @deprecated Renamed to `products`. Kept as an alias for incremental migration. */
-export const games = products;
-
 // Campaign = a video spot scheduled for a date range on a set of channels.
 //
 // Status: there's no draft/approval workflow — a campaign is either active or
@@ -275,10 +272,9 @@ export const spots = pgTable("spot", {
 // (campaign, country) primary key still enforces "one spot per country per
 // campaign" without needing a check constraint.
 //
-// Migration path: previous schema kept video_url directly on this row. The
+// Historical: previous schema kept video_url directly on this row. The
 // 2026-05 spots refactor moved URLs into the spots table and replaced
-// video_url with spot_id. spotId is nullable during the migration window;
-// once the backfill completes it'll be NOT NULL.
+// video_url with spot_id (NOT NULL).
 export const campaignVideos = pgTable(
   "campaign_video",
   {
@@ -349,8 +345,9 @@ export const campaignTemplates = pgTable("campaign_template", {
 });
 
 // Per-user named filter bookmarks. A "saved view" is just a stored set of
-// URL search-params (q, country, chain, runState, communicationType, …)
-// scoped to a particular page ("timeline" or "campaigns"). Click loads them.
+// URL search-params (q, country, chain, runState, approval, missingSpot,
+// tag, from, to) scoped to a particular page ("timeline" or "campaigns").
+// Canonical allowlist lives in app/saved-views/actions.ts. Click loads them.
 //
 // Keeping this per-user (not shared) by design — different team members care
 // about different slices, and a global "shared filters" list invites bikeshed.

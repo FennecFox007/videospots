@@ -239,16 +239,16 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
 
 Tři paralelní audity (consistency / DB / UI) prošly celou code base a vyextrahovali ~40 reálných issues. Plán je rozdělený na tranše seřazené podle priority. Detail viz commity, tady jen přehled stavu.
 
-**🔴 Tier 1 — Kritické bugy (data-integrity, audit, filter-forwarding):**
-- Tranše 1: `auditLog ⟕ campaigns` JOIN bez `entity='campaign'` filtru → AI digest ukáže špatný campaign name vedle non-campaign audit entry. `channels.country_id` + `chain_id` cascade-deletujou všechny campaign_channels při smazání země.
-- Tranše 2: Audit log humanization — `action="approved"` se renderuje jako raw "approved" string. `clearCampaignApproval` / `setChannelOverride` / `clearChannelOverride` audit entries jsou v detail page neviditelné (humanizer nezná jejich `changes` shape).
-- Tranše 3: Filter forwarding — `/api/export/campaigns`, `/print/timeline`, `/share/[token]` nepředávají `approval` ani `missingSpot` filtry. CSV/print ignoruje aktivní filtry.
+**🔴 Tier 1 — Kritické bugy (data-integrity, audit, filter-forwarding):** ✅ commit `b669eae`
+- Tranše 1: `auditLog ⟕ campaigns` JOIN ve 3 místech (admin/audit/actions+page, components/nav) bez `entity='campaign'` filtru → spot/user id by silently přilepil špatný campaign name v aktivitě. Přidáno `and(entity='campaign', entityId=campaigns.id)`. `channels.country_id`/`chain_id` + `spots.country_id` přepnuté z `cascade` na `restrict` — admin nemůže nedopatřením smazat zemi a vzít s sebou všechny campaign_channels rows.
+- Tranše 2: Audit log humanization — `action="approved"` (raw EN slovo) → "schválil(a) kampaň" + volitelná poznámka. `approvalCleared`, `channelOverride`, `channelOverrideCleared` mají vlastní humanized branche místo fallback "upravil(a) kampaň".
+- Tranše 3: Filter forwarding — `/api/export/campaigns`, `/print/timeline`, `/share/[token]` nyní propaguji `approval` + `missingSpot` filtry.
 
-**🟡 Tier 2 — Cleanup (high yield, low risk):**
-- Tranše 4: Saved-views `ALLOWED_PARAMS` + `createTimelineShareLink` ALLOWED list — drop dead `client`/`communicationType`, **add missing `approval`/`missingSpot`** (reálný bug: ukládání Pohledu silently dropuje tyhle dva filtry).
-- Tranše 5: Dead code/files — `scripts/migrate-video-urls.ts` (legacy migrace, dnes by hodila SQL error), `components/video-player-modal.tsx` (žádný import), `lib/db/schema.ts:135 export const games` alias, `lib/utils.ts dateRangesOverlap`.
-- Tranše 6: Stale comments — schema.ts:269-271 "spotId nullable during migration" (backfill je dávno hotový, sloupec NOT NULL), schema.ts:341 saved_view payload obsahuje `communicationType`, queries.ts:119 "games" místo "products".
-- Tranše 7: Server action revalidation — `cancelCampaign`/`reactivateCampaign` chybí `revalidatePath("/campaigns")`, `deleteProduct` chybí `revalidatePath("/")` + `/campaigns`.
+**🟡 Tier 2 — Cleanup (high yield, low risk):** ✅
+- Tranše 4: Saved-views `ALLOWED_PARAMS` + `createTimelineShareLink` ALLOWED list — drop dead `client`/`communicationType`, **add missing `approval`/`missingSpot`** (reálný bug: ukládání Pohledu silently dropovalo tyhle dva filtry). Schema.ts saved_view komentář aktualizovaný. `summarizePayload` v saved-views-menu má updated label mapu.
+- Tranše 5: Dead code/files smazány — `scripts/migrate-video-urls.ts` (legacy migrace), `components/video-player-modal.tsx` (žádný import), `lib/db/schema.ts export const games` alias, `lib/utils.ts dateRangesOverlap`, seed.ts "promote draft to approved" leftover (workflow byl odstraněn dávno).
+- Tranše 6: Stale comments — schema.ts spotId migration-window note (backfill je dávno hotový), schema.ts saved_view payload příklad, queries.ts "games" → "products", saved-views-menu header komentář.
+- Tranše 7: Server action revalidation — `cancelCampaign`/`reactivateCampaign` přidaly `revalidatePath("/campaigns")`, `deleteProduct` přidalo `revalidatePath("/")` + `/campaigns` (timeline + list zobrazují product name na cards).
 
 **🟢 Tier 3 — Schema hygiena (vyžaduje migraci):**
 - Tranše 8: Drop dead `campaigns.videoUrl` column. Píše se vždy `null`, čte ho jen CSV (vrací prázdný string) a templates (vždy null). Per-country URLs jsou na `spots`. Zahrnuje DROP COLUMN migraci, remove z CSV/templates/insert+update.

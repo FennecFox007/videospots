@@ -37,6 +37,10 @@ export async function cancelCampaign(campaignId: number) {
   });
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath("/");
+  // /campaigns table shows status badges — without this, cancelling from
+  // peek/timeline left the list view stale until something else triggered
+  // a refresh.
+  revalidatePath("/campaigns");
 }
 
 /** Inline-rename a campaign without touching anything else. */
@@ -86,6 +90,7 @@ export async function reactivateCampaign(campaignId: number) {
   });
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath("/");
+  revalidatePath("/campaigns");
 }
 
 // ---------------------------------------------------------------------------
@@ -166,16 +171,20 @@ export async function createTimelineShareLink(
   const userId = await requireUser();
 
   // Whitelist params we recognize — drop anything else so a malicious caller
-  // can't stuff arbitrary keys into the JSONB payload.
+  // can't stuff arbitrary keys into the JSONB payload. Must mirror the live
+  // FilterBar; earlier this listed `client` (filter removed) and missed
+  // `approval` + `missingSpot` (so share links of "Čeká na schválení" views
+  // silently shipped everything).
   const ALLOWED = [
     "from",
     "to",
     "q",
     "country",
     "chain",
-    "client",
     "status",
     "runState",
+    "approval",
+    "missingSpot",
     "tag",
   ] as const;
   const safe: Record<string, string> = {};
