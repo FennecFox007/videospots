@@ -1057,9 +1057,18 @@ export function Timeline({
                     // PendingDrop into spot-drop-store, which the modal
                     // mounted at page level reacts to.
                     onDragOver={(e) => {
-                      if (!e.dataTransfer.types.includes(SPOT_DRAG_MIME)) {
-                        return;
+                      // `types` can be either Array or DOMStringList depending
+                      // on the browser; iterate manually so .includes() not
+                      // being on the prototype isn't fatal.
+                      const types = e.dataTransfer.types;
+                      let hasMime = false;
+                      for (let i = 0; i < types.length; i++) {
+                        if (types[i] === SPOT_DRAG_MIME) {
+                          hasMime = true;
+                          break;
+                        }
                       }
+                      if (!hasMime) return;
                       e.preventDefault();
                       // Country match? If yes, allow drop + paint ghost
                       // preview; if no, set dropEffect="none" so the cursor
