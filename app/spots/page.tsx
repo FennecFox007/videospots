@@ -43,6 +43,7 @@ import { formatDate } from "@/lib/utils";
 import { SpotsFilters } from "@/components/spots-filters";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pill } from "@/components/ui/pill";
+import { SpotApprovalQuickButtons } from "@/components/spot-approval-quick-buttons";
 import {
   spotApprovalState,
   spotApprovalTone,
@@ -618,13 +619,28 @@ function ApprovalCell({
   spot,
   t,
 }: {
-  spot: { clientApprovedAt: Date | null; rejectedAt: Date | null };
+  spot: {
+    id: number;
+    clientApprovedAt: Date | null;
+    rejectedAt: Date | null;
+    archivedAt: Date | null;
+  };
   t: Awaited<ReturnType<typeof getT>>;
 }) {
   const state = spotApprovalState(spot);
+  // Pending rows get inline approve/reject quick buttons (one-click
+  // approve from the list — most common partner ask). Resolved rows
+  // (approved/rejected) just show the pill; further state changes go
+  // through the detail page where reset + history are.
+  // Archived rows show only the pill (no quick actions on archived).
+  const showQuickButtons =
+    state === "pending" && spot.archivedAt === null;
   return (
-    <Pill size="sm" tone={spotApprovalTone(state)}>
-      {t(spotApprovalLabelKey(state))}
-    </Pill>
+    <div className="inline-flex items-center gap-2 flex-wrap">
+      <Pill size="sm" tone={spotApprovalTone(state)}>
+        {t(spotApprovalLabelKey(state))}
+      </Pill>
+      {showQuickButtons && <SpotApprovalQuickButtons spotId={spot.id} />}
+    </div>
   );
 }
