@@ -1,7 +1,12 @@
 // Visual badge for the campaign's communication intent (preorder / launch /
 // outnow / dlc / update / promo / sale / bundle / brand). Read-only — used
 // on detail / list / share / print views.
+//
+// Built on the shared <Pill> primitive. Communication-type colors live in
+// lib/communication.ts (richer palette than Pill's tone enum can model)
+// so we pass them as className.
 
+import { Pill } from "@/components/ui/pill";
 import {
   communicationTypeLabel,
   communicationTypeClasses,
@@ -15,13 +20,10 @@ export function CommunicationBadge({
   className?: string;
 }) {
   if (!type) return null;
-  const classes = communicationTypeClasses(type);
+  const colorClasses = communicationTypeClasses(type);
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${classes} ${className}`}
-      title="Typ komunikace"
-    >
-      {communicationTypeLabel(type)}
-    </span>
+    <Pill size="sm" className={`${colorClasses} ${className}`}>
+      <span title="Typ komunikace">{communicationTypeLabel(type)}</span>
+    </Pill>
   );
 }

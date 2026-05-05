@@ -43,6 +43,7 @@ import {
 } from "@/lib/spot-drop-store";
 import { ChannelOverrideDialog } from "@/components/channel-override-dialog";
 import { useDialog } from "@/components/dialog/dialog-provider";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export type TimelineChannel = {
   id: number;
@@ -1281,22 +1282,36 @@ export function Timeline({
         })}
 
         {isEmpty && (
-          <div className="px-4 py-12 text-center text-sm text-zinc-500">
-            {t("timeline.no_channels")}{" "}
-            <Link className="underline" href="/admin/channels">
-              {t("timeline.no_channels_link")}
-            </Link>
-            .
-          </div>
+          // Embedded inside the timeline scrollbox — drop the dashed border
+          // since the parent already provides framing.
+          <EmptyState
+            variant="plain"
+            description={
+              <>
+                {t("timeline.no_channels")}{" "}
+                <Link className="underline" href="/admin/channels">
+                  {t("timeline.no_channels_link")}
+                </Link>
+                .
+              </>
+            }
+          />
         )}
 
         {!isEmpty && hasNoCampaigns && (
-          <div className="px-4 py-12 text-center text-sm text-zinc-500 border-t border-zinc-100 dark:border-zinc-800">
-            {t("timeline.no_campaigns_in_range")}{" "}
-            <Link className="underline" href="/campaigns/new">
-              {t("timeline.create_first")}
-            </Link>
-            .
+          <div className="border-t border-zinc-100 dark:border-zinc-800">
+            <EmptyState
+              variant="plain"
+              description={
+                <>
+                  {t("timeline.no_campaigns_in_range")}{" "}
+                  <Link className="underline" href="/campaigns/new">
+                    {t("timeline.create_first")}
+                  </Link>
+                  .
+                </>
+              }
+            />
           </div>
         )}
       </div>

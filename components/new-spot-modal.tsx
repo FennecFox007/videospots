@@ -19,6 +19,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { createSpotForPicker } from "@/app/spots/actions";
 import { PRODUCT_KINDS, DEFAULT_PRODUCT_KIND } from "@/lib/products";
 import { useT } from "@/lib/i18n/client";
+import { Field } from "./ui/field";
 
 export type CreatedSpot = {
   id: number;
@@ -175,6 +176,7 @@ export function NewSpotModal({
           className="flex-1 overflow-y-auto px-5 py-4 space-y-4 text-sm"
         >
           <Field
+            size="sm"
             label={t("spots.form.field.name")}
             hint={t("spots.form.field.name_hint")}
           >
@@ -190,7 +192,7 @@ export function NewSpotModal({
           </Field>
 
           <div className="grid grid-cols-[1fr_auto] gap-3">
-            <Field label={t("spots.form.field.product_name")}>
+            <Field size="sm" label={t("spots.form.field.product_name")}>
               <input
                 type="text"
                 value={productName}
@@ -200,7 +202,7 @@ export function NewSpotModal({
                 className={inputClass}
               />
             </Field>
-            <Field label={t("spots.form.field.product_kind")}>
+            <Field size="sm" label={t("spots.form.field.product_kind")}>
               <select
                 value={productKind}
                 onChange={(e) => setProductKind(e.target.value)}
@@ -215,7 +217,7 @@ export function NewSpotModal({
             </Field>
           </div>
 
-          <Field label={t("spots.form.field.video_url")} required>
+          <Field size="sm" label={t("spots.form.field.video_url")} required>
             <input
               type="url"
               value={videoUrl}
@@ -264,29 +266,6 @@ export function NewSpotModal({
         </footer>
       </div>
     </div>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  required,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="text-xs text-zinc-500 mb-1 block">
-        {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
-      </span>
-      {children}
-      {hint && <p className="text-xs text-zinc-500 mt-1">{hint}</p>}
-    </label>
   );
 }
 

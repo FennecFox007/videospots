@@ -8,6 +8,7 @@ import { PRODUCT_KINDS, DEFAULT_PRODUCT_KIND } from "@/lib/products";
 import { COMMUNICATION_TYPES } from "@/lib/communication";
 import { ChannelsPicker } from "./channels-picker";
 import { CampaignSpotPickers } from "./campaign-spot-pickers";
+import { Field } from "./ui/field";
 import { getT } from "@/lib/i18n/server";
 
 export type CampaignFormDefaults = {
@@ -408,29 +409,6 @@ function Section({
       </div>
       {children}
     </section>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  required,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium mb-1">
-        {label}
-        {required && <span className="text-red-600 ml-0.5">*</span>}
-      </label>
-      {children}
-      {hint && <p className="text-xs text-zinc-500 mt-1">{hint}</p>}
-    </div>
   );
 }
 

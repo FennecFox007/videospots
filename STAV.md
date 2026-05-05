@@ -285,8 +285,12 @@ Tři paralelní audity (consistency / DB / UI) prošly celou code base a vyextra
 **🔵 Tier 4 — i18n gaps (CS/EN parita):** ✅
 - Tranše 11: Hardcoded CS stringy lokalizované — `saved-views-menu.tsx` (toast/prompt/confirm/empty/aria + summarizePayload labels), `activity-feed.tsx` (`ACTION_VERB` mapa pro CS gendered + EN simple, "Aktivita" header, "Žádná aktivita.", "Zobrazit kompletní audit log", "neznámý"), `campaigns-table.tsx` (3 aria-labels checkboxů), 3× close-button `aria-label="Zavřít"` (route-modal, public-timeline, dialog-provider) → `t("common.close")`, `nav.tsx` Cmd+K tooltip. Nové i18n klíče v `lib/i18n/messages.ts`: `nav.search_shortcut_tooltip`, `activity_feed.*`, `saved_views.*` (~30 klíčů), `campaigns_table.aria.*`.
 
-**🟣 Tier 5 — Vizuální konzistence (polish, větší rozsah):**
-- Tranše 12: UI primitivy — `<Field>` má 4 verze (text-red-500 vs 600, text-xs vs text-sm), `<Section>` má 3 verze, primární tlačítka mají 5 různých paddingů, "pill"/badge má 6 paddingů. Návrh extraktu do `components/ui/`. Subjektivní rozhodnutí — rozhodnout s partnerem.
+**🟣 Tier 5 — Vizuální konzistence (polish, větší rozsah):** ✅
+- Tranše 12: UI primitivy A+B+C ✅ — extrahované do `components/ui/`:
+  - **`<Field label hint required size="sm|md">`** v `components/ui/field.tsx` — sjednotil 4 verze (campaign-form-body, spot-form-body, new-spot-modal, spot-drop-modal). `size="md"` (default) = `text-sm font-medium` label, červená `*` na `text-red-500`. `size="sm"` = `text-xs text-zinc-500` label, pro modaly. `<label>` wrapper pro accessibility.
+  - **`<EmptyState title? description cta? variant="dashed|plain">`** v `components/ui/empty-state.tsx` — sjednotil empty states v `/spots`, `/releases`, timeline. Default = dashed-border kontejner; `variant="plain"` pro embedded kontexty (timeline scrollbox).
+  - **`<Pill size="xs|sm|md" tone? className?>`** v `components/ui/pill.tsx` — sjednotil StatusBadge, CommunicationBadge, deployment-count chip v `/spots`. Tones: emerald, amber, blue, red, zinc, indigo. Custom palette přes `className` (viz CommunicationBadge co používá `lib/communication.ts` paletu).
+  - **NEEXTRAHOVALI jsme** `<Section>` (záměrné rozdíly mezi form section header / table grouper / country banner) a `<PrimaryButton>` (5 paddingů je per kontext, extrakce by replikovala tailwind).
 - Tranše 13: Modal pattern unification ✅ — z-index hierarchie sjednocená (drawer 60 < SidePanel 70 < modal 80 < dialog 90 < toast 95 < menu 100, viz "Z-index hierarchy" sekci). public-timeline modal backdrop /50 → /40. SpotDropModal + ChannelOverrideDialog dostaly auto-focus + restore-prior-focus. Submit button pattern dokumentovaný v "Modal pattern checklist".
 
 **⚙️ Tier 6 — Audit/perf (low priority):**

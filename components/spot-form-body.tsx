@@ -1,12 +1,13 @@
 // Shared form body for /spots/new and /spots/[id]/edit. Mirrors the
-// campaign form's pattern — Section / Field helpers — so both surfaces
-// look like part of the same app.
+// campaign form's pattern — local Section helper + shared Field primitive
+// — so both surfaces look like part of the same app.
 
 import { getT } from "@/lib/i18n/server";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { db, countries } from "@/lib/db/client";
 import { asc } from "drizzle-orm";
 import { PRODUCT_KINDS } from "@/lib/products";
+import { Field } from "./ui/field";
 
 type Defaults = {
   name?: string | null;
@@ -38,7 +39,7 @@ export async function SpotFormBody({
   return (
     <div className="space-y-6">
       <Section title={t("spots.form.section.basics")}>
-        <Field label={t("spots.form.field.name")}>
+        <Field size="sm" label={t("spots.form.field.name")}>
           <input
             name="name"
             type="text"
@@ -54,7 +55,7 @@ export async function SpotFormBody({
 
       <Section title={t("spots.form.section.product")}>
         <div className="grid grid-cols-[1fr_auto] gap-3">
-          <Field label={t("spots.form.field.product_name")}>
+          <Field size="sm" label={t("spots.form.field.product_name")}>
             <input
               name="productName"
               type="text"
@@ -63,7 +64,7 @@ export async function SpotFormBody({
               className={inputClass}
             />
           </Field>
-          <Field label={t("spots.form.field.product_kind")}>
+          <Field size="sm" label={t("spots.form.field.product_kind")}>
             <select
               name="productKind"
               defaultValue={defaults?.productKind ?? "game"}
@@ -83,7 +84,7 @@ export async function SpotFormBody({
       </Section>
 
       <Section title={t("spots.form.section.where")}>
-        <Field label={t("spots.form.field.country")} required>
+        <Field size="sm" label={t("spots.form.field.country")} required>
           <div className="flex flex-wrap gap-2">
             {countryRows.map((c) => (
               <label
@@ -110,7 +111,7 @@ export async function SpotFormBody({
       </Section>
 
       <Section title={t("spots.form.section.video")}>
-        <Field label={t("spots.form.field.video_url")} required>
+        <Field size="sm" label={t("spots.form.field.video_url")} required>
           <input
             name="videoUrl"
             type="url"
@@ -142,22 +143,3 @@ function Section({
   );
 }
 
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="text-xs text-zinc-500 mb-1 block">
-        {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
-      </span>
-      {children}
-    </label>
-  );
-}

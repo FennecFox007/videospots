@@ -42,6 +42,8 @@ import { getT } from "@/lib/i18n/server";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { formatDate } from "@/lib/utils";
 import { SpotsFilters } from "@/components/spots-filters";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Pill } from "@/components/ui/pill";
 
 type View = "all" | "undeployed" | "deployed" | "archived";
 type Sort = "created" | "name" | "deployments";
@@ -309,13 +311,15 @@ export default async function SpotsPage({
       />
 
       {filtered.length === 0 ? (
-        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm px-5 py-12 text-center text-sm text-zinc-500">
-          {q || countryFilter || productFilter !== null
-            ? t("spots.empty.filtered")
-            : view === "undeployed"
-              ? t("spots.empty.undeployed")
-              : t("spots.empty.generic")}
-        </div>
+        <EmptyState
+          description={
+            q || countryFilter || productFilter !== null
+              ? t("spots.empty.filtered")
+              : view === "undeployed"
+                ? t("spots.empty.undeployed")
+                : t("spots.empty.generic")
+          }
+        />
       ) : group === "country" ? (
         <div className="space-y-4">
           {Array.from(groupedByCountry.values())
@@ -501,17 +505,15 @@ function SpotTable({
               )}
               <td className="px-4 py-2.5">
                 {s.deployments > 0 ? (
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-200 dark:ring-emerald-900 px-2 py-0.5 text-xs text-emerald-800 dark:text-emerald-300">
+                  <Pill tone="emerald">
                     {s.deployments}× {t.plural(s.deployments, "unit.campaign")}
-                  </span>
+                  </Pill>
                 ) : s.archivedAt ? (
                   <span className="text-xs text-zinc-400">
                     {t("spots.archived_at", { date: formatDate(s.archivedAt) })}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-200 dark:ring-amber-900 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-300">
-                    {t("spots.undeployed_label")}
-                  </span>
+                  <Pill tone="amber">{t("spots.undeployed_label")}</Pill>
                 )}
               </td>
               <td className="px-4 py-2.5 text-xs text-zinc-500">

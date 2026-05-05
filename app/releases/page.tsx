@@ -14,6 +14,7 @@ import {
 } from "@/lib/utils";
 import { kindEmoji, kindLabel } from "@/lib/products";
 import { getT, makeT } from "@/lib/i18n/server";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const ONE_DAY_MS = 86_400_000;
 // Look back this far so a release that just happened still appears at the top
@@ -114,13 +115,17 @@ export default async function ReleasesPage() {
       </div>
 
       {groups.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-8 text-center text-sm text-zinc-500">
-          {t("releases.empty")}{" "}
-          <Link href="/admin/products" className="underline">
-            {t("releases.empty_link")}
-          </Link>
-          .
-        </div>
+        <EmptyState
+          description={
+            <>
+              {t("releases.empty")}{" "}
+              <Link href="/admin/products" className="underline">
+                {t("releases.empty_link")}
+              </Link>
+              .
+            </>
+          }
+        />
       ) : (
         <div className="space-y-6">
           {groups.map((g) => (

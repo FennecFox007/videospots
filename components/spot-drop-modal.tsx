@@ -21,6 +21,7 @@ import { createCampaignFromSpot } from "@/app/spots/actions";
 import { addDays, daysBetween, formatDate, pluralCs, toDateInputValue } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { useDialog } from "@/components/dialog/dialog-provider";
+import { Field } from "@/components/ui/field";
 
 /** Channels grouped by country — same shape as the timeline gets so we can
  *  render the "other channels in this country" checkbox list. */
@@ -233,7 +234,7 @@ function ModalBody({
           onSubmit={handleSubmit}
           className="flex-1 overflow-y-auto px-5 py-4 space-y-4 text-sm"
         >
-          <Field label={t("spot_drop.field.name")} required>
+          <Field size="sm" label={t("spot_drop.field.name")} required>
             <input
               ref={nameInputRef}
               type="text"
@@ -247,7 +248,7 @@ function ModalBody({
 
           <div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label={t("common.start")} required>
+              <Field size="sm" label={t("common.start")} required>
                 <input
                   type="date"
                   lang="cs-CZ"
@@ -257,7 +258,7 @@ function ModalBody({
                   className={inputClass}
                 />
               </Field>
-              <Field label={t("common.end")} required>
+              <Field size="sm" label={t("common.end")} required>
                 <input
                   type="date"
                   lang="cs-CZ"
@@ -351,25 +352,6 @@ function ModalBody({
   );
 }
 
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="text-xs text-zinc-500 mb-1 block">
-        {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
-      </span>
-      {children}
-    </label>
-  );
-}
 
 const inputClass =
   "w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";

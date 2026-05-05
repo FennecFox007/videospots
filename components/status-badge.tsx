@@ -1,7 +1,12 @@
 // Visual badge for campaign status. Uses the computed run state (upcoming /
 // active / done / cancelled). There is no draft/approval step — campaigns
 // are either active or explicitly cancelled.
+//
+// Built on the shared <Pill> primitive so status pills sit visually next
+// to other badges (communication type, deployment count) without the
+// "different family" feeling that ring-vs-no-ring used to give them.
 
+import { Pill } from "@/components/ui/pill";
 import type { RunState } from "@/lib/utils";
 
 type Props = {
@@ -12,12 +17,7 @@ type Props = {
 export function StatusBadge({ status, runState }: Props) {
   const palette = paletteFor(status, runState);
   return (
-    <span
-      className={
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium " +
-        palette.classes
-      }
-    >
+    <Pill size="md" className={palette.classes}>
       {palette.dot && (
         <span
           aria-hidden
@@ -25,7 +25,7 @@ export function StatusBadge({ status, runState }: Props) {
         />
       )}
       {palette.label}
-    </span>
+    </Pill>
   );
 }
 
@@ -37,14 +37,14 @@ function paletteFor(
     return {
       label: "Zrušeno",
       classes:
-        "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500 line-through",
+        "bg-zinc-100 ring-1 ring-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:ring-zinc-700 dark:text-zinc-500 line-through",
     };
   }
   if (runState === "active") {
     return {
       label: "Právě běží",
       classes:
-        "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300",
+        "bg-emerald-100 ring-1 ring-emerald-200 text-emerald-800 dark:bg-emerald-950/60 dark:ring-emerald-900 dark:text-emerald-300",
       dot: "bg-emerald-500 animate-pulse",
     };
   }
@@ -52,7 +52,7 @@ function paletteFor(
     return {
       label: "Čeká na start",
       classes:
-        "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300",
+        "bg-blue-100 ring-1 ring-blue-200 text-blue-800 dark:bg-blue-950/60 dark:ring-blue-900 dark:text-blue-300",
       dot: "bg-blue-500",
     };
   }
@@ -60,14 +60,14 @@ function paletteFor(
     return {
       label: "Doběhlo",
       classes:
-        "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+        "bg-zinc-100 ring-1 ring-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:ring-zinc-700 dark:text-zinc-400",
       dot: "bg-zinc-500",
     };
   }
   return {
     label: "Aktivní",
     classes:
-      "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300",
+      "bg-emerald-100 ring-1 ring-emerald-200 text-emerald-800 dark:bg-emerald-950/60 dark:ring-emerald-900 dark:text-emerald-300",
     dot: "bg-emerald-500",
   };
 }
