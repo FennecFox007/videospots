@@ -18,6 +18,7 @@ import {
   campaigns,
   campaignChannels,
   spots,
+  auditLog,
 } from "@/lib/db/client";
 import {
   Timeline,
@@ -27,6 +28,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { TimelineShareButton } from "@/components/timeline-share-button";
 import { SpotsDrawer } from "@/components/spots-drawer";
 import { SpotDropModal } from "@/components/spot-drop-modal";
+import { TimelineTip } from "@/components/timeline-tip";
 import {
   formatDate,
   addDays,
@@ -292,13 +294,19 @@ export default async function Dashboard({
             {t.plural(channelRows.length, "unit.channel")}
           </p>
         </div>
+        {/* Toolbar — two visual groups with a thin divider between:
+              left  = read-only navigation (list / print / share)
+              right = creation surfaces (library drawer / new campaign)
+            Knihovna sits next to + Nová so the action that opens the
+            right-side drawer is spatially adjacent to where the drawer
+            appears, and the primary CTA stays rightmost. */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* SpotsDrawer renders both the toolbar trigger button and the
-              floating slide-out drawer. Click → drawer; drag a spot card
-              onto a Timeline channel row → SpotDropModal opens at the
-              bottom of the page (mounted below). */}
-          <SpotsDrawer spots={drawerSpots} />
-          <TimelineShareButton />
+          <Link
+            href="/campaigns"
+            className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+          >
+            {t("timeline.list_link")}
+          </Link>
           <a
             href={`/print/timeline?${queryParamsForward}${queryParamsForward.toString() ? "&" : ""}from=${toDateInputValue(rangeStart)}&to=${toDateInputValue(rangeEnd)}`}
             target="_blank"
@@ -308,12 +316,18 @@ export default async function Dashboard({
           >
             {t("timeline.print")}
           </a>
-          <Link
-            href="/campaigns"
-            className="rounded-md border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
-          >
-            {t("timeline.list_link")}
-          </Link>
+          <TimelineShareButton />
+
+          <span
+            aria-hidden
+            className="hidden sm:inline-block w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-1"
+          />
+
+          {/* SpotsDrawer renders both the toolbar trigger button and the
+              floating slide-out drawer. Click → drawer; drag a spot card
+              onto a Timeline channel row → SpotDropModal opens at the
+              bottom of the page (mounted below). */}
+          <SpotsDrawer spots={drawerSpots} />
           <Link
             href="/campaigns/new"
             className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2"
@@ -485,10 +499,7 @@ export default async function Dashboard({
         }}
       />
 
-      <p className="text-xs text-zinc-500">
-        <span className="font-medium">{t("common.tip")}:</span>{" "}
-        {t("timeline.tip")}
-      </p>
+      <TimelineTip />
 
       <Timeline
         groups={groups}
@@ -763,7 +774,13 @@ async function DashboardStats() {
     59
   );
 
-  const [thisMonthCount, totalCount, topClients, awaitingCounts, undeployedSpotsCount] =
+  // Activity pulse — campaigns + spots created in the last 7 days. The
+  // earlier "Top klient" tile was static (single-client agency) so it
+  // showed the same string forever; this gives a real cadence signal.
+  // count(*) FILTER lets the DB partition by entity in one wire-row.
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
+
+  const [thisMonthCount, totalCount, recentActivity, awaitingCounts, undeployedSpotsCount] =
     await Promise.all([
       db
         .select({ c: sql<number>`count(*)::int` })
@@ -781,19 +798,11 @@ async function DashboardStats() {
         .where(isNull(campaigns.archivedAt)),
       db
         .select({
-          client: campaigns.client,
-          c: sql<number>`count(*)::int`,
+          campaigns: sql<number>`count(*) FILTER (WHERE ${auditLog.entity} = 'campaign' AND ${auditLog.action} = 'created')::int`,
+          spots: sql<number>`count(*) FILTER (WHERE ${auditLog.entity} = 'spot' AND ${auditLog.action} = 'created')::int`,
         })
-        .from(campaigns)
-        .where(
-          and(
-            isNull(campaigns.archivedAt),
-            sql`${campaigns.client} IS NOT NULL`
-          )
-        )
-        .groupBy(campaigns.client)
-        .orderBy(sql`count(*) desc`)
-        .limit(3),
+        .from(auditLog)
+        .where(gte(auditLog.createdAt, sevenDaysAgo)),
       // "Awaiting approval" = unapproved campaigns that haven't ended yet,
       // split into running-now vs upcoming. count() FILTER lets Postgres
       // do the partition in a single row of two ints, instead of pulling
@@ -852,16 +861,24 @@ async function DashboardStats() {
                   upcoming: awaitingUpcoming,
                 })
         }
+        // Click → /campaigns with the approval=pending filter. Drops
+        // the user straight onto the rows that need attention.
+        href={awaitingTotal > 0 ? "/campaigns?approval=pending" : undefined}
       />
+      {/* Activity pulse — replaces the previous static "Top klient" tile
+          (single-client agency = constant string, no signal). New campaigns
+          + spots created in the last 7 days, summed. Tells you whether the
+          team's been moving. Click → /admin/audit for the full feed. */}
       <StatCard
-        label={t("dashboard.stats.top_client")}
-        value={topClients[0]?.client ?? "—"}
-        sub={
-          topClients[0]
-            ? `${topClients[0].c} ${t.plural(topClients[0].c, "unit.campaign")}`
-            : t("dashboard.stats.no_yet")
+        label={t("dashboard.stats.recent_activity")}
+        value={
+          (recentActivity[0]?.campaigns ?? 0) +
+          (recentActivity[0]?.spots ?? 0)
         }
-        small
+        sub={t("dashboard.stats.recent_activity_sub", {
+          campaigns: recentActivity[0]?.campaigns ?? 0,
+          spots: recentActivity[0]?.spots ?? 0,
+        })}
       />
       {/* "Undeployed spots" — partner-driven V2 metric. The agency makes
           spots, sometimes forgets to schedule them, this tile is the
@@ -874,6 +891,11 @@ async function DashboardStats() {
             ? t("dashboard.stats.undeployed_none")
             : t("dashboard.stats.undeployed_sub")
         }
+        href={
+          (undeployedSpotsCount[0]?.c ?? 0) > 0
+            ? "/spots?view=undeployed"
+            : undefined
+        }
       />
     </div>
   );
@@ -884,14 +906,20 @@ function StatCard({
   value,
   sub,
   small,
+  href,
 }: {
   label: string;
   value: string | number;
   sub?: string;
   small?: boolean;
+  /** When set, the whole tile becomes a clickable Link to `href`.
+   *  Used for tiles where the value drives a page filter (awaiting
+   *  approval → /campaigns?approval=pending, undeployed spots →
+   *  /spots?view=undeployed). */
+  href?: string;
 }) {
-  return (
-    <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-4">
+  const inner = (
+    <>
       <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">
         {label}
       </div>
@@ -906,6 +934,19 @@ function StatCard({
       {sub && (
         <div className="text-xs text-zinc-500 mt-1 truncate">{sub}</div>
       )}
-    </div>
+    </>
   );
+  const baseClass =
+    "rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-4";
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={`${baseClass} block transition-shadow hover:shadow-md hover:ring-zinc-300 dark:hover:ring-zinc-700`}
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={baseClass}>{inner}</div>;
 }
