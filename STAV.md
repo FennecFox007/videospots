@@ -405,6 +405,14 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
   - StatCard získal volitelné `icon` + `iconTone` props (emerald/blue/violet/pink/amber/zinc). Wired up: Celkem=Play emerald, Čeká=CheckCircle2 blue, Aktivita=Activity violet, Nenasazené=Megaphone pink.
   - Toolbar: "Seznam" odstraněn (duplikát s top nav), Tisk dostal `Printer`, "+ Nová kampaň" `Plus`, Sdílet `Share2`. SpotsDrawer 📺 emoji → `Bookmark` icon (konzistentní s Lucide stroke aesthetikou).
   - **Top nav active state** v `components/nav-link.tsx`: NavLink přesunut do client componentu s `usePathname()`. Active = bolder text + blue `border-b-2`. Inactive = `border-transparent`, na hoveru jemné `border-zinc-200`. Fixovat po commitu `933634d`: původní absolute-positioned underline na `bottom: -7px` poukazoval pod link; kontejner s `overflow-x-auto` (mobile horizontal scroll) automaticky forsil `overflow-y: auto` a underline trčící ven triggeroval vertical scrollbar v navu. `border-b-2` na linku to fixuje (žádný absolute trick).
+- **Chrome ikony polish** (commit `b1af27b`) — sjednocení emoji glyphů s Lucide stroke vocabulary v chrome surfaces. Žádné DB ani behavior změny.
+  - **Nové primitivy:**
+    - `components/country-badge.tsx` — `<CountryBadge code flag size="xs|sm|md">`. Emoji vlajka v malém zaobleném chipu (`bg-zinc-50 ring-1 ring-zinc-200`). Fallback na 🌐 dot když `flag === null` (nezhroutí layout). Tooltip = ISO kód, `aria-hidden` (název země zůstává v sousedním textu).
+    - `components/product-kind-icon.tsx` — `<ProductKindIcon kind className?>`. Mapa product kind → Lucide ikona: game=Gamepad2, console=Monitor, controller=Joystick, accessory=Headphones, service=ShoppingBag, other=Package (fallback).
+  - **CountryBadge wired do**: timeline group header, public-timeline (header + bar meta), spots-drawer (sekce + per-card), `/spots` tabulka + sekce, `/spots/[id]` meta, `/campaigns/[id]` (videa + kanály), `/admin/channels` country sloupec, campaign-peek (videa + kanály), channel-override-dialog header (přidán nový `countryCode` prop), spot-drop-modal header.
+  - **ProductKindIcon wired do**: campaign-peek product chip, `/campaigns` tabulka, `/spots` tabulka. (V `lib/products.ts` zůstává `kindEmoji()` živá — používá se jinde.)
+  - **Záměrně ponecháno emoji**: form `<select>` pickery (channels-picker, campaign-spot-pickers, new-spot-modal, spot-form-body — `<option>` text nemůže renderovat React), `/admin/countries` (správa emoji samotného), `/releases` (kindEmoji je fallback cover-art placeholder), share + print views (paper, simpler), admin product CRUD.
+  - **Bell + Search ikony**: 🔔 v `<ActivityFeed>` button → `<Bell>`. 🔍 v ⌘K palette input + nav shortcut hint pill → `<Search>`.
 
 ## Klíčové soubory
 
@@ -434,6 +442,8 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 - `components/filter-bar.tsx` — URL-driven filtry + saved views + approval + missingSpot
 - `components/saved-views-menu.tsx`
 - `components/communication-badge.tsx`, `components/status-badge.tsx`
+- `components/country-badge.tsx` — emoji vlajka v rounded chipu (`xs/sm/md`), fallback 🌐 když flag null
+- `components/product-kind-icon.tsx` — Lucide ikona pro product kind (Gamepad2/Monitor/Joystick/Headphones/ShoppingBag/Package)
 - `components/route-modal.tsx` — generic shell pro intercepting-route modaly
 - `components/dialog/dialog-provider.tsx` — Toast + Confirm + Prompt
 - `components/locale-switcher.tsx`, `components/dark-mode-toggle.tsx`
