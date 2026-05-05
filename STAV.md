@@ -313,27 +313,57 @@ DB pořád má všechny dropnuté sloupce/tabulky jako orphan storage. Kód je n
   - **`/campaigns/[id]/edit` Promise.all** — 3 sekvenční awaity (campaign snapshot, channel rows, video rows) → paralelně. Neon HTTP = každý await je RTT, takže reálná latency win na pomalém spojení.
   - **`DashboardStats.awaitingRows`** — pulloval celé řádky jen pro count + JS bucketing running vs upcoming. Teď `count(*) FILTER (WHERE ...)` partition v SQL = 1 řádek se 2 ints místo N řádků.
 
-## V2 — zbývající plán (z partnerovy schůzky)
+## V2 — zbývající plán (po auditu, reordered 2026-05)
 
-**Diskutované, partner+kolega potvrdili odložit:**
+Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority list, který kombinuje (a) původní partner-driven roadmapu, (b) věci, které jsem v auditu objevil, ale na seznamu nebyly. Partner schválil tuhle reorderaci.
 
-1. ~~**Inline modal pro `/spots/new`** z campaign formuláře~~ ✅ shipped — `<NewSpotModal>` + `<CampaignSpotPickers>`. Klik na "+ Nový spot" otevře inline modal s pre-fillem produktu (čte se z form fieldů `productName` + `productKind`) a uzamčenou zemí (podle řádku, ze kterého modal otevřeš). Submit volá `createSpotForPicker(formData)` (varianta `createSpot` co vrátí spot místo redirectu), parent picker prepende spot do options + auto-vybere ho. Žádný `router.refresh()`, žádný tab switching.
-2. **NAS sync** — automatický pull spotů z NAS adresáře (jmenná konvence pro country/chain mapping). Závislé na hosting strategii.
-3. **E-mailové notifikace** — SMTP (Atlas/Mailgun/Resend), upozornění na blížící se kampaně, schválení čeká, atd. _V V1 máme jen vizuální nudges (šrafování, dashed kroužky, filter chips, dashboard tiles, activity feed) — to partner akceptuje._
-4. **Release → Campaign hierarchie** — release jako parent kampaní (více kampaní per release: Pre-order, Launch, …). Aktuálně jsou kampaně samostatné, release = product.releaseDate informativně.
-5. **Stopáž smyčky** — spot má délku v sekundách, timeline ukazuje "ve smyčce máš 90s, mohlo by se hodit dalších 20s".
-6. **Re-approval po edit** — schválení je teď trvalé, V2 možná snapshot + invalidate.
-7. **Multi-PDF export** (víc kampaní v jednom souboru)
-8. **Per-user permissions / role**
-9. **Tisk / banner kampaně** — rozšíření modelu mimo video.
+### 🥇 Top 3 — udělat HNED (next batch ~2 dny)
 
-**Wow upgrades pro klientské demo (volitelné):**
+**A. Per-user role (admin / editor / viewer)** — risk reduction. Aktuálně `/admin/*` checkuje jen "is signed in", takže jakýkoli další uživatel co někdo vytvoří dostane plný admin přístup, **včetně možnosti vytvořit dalšího admina**. Aktuálně bezpečné protože je 1 user; jakmile bude tým 2+, real risk. Schema: `users.role: "admin"|"editor"|"viewer"`. Helpers: `requireAdmin()`, `requireEditor()`. Gate `/admin/*` na admin, mutace na editor+, čtení na viewer+. Share/peek view pro viewer. ~1 den.
 
-- AI briefing generator
-- iCal feed (klient subscribuje v kalendáři)
-- TV/wall mode (`/tv` velkoformátový view)
-- Smart NL search v Cmd+K přes Claude API
-- Drag-from-releases na timeline
+**B. Stopáž smyčky** — partner-driven, konkrétní operační value. Spot má délku v sekundách. Timeline by měl ukazovat "ve smyčce máš 90s, mohlo by se hodit dalších 20s" (per-channel agregace z bars co teď běží). Schema: `spots.durationSec`. Form field. Tooltip na barech / channel summary. ~3 hod.
+
+**C. Re-approval po edit** — partner-driven, řeší reálný concern. Aktuálně schválení (`clientApprovedAt`) zůstává po jakékoli editaci kampaně — klient možná schválil verzi A, agent edituje na verzi B, klient o tom neví. Snapshot fields {name, startsAt, endsAt, channelIds, spotsByCountry}, na update porovnat se schváleným snapshotem, kdyby se "podstatně" změnilo → invalidate `clientApprovedAt` + audit entry. ~3 hod.
+
+### 🥈 Po tom — viditelné winy (~1 týden)
+
+**D. Aggregate analytics tile / mini-page** — po Tier 6 audit log loguje všechno, ale UI to neukazuje sumarizovaně. Queries jako "kampaně tento kvartál × stav", "channel utilizace per země", "průměrná délka kampaně" jsou teď jednoduché groupBy. Partner = ukáže klientovi a dělá dojem. ~1 den.
+
+**E. Test infrastructure foundation** — vitest setup, 5-7 smoke testů pro kritické server actions: `createCampaignFromSpot`, `approveCampaign`, `setChannelOverride`, `createSpotForPicker`, `deleteUser`, `updateCampaign`. Nepokrývá vše, ale zachytí regresi v hlavních flowech (drag-drop ghost bug, audit join bug, filter forwarding bug — vše bychom měli teoreticky testem chytit). ~půlden.
+
+**F. Cmd+K → spoty + admin entities** — search palette teď indexuje jen kampaně + produkty. Hledat "SAROS" by mělo najít i spoty. Hledat "Datart" → channels admin. Extend `app/api/search/route.ts` o spot + admin branches. ~1 hod.
+
+### 🥉 Polish, až bude prostor
+
+**G. Pagination** — `/campaigns`, `/spots`, `/admin/audit` všechno pulluje vše. Na 50 řádcích fine, na 500+ to bude trapné. Tripwire: implementovat když nějaká tabulka překročí 50 řádků. SpotsDrawer taky — ten pulluje při každém dashboard render. ~3 hod.
+
+**H. Drag-from-releases na timeline** — z původního "wow" seznamu. Reusuje drag-drop pattern (SpotsDrawer + SpotDropModal). Drag release → timeline = vytvoř kampaň pro daný product. ~3 hod.
+
+**I. Activity feed filter** — "moje akce" / "tato kampaň". Bell dropdown teď ukazuje globální feed; ve více-uživatelském režimu (po Tranši A) bude šum. ~2 hod.
+
+**J. Inline edit pro quick changes** — `<EditableCampaignTitle>` pattern existuje. Extendnout na color, status na peek panelu, bez nutnosti přejít na `/edit`. ~3 hod.
+
+### 🧹 Tech debt — rezerva
+
+- **DB migration files** — až bude staging/prod, jeden den setup. Drizzle-kit `generate` místo `push --force`.
+- **Hard delete recovery (30-day grace period)** — v dev fázi netřeba, ale v produkci `deleteUser`/`deleteSpot` bez recovery je real risk. Soft-delete s 30-day restore.
+- **Constants block v `timeline.tsx`** — `BAR_MIN_WIDTH_PX`, `CLICK_THRESHOLD_PX`, `RESIZE_EDGE_PX` scattered. Drobné hygienické.
+- **Drag-resize na barech s override** — aktuálně locked, drag updatuje master. Mohlo by drag updatovat override (ne master) když má override. Discoverability win.
+
+### ❌ Vyhozeno (skip nebo až klient explicitně řekne)
+
+- ~~**AI briefing generator**~~ — wow bez business case
+- ~~**Multi-PDF export**~~ — niche, print N× funguje
+- ~~**Tisk / banner kampaně**~~ — velký schema refaktor pro niche use case
+- ~~**TV/wall mode `/tv`**~~ — kdo to bude koukat
+- ~~**iCal feed**~~ — klienti maily/kalendáře nehlídají per kampaň
+- **NAS sync** — drží na hosting decisions (ne z roadmapy přímo, ale prakticky čeká)
+- **E-mailové notifikace** — SMTP setup + decisions; partner explicitně říká "vizuální nudges stačí pro V1"
+- **Release → Campaign hierarchie** — větší refaktor (release jako parent více kampaní); pokud klient nepožádá, není to teď nutné
+
+### ✅ Shipped během auditu (mimo původní seznam)
+
+- Inline `<NewSpotModal>` z campaign formuláře (`<NewSpotModal>` + `<CampaignSpotPickers>` — `createSpotForPicker` returning místo redirect)
 
 ## Klíčové soubory
 
