@@ -93,6 +93,8 @@ function ModalBody({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const previouslyFocusedRef = useRef<Element | null>(null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -104,9 +106,17 @@ function ModalBody({
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Focus the name input on open so the user can adjust the auto-filled
+    // campaign name without reaching for the mouse. Capture whatever was
+    // focused before so we can restore it on close.
+    previouslyFocusedRef.current = document.activeElement;
+    nameInputRef.current?.focus();
+    nameInputRef.current?.select();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      const prev = previouslyFocusedRef.current;
+      if (prev instanceof HTMLElement) prev.focus();
     };
   }, []);
 
@@ -225,6 +235,7 @@ function ModalBody({
         >
           <Field label={t("spot_drop.field.name")} required>
             <input
+              ref={nameInputRef}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}

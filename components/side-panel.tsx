@@ -73,8 +73,12 @@ export function SidePanel({
   }, []);
 
   return (
+    // z-[70] sits between toolbar drawers (z-[60]) and modals (z-[80]),
+    // so a confirm dialog opened from inside the peek (e.g. cancel campaign)
+    // renders on top of it instead of being clipped underneath. See
+    // STAV.md "Tier 5 — z-index hierarchy" for the canonical layering.
     <div
-      className="fixed inset-0 z-[80] flex justify-end bg-black/20 sm:bg-transparent print:hidden"
+      className="fixed inset-0 z-[70] flex justify-end bg-black/20 sm:bg-transparent print:hidden"
       role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

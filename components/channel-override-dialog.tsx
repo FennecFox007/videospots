@@ -71,6 +71,8 @@ export function ChannelOverrideDialog({
   const [cancelled, setCancelled] = useState(initialCancelled);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const startInputRef = useRef<HTMLInputElement>(null);
+  const previouslyFocusedRef = useRef<Element | null>(null);
 
   // Reset form whenever the dialog opens with a different bar.
   useEffect(() => {
@@ -81,7 +83,10 @@ export function ChannelOverrideDialog({
     setError(null);
   }, [open, effectiveStartsAt, effectiveEndsAt, initialCancelled]);
 
-  // ESC closes; body scroll locked while open.
+  // ESC closes; body scroll locked while open. Also captures the previously
+  // focused element on open and restores it on close — context-menu-driven
+  // dialogs especially benefit because the user's keyboard focus was on a
+  // bar / menu item before they triggered this.
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -93,9 +98,15 @@ export function ChannelOverrideDialog({
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    previouslyFocusedRef.current = document.activeElement;
+    // Focus the start-date input — the most common adjustment when
+    // overriding (Datart vyprodal → posunout konec / zkrátit).
+    startInputRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      const prev = previouslyFocusedRef.current;
+      if (prev instanceof HTMLElement) prev.focus();
     };
   }, [open, onClose]);
 
@@ -206,6 +217,7 @@ export function ChannelOverrideDialog({
                   {t("common.start")}
                 </span>
                 <input
+                  ref={startInputRef}
                   type="date"
                   lang="cs-CZ"
                   value={startsAt}

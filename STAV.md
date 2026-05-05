@@ -165,6 +165,33 @@ Klíčová vlastnost: **kampaň bez spotu je legitimní stav**, ne chyba. Vizuá
 
 Hlavní toolbar (zoom presety, date nav, kontextové presety) zůstává na **`text-sm` + `px-3 py-1.5`** — větší cíle pro hlavní navigaci. **FilterBar řada pod ním** (search, country, chain, runState, approval, missingSpot, tag, Pohledy) je naopak na **`text-xs` + `px-2.5 py-1`** — sub-úroveň pod toolbarem, drží jeden řádek častěji.
 
+## Z-index hierarchy (canonical)
+
+Vrstvení overlayů — když přidáváš novou plovoucí komponentu, drž tuhle stupnici:
+
+| Layer | z-index | Příklady |
+|---|---|---|
+| Bary v timeline | `z-[1]` až `z-[3]` | DraggableBar, ghost preview, drag-pill |
+| Toolbar drawer (transientní, koexistuje s page) | `z-[60]` | `<SpotsDrawer>` |
+| Side panel (kontextové, blokuje page focus) | `z-[70]` | `<SidePanel>` (CampaignPeek) |
+| Modal (blokující dialog) | `z-[80]` | `<NewSpotModal>`, `<SpotDropModal>`, `<ChannelOverrideDialog>`, `<RouteModal>`, public-timeline modal |
+| DialogProvider (confirm/prompt — overrides everything) | `z-[90]` | `confirm()`, `prompt()` |
+| Toast (transient notification) | `z-[95]` | dialog-provider toast |
+| Context menu / Cmd+K palette | `z-[100]` | timeline ContextMenu, CommandPalette |
+
+Backdrop opacity = **`bg-black/40 backdrop-blur-sm`** ve všech modalech. SidePanel má lehčí `bg-black/20 sm:bg-transparent` (drawer-tier, ne plně blokující).
+
+## Modal pattern checklist
+
+Když přidáváš nový modal, drž tyto principy:
+
+- **ESC closes** — `useEffect` listener na `document` `keydown`
+- **Backdrop click closes** — `onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}` na fixed root
+- **Body scroll-lock** — `document.body.style.overflow = "hidden"` v effectu, restore na cleanup. Výjimka: `<SpotsDrawer>` (toolbar drawer, koexistuje s page; necháno záměrně)
+- **Auto-focus first relevant field** — viz `nameInputRef.current?.focus()` v `<NewSpotModal>` / `<SpotDropModal>`. Pro confirm dialogy fokus jde na confirm/cancel
+- **Restore prior focus on close** — `previouslyFocusedRef.current = document.activeElement` na openu, na cleanup `prev.focus()`. Klávesnicový uživatel se vrátí tam, odkud modal otevřel
+- **Submit button placement** — současná konvence: footer mimo `<form>`, submit přes `closest("[role=dialog]").querySelector("form").requestSubmit()` choreografii (drží native form validation). Viz `<NewSpotModal>` a `<SpotDropModal>`. Když submit jde uvnitř form, footer musí být uvnitř form taky.
+
 ## Hosting & deploy strategie
 
 **Aktuálně:** lokálně přes `npm run dev` na `localhost:3000`. DB = Neon dev project (free tier). Pro občasné sdílení s klientem = **Cloudflare Tunnel** (`cloudflared tunnel --url http://localhost:3000`) — dočasné `*.trycloudflare.com` URL, žádný setup.
@@ -260,7 +287,7 @@ Tři paralelní audity (consistency / DB / UI) prošly celou code base a vyextra
 
 **🟣 Tier 5 — Vizuální konzistence (polish, větší rozsah):**
 - Tranše 12: UI primitivy — `<Field>` má 4 verze (text-red-500 vs 600, text-xs vs text-sm), `<Section>` má 3 verze, primární tlačítka mají 5 různých paddingů, "pill"/badge má 6 paddingů. Návrh extraktu do `components/ui/`. Subjektivní rozhodnutí — rozhodnout s partnerem.
-- Tranše 13: Modal pattern unification — z-index drift (SidePanel z-[80] koliduje s SpotDropModal z-[80]; STAV říká drawer 60, modals 70+), backdrop opacity drift (bg-black/40 vs /50 vs /70), focus management drift, submit button placement drift.
+- Tranše 13: Modal pattern unification ✅ — z-index hierarchie sjednocená (drawer 60 < SidePanel 70 < modal 80 < dialog 90 < toast 95 < menu 100, viz "Z-index hierarchy" sekci). public-timeline modal backdrop /50 → /40. SpotDropModal + ChannelOverrideDialog dostaly auto-focus + restore-prior-focus. Submit button pattern dokumentovaný v "Modal pattern checklist".
 
 **⚙️ Tier 6 — Audit/perf (low priority):**
 - Tranše 14: Audit log gaps — admin user actions (createUser/updatePassword/deleteUser) nemají audit entries (security-sensitive!), admin entity actions (countries/chains/channels/products) taky ne i když schema komentář deklaruje `entity: "country"|"chain"|"channel"`.
