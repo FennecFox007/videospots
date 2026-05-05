@@ -18,7 +18,7 @@ import {
   type PendingDrop,
 } from "@/lib/spot-drop-store";
 import { createCampaignFromSpot } from "@/app/spots/actions";
-import { addDays, toDateInputValue } from "@/lib/utils";
+import { addDays, daysBetween, formatDate, pluralCs, toDateInputValue } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import { useDialog } from "@/components/dialog/dialog-provider";
 
@@ -234,25 +234,30 @@ function ModalBody({
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={t("common.start")} required>
-              <input
-                type="date"
-                value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
-                required
-                className={inputClass}
-              />
-            </Field>
-            <Field label={t("common.end")} required>
-              <input
-                type="date"
-                value={endsAt}
-                onChange={(e) => setEndsAt(e.target.value)}
-                required
-                className={inputClass}
-              />
-            </Field>
+          <div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t("common.start")} required>
+                <input
+                  type="date"
+                  lang="cs-CZ"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                  required
+                  className={inputClass}
+                />
+              </Field>
+              <Field label={t("common.end")} required>
+                <input
+                  type="date"
+                  lang="cs-CZ"
+                  value={endsAt}
+                  onChange={(e) => setEndsAt(e.target.value)}
+                  required
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+            <DateRangeSummary startsAt={startsAt} endsAt={endsAt} />
           </div>
 
           <div>
@@ -357,3 +362,41 @@ function Field({
 
 const inputClass =
   "w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+
+/**
+ * Czech-formatted summary line shown under the date inputs. Browsers
+ * render <input type="date"> in their own locale (often YYYY-MM-DD in
+ * en-US Chrome), which is unfamiliar to Czech users. The summary always
+ * shows the same dates in "5. 5. 2026 – 18. 5. 2026 (14 dní)" form so
+ * the user can verify what they picked regardless of browser settings.
+ */
+function DateRangeSummary({
+  startsAt,
+  endsAt,
+}: {
+  startsAt: string;
+  endsAt: string;
+}) {
+  if (!startsAt || !endsAt) return null;
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+    return null;
+  }
+  if (end < start) {
+    return (
+      <p className="mt-1.5 text-xs text-red-600">
+        Konec je před začátkem.
+      </p>
+    );
+  }
+  const dur = daysBetween(start, end);
+  return (
+    <p className="mt-1.5 text-xs text-zinc-500">
+      → {formatDate(start)} – {formatDate(end)}{" "}
+      <span className="text-zinc-400">
+        ({dur} {pluralCs(dur, "den", "dny", "dní")})
+      </span>
+    </p>
+  );
+}

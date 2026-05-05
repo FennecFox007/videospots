@@ -17,7 +17,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toDateInputValue } from "@/lib/utils";
+import { daysBetween, formatDate, pluralCs, toDateInputValue } from "@/lib/utils";
 import { useT } from "@/lib/i18n/client";
 import {
   setChannelOverride,
@@ -199,31 +199,36 @@ export function ChannelOverrideDialog({
             {t("override.scope_note")}
           </p>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-xs text-zinc-500 mb-1 block">
-                {t("common.start")}
-              </span>
-              <input
-                type="date"
-                value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
-                disabled={cancelled || isPending}
-                className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1.5 text-sm disabled:opacity-50"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-zinc-500 mb-1 block">
-                {t("common.end")}
-              </span>
-              <input
-                type="date"
-                value={endsAt}
-                onChange={(e) => setEndsAt(e.target.value)}
-                disabled={cancelled || isPending}
-                className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1.5 text-sm disabled:opacity-50"
-              />
-            </label>
+          <div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-xs text-zinc-500 mb-1 block">
+                  {t("common.start")}
+                </span>
+                <input
+                  type="date"
+                  lang="cs-CZ"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                  disabled={cancelled || isPending}
+                  className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1.5 text-sm disabled:opacity-50"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs text-zinc-500 mb-1 block">
+                  {t("common.end")}
+                </span>
+                <input
+                  type="date"
+                  lang="cs-CZ"
+                  value={endsAt}
+                  onChange={(e) => setEndsAt(e.target.value)}
+                  disabled={cancelled || isPending}
+                  className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1.5 text-sm disabled:opacity-50"
+                />
+              </label>
+            </div>
+            {!cancelled && <DateRangeSummary startsAt={startsAt} endsAt={endsAt} />}
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer">
@@ -285,5 +290,37 @@ export function ChannelOverrideDialog({
         </footer>
       </div>
     </div>
+  );
+}
+
+/** Czech-formatted summary of the picked date range. Shown under the date
+ *  inputs so the user always sees "5. 5. 2026 – 18. 5. 2026 (14 dní)"
+ *  even if the browser renders <input type="date"> in a different locale. */
+function DateRangeSummary({
+  startsAt,
+  endsAt,
+}: {
+  startsAt: string;
+  endsAt: string;
+}) {
+  if (!startsAt || !endsAt) return null;
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+    return null;
+  }
+  if (end < start) {
+    return (
+      <p className="mt-1.5 text-xs text-red-600">Konec je před začátkem.</p>
+    );
+  }
+  const dur = daysBetween(start, end);
+  return (
+    <p className="mt-1.5 text-xs text-zinc-500">
+      → {formatDate(start)} – {formatDate(end)}{" "}
+      <span className="text-zinc-400">
+        ({dur} {pluralCs(dur, "den", "dny", "dní")})
+      </span>
+    </p>
   );
 }
