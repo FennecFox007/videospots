@@ -11,10 +11,17 @@ import {
 import { relations } from "drizzle-orm";
 
 // =============================================================================
-// Auth.js (NextAuth v5) tables — schema follows the official Drizzle adapter.
-// https://authjs.dev/getting-started/adapters/drizzle
-// We include all four tables now even though auth isn't wired up yet, so we
-// don't need a migration when it is.
+// Auth — JWT-only via Auth.js Credentials provider, not the Drizzle adapter.
+//
+// We previously declared the full DrizzleAdapter scaffolding (account /
+// session / verificationToken tables + emailVerified + image columns)
+// against a possible future need for DB sessions or social login. None
+// of that is wired up; the columns/tables are dropped from the schema in
+// the 2026-05 cleanup. The DB still has them as orphan storage — see
+// "Schema drift (Tier 3 soft-removal)" in STAV.md. If we ever switch to
+// DB-backed Auth.js sessions, restore the deleted declarations from the
+// Auth.js drizzle adapter docs and `db:push`; the existing DB tables
+// will line up.
 // =============================================================================
 
 export const users = pgTable("user", {
@@ -23,51 +30,9 @@ export const users = pgTable("user", {
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name"),
   email: text("email").unique().notNull(),
-  emailVerified: timestamp("emailVerified", { mode: "date" }),
-  image: text("image"),
   // bcrypt hash for the Credentials login. Set by admin via /admin/users.
   passwordHash: text("password_hash"),
 });
-
-export const accounts = pgTable(
-  "account",
-  {
-    userId: text("userId")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").notNull(),
-    provider: text("provider").notNull(),
-    providerAccountId: text("providerAccountId").notNull(),
-    refresh_token: text("refresh_token"),
-    access_token: text("access_token"),
-    expires_at: integer("expires_at"),
-    token_type: text("token_type"),
-    scope: text("scope"),
-    id_token: text("id_token"),
-    session_state: text("session_state"),
-  },
-  (account) => [
-    primaryKey({ columns: [account.provider, account.providerAccountId] }),
-  ]
-);
-
-export const sessions = pgTable("session", {
-  sessionToken: text("sessionToken").primaryKey(),
-  userId: text("userId")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { mode: "date" }).notNull(),
-});
-
-export const verificationTokens = pgTable(
-  "verificationToken",
-  {
-    identifier: text("identifier").notNull(),
-    token: text("token").notNull(),
-    expires: timestamp("expires", { mode: "date" }).notNull(),
-  },
-  (vt) => [primaryKey({ columns: [vt.identifier, vt.token] })]
-);
 
 // =============================================================================
 // App domain tables
@@ -124,18 +89,19 @@ export const channels = pgTable(
 // JS export is `products`; the DB table is still called "game" — renaming a
 // live table would need a manual migration and there's no payoff. The `kind`
 // column distinguishes types in code/UI.
+//
+// IGDB-related columns (igdbId / slug / rawIgdb / fetchedAt) were dropped
+// from this schema in the 2026-05 cleanup — the IGDB integration is in
+// "out of scope" and the columns were never written. The DB still has them
+// as orphan storage; see "Schema drift" note in STAV.md.
 export const products = pgTable("game", {
   id: serial("id").primaryKey(),
-  igdbId: integer("igdb_id").unique(),
   name: text("name").notNull(),
   // game | console | controller | accessory | service | other
   kind: text("kind").notNull().default("game"),
-  slug: text("slug"),
   coverUrl: text("cover_url"),
   summary: text("summary"),
   releaseDate: timestamp("release_date", { mode: "date" }),
-  rawIgdb: jsonb("raw_igdb"), // kept for forward compatibility
-  fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
 });
 
 // Campaign = a video spot scheduled for a date range on a set of channels.
@@ -146,11 +112,15 @@ export const products = pgTable("game", {
 //                   readable; user-facing label is "Aktivní")
 //   - 'cancelled' — historical mark, set via the detail-page button
 // "Active / upcoming / done" are computed from dates, not stored.
+//
+// `videoUrl` (deprecated single-URL-per-campaign) was dropped from this
+// schema in the 2026-05 cleanup. Per-country URLs live on spots.videoUrl
+// (joined via campaignVideos). The DB column still exists as orphan
+// storage; see STAV.md "Schema drift".
 export const campaigns = pgTable("campaign", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   client: text("client"), // e.g. "Sony Interactive Entertainment"
-  videoUrl: text("video_url"),
   productId: integer("game_id").references(() => products.id, {
     onDelete: "set null",
   }),
@@ -369,16 +339,6 @@ export const savedViews = pgTable("saved_view", {
 
 export const usersRelations = relations(users, ({ many }) => ({
   campaigns: many(campaigns),
-  accounts: many(accounts),
-  sessions: many(sessions),
-}));
-
-export const accountsRelations = relations(accounts, ({ one }) => ({
-  user: one(users, { fields: [accounts.userId], references: [users.id] }),
-}));
-
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));
 
 export const countriesRelations = relations(countries, ({ many }) => ({

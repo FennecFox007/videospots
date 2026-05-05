@@ -434,7 +434,6 @@ export async function cloneCampaign(campaignId: number) {
     .values({
       name: `${original.name} (kopie)`,
       client: original.client,
-      videoUrl: original.videoUrl,
       productId: original.productId,
       startsAt: original.startsAt,
       endsAt: original.endsAt,

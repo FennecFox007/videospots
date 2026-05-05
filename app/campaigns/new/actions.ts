@@ -155,9 +155,6 @@ export async function createCampaign(formData: FormData) {
       .values({
         name,
         client: parsed.client || null,
-        // videoUrl on `campaigns` is the deprecated legacy column — leave it
-        // null going forward; per-country URLs go to campaignVideos below.
-        videoUrl: null,
         color,
         status,
         communicationType,

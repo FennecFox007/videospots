@@ -212,9 +212,6 @@ export async function updateCampaign(campaignId: number, formData: FormData) {
     .set({
       name: parsed.name,
       client: parsed.client || null,
-      // Legacy column — null going forward; per-country URLs are persisted
-      // in campaign_video below.
-      videoUrl: null,
       color,
       status,
       communicationType,

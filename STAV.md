@@ -277,10 +277,22 @@ Tři paralelní audity (consistency / DB / UI) prošly celou code base a vyextra
 - Tranše 6: Stale comments — schema.ts spotId migration-window note (backfill je dávno hotový), schema.ts saved_view payload příklad, queries.ts "games" → "products", saved-views-menu header komentář.
 - Tranše 7: Server action revalidation — `cancelCampaign`/`reactivateCampaign` přidaly `revalidatePath("/campaigns")`, `deleteProduct` přidalo `revalidatePath("/")` + `/campaigns` (timeline + list zobrazují product name na cards).
 
-**🟢 Tier 3 — Schema hygiena (vyžaduje migraci):**
-- Tranše 8: Drop dead `campaigns.videoUrl` column. Píše se vždy `null`, čte ho jen CSV (vrací prázdný string) a templates (vždy null). Per-country URLs jsou na `spots`. Zahrnuje DROP COLUMN migraci, remove z CSV/templates/insert+update.
-- Tranše 9: Auth.js dead tables — `accounts`, `sessions`, `verificationTokens` tabulky jsou jen scaffolding pro DrizzleAdapter; my používáme JWT-only auth. Plus `users.emailVerified`, `users.image` dead. Volitelné — drop nebo dokumentovat jako reserved.
-- Tranše 10: Drop dead `products.igdbId/slug/rawIgdb/fetchedAt` (IGDB integrace je v "out of scope"). Volitelné.
+**🟢 Tier 3 — Schema hygiena (soft removal — bez DB migrace):** ✅
+- Tranše 8: Dropnuto z `schema.ts`: `campaigns.videoUrl` (legacy single-URL-per-campaign, nahradilo `spots.videoUrl` cez `campaignVideos`). Code refs odstraněny — `app/admin/templates/actions.ts` (TemplatePayload + saveCampaignAsTemplate snapshot), `app/campaigns/[id]/actions.ts` (clone), `app/campaigns/new/actions.ts` + `[id]/edit/actions.ts` (insert/update writes), `app/api/export/campaigns/route.ts` (CSV column). Old templates JSONB payload může mít `videoUrl` key — TS type ho neexpectuje, silently ignoruje.
+- Tranše 9: Dropnuto z `schema.ts`: `accounts`, `sessions`, `verificationTokens` tabulky (Auth.js Drizzle adapter scaffolding — my používáme JWT-only Credentials, žádný DB session backend) + `users.emailVerified`, `users.image` sloupce. Drizzle relations pro accounts/sessions taky odstraněné.
+- Tranše 10: Dropnuto z `schema.ts`: `products.igdbId/slug/rawIgdb/fetchedAt` — IGDB integrace je explicitně v "out of scope".
+
+## Schema drift (Tier 3 soft-removal)
+
+DB pořád má všechny dropnuté sloupce/tabulky jako orphan storage. Kód je nikdy nereferencuje, takže INSERT/UPDATE/SELECT je ignorují (drizzle generuje queries z deklarací, ne z `SELECT *`). Důvod soft-removal: vyhnout se DB migraci v dev/Cloudflare Tunnel režimu kde to není pain-point.
+
+**Co to znamená v praxi:**
+- `psql` proti DB ukáže navíc: `account`, `session`, `verificationToken` tabulky; `user.emailVerified`, `user.image` sloupce; `campaign.video_url`; `game.igdb_id`, `game.slug`, `game.raw_igdb`, `game.fetched_at`. Jsou prázdné nebo z dávných writes.
+- App nic z toho nečte ani nepíše. Funkčně to neovlivní.
+- `npm run db:push` v budoucnu detekuje drift a navrhne `DROP COLUMN/TABLE`. V tu chvíli to potvrdíš a DB se sjednotí.
+- **Recovery**: kdybys někdy chtěl IGDB / Auth.js DB sessions / atd., vrátíš deklarace do `schema.ts` z gitové historie (`git show HEAD~N:lib/db/schema.ts`). DB sloupce/tabulky tam sedí, takže žádná migrace nepotřeba.
+
+**Až přijde produkční nasazení:** v rámci first deploy migrace pustit `npm run db:push --force` proti prod DB. Drizzle-kit detekuje drift, navrhne `DROP COLUMN/TABLE` pro orphans, ty potvrdíš, prod DB se sjednotí se schématem.
 
 **🔵 Tier 4 — i18n gaps (CS/EN parita):** ✅
 - Tranše 11: Hardcoded CS stringy lokalizované — `saved-views-menu.tsx` (toast/prompt/confirm/empty/aria + summarizePayload labels), `activity-feed.tsx` (`ACTION_VERB` mapa pro CS gendered + EN simple, "Aktivita" header, "Žádná aktivita.", "Zobrazit kompletní audit log", "neznámý"), `campaigns-table.tsx` (3 aria-labels checkboxů), 3× close-button `aria-label="Zavřít"` (route-modal, public-timeline, dialog-provider) → `t("common.close")`, `nav.tsx` Cmd+K tooltip. Nové i18n klíče v `lib/i18n/messages.ts`: `nav.search_shortcut_tooltip`, `activity_feed.*`, `saved_views.*` (~30 klíčů), `campaigns_table.aria.*`.

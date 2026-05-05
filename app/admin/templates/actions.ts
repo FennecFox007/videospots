@@ -18,9 +18,13 @@ async function requireUser() {
   return session.user.id;
 }
 
+// Older templates (saved before the spots refactor) carry a top-level
+// `videoUrl` in their JSONB payload — we ignore it on load (per-country
+// spot picks happen on the new campaign form) and don't capture it on
+// new templates. The TS type intentionally doesn't include it; the
+// extra DB key sits unused in old rows without causing problems.
 export type TemplatePayload = {
   client: string | null;
-  videoUrl: string | null;
   color: string;
   tags: string[];
   durationDays: number;
@@ -65,7 +69,6 @@ export async function saveCampaignAsTemplate(
   const c = row.campaign;
   const payload: TemplatePayload = {
     client: c.client,
-    videoUrl: c.videoUrl,
     color: c.color,
     tags: c.tags ?? [],
     durationDays: daysBetween(c.startsAt, c.endsAt),

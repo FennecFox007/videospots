@@ -77,6 +77,10 @@ export async function GET(req: NextRequest) {
     channelsByCampaign.set(r.campaignId, list);
   }
 
+  // Note: per-country spot URLs (campaign_video → spots.video_url) aren't
+  // included here — a single CSV row can't cleanly carry N-per-row data.
+  // The detail page surfaces them; export the campaign list and consult
+  // the app for per-country specifics.
   const HEADER = [
     "ID",
     "Název",
@@ -89,7 +93,6 @@ export async function GET(req: NextRequest) {
     "Délka (dní)",
     "Kanály",
     "Štítky",
-    "Video URL",
     "Poznámky",
   ];
 
@@ -108,7 +111,6 @@ export async function GET(req: NextRequest) {
         daysBetween(c.startsAt, c.endsAt),
         (channelsByCampaign.get(c.id) ?? []).sort().join("; "),
         (c.tags ?? []).join("; "),
-        c.videoUrl ?? "",
         c.notes ?? "",
       ]
         .map(esc)
