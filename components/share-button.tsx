@@ -4,8 +4,8 @@
 //   1. trigger button — "Sdílet"
 //   2. configure form — pick expiry preset + optional label, hit Generate
 //   3. result        — show URL with copy-to-clipboard
-// User can dismiss between (1)-(2) and (2)-(3) without committing anything;
-// the link is only persisted when "Vytvořit" is pressed in state (2).
+// The configure form is a popover anchored to the button (via the relative
+// wrapper) so the surrounding action-button row doesn't squeeze it.
 //
 // Revocation is intentionally NOT here — it lives in <CampaignShareLinks>
 // (the management list rendered alongside this button on /campaigns/[id]).
@@ -47,65 +47,71 @@ export function ShareButton({ campaignId }: { campaignId: number }) {
     }
   }
 
-  if (mode === "idle") {
-    return (
-      <button
-        type="button"
-        onClick={() => setMode("configuring")}
-        className="text-sm px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-900 inline-flex items-center gap-1.5"
-      >
-        <Share2 className="w-4 h-4" strokeWidth={2} />
-        {t("share_button.label")}
-      </button>
-    );
-  }
-
-  if (mode === "configuring") {
-    return (
-      <ShareCreateForm
-        onCancel={() => setMode("idle")}
-        onCreate={async (opts) => {
-          const newUrl = await createCampaignShareLink(campaignId, opts);
-          setUrl(newUrl);
-          setMode("showing");
-          // The per-campaign management list re-renders from server data.
-          router.refresh();
-          return newUrl;
-        }}
-      />
-    );
-  }
-
-  // mode === "showing"
   return (
-    <div className="flex flex-col gap-1 items-end">
-      <div className="flex items-center gap-1">
-        <input
-          readOnly
-          value={url ?? ""}
-          className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2 py-1 text-xs font-mono w-72 max-w-[60vw]"
-          onFocus={(e) => e.currentTarget.select()}
-        />
+    <div className="relative inline-block">
+      {mode === "showing" ? (
+        <div className="flex flex-col gap-1 items-end">
+          <div className="flex items-center gap-1">
+            <input
+              readOnly
+              value={url ?? ""}
+              className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2 py-1 text-xs font-mono w-72 max-w-[60vw]"
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <button
+              type="button"
+              onClick={copy}
+              className="text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
+            >
+              {copied ? t("share_button.copied") : t("share_button.copy")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("idle");
+                setUrl(null);
+              }}
+              className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-1"
+              title={t("common.close")}
+            >
+              ✕
+            </button>
+          </div>
+          <p className="text-[10px] text-zinc-500">{t("share_button.note")}</p>
+        </div>
+      ) : (
         <button
           type="button"
-          onClick={copy}
-          className="text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
+          onClick={() =>
+            setMode((m) => (m === "configuring" ? "idle" : "configuring"))
+          }
+          className={
+            "text-sm px-3 py-1.5 border rounded-md inline-flex items-center gap-1.5 transition-colors " +
+            (mode === "configuring"
+              ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+              : "border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-900")
+          }
+          aria-expanded={mode === "configuring"}
         >
-          {copied ? t("share_button.copied") : t("share_button.copy")}
+          <Share2 className="w-4 h-4" strokeWidth={2} />
+          {t("share_button.label")}
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode("idle");
-            setUrl(null);
+      )}
+
+      {mode === "configuring" && (
+        <ShareCreateForm
+          align="left"
+          onCancel={() => setMode("idle")}
+          onCreate={async (opts) => {
+            const newUrl = await createCampaignShareLink(campaignId, opts);
+            setUrl(newUrl);
+            setMode("showing");
+            // The per-campaign management list re-renders from server data.
+            router.refresh();
+            return newUrl;
           }}
-          className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-1"
-          title={t("common.close")}
-        >
-          ✕
-        </button>
-      </div>
-      <p className="text-[10px] text-zinc-500">{t("share_button.note")}</p>
+        />
+      )}
     </div>
   );
 }
