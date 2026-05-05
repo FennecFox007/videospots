@@ -340,6 +340,8 @@ const cs = {
   "spots_drawer.card_drag_hint": "Přetáhni na timeline",
   "spots_drawer.footer_hint": "Přetáhni spot na řádek kanálu",
   "spots_drawer.new_link": "+ Nový spot",
+  "spots_drawer.action.play": "Přehrát",
+  "spots_drawer.action.edit": "Upravit",
 
   // Spot drop modal — opens after dragging a spot onto a channel row
   "spot_drop.title": "Vytvořit kampaň ze spotu",
@@ -867,6 +869,8 @@ const en: Record<keyof typeof cs, string> = {
   "spots_drawer.card_drag_hint": "Drag onto the timeline",
   "spots_drawer.footer_hint": "Drop a spot onto a channel row",
   "spots_drawer.new_link": "+ New spot",
+  "spots_drawer.action.play": "Play",
+  "spots_drawer.action.edit": "Edit",
 
   // Spot drop modal
   "spot_drop.title": "Create campaign from spot",

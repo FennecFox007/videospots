@@ -269,6 +269,15 @@ function SpotCard({ spot }: { spot: DrawerSpot }) {
     e.dataTransfer.effectAllowed = "copy";
   }
 
+  // Stop drag-related events on action buttons so a click inside Play /
+  // Edit doesn't initiate a drag of the whole card.
+  const stopDrag = {
+    onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+    onMouseDown: (e: React.MouseEvent) => e.stopPropagation(),
+    onClick: (e: React.MouseEvent) => e.stopPropagation(),
+    onDragStart: (e: React.DragEvent) => e.stopPropagation(),
+  };
+
   return (
     <li
       draggable
@@ -279,13 +288,29 @@ function SpotCard({ spot }: { spot: DrawerSpot }) {
       <div className="flex items-center gap-2">
         <span
           aria-hidden
-          className="text-zinc-300 dark:text-zinc-600 select-none cursor-grab"
+          className="text-zinc-300 dark:text-zinc-600 select-none cursor-grab text-xs"
         >
           ⋮⋮
         </span>
+        {/* Country flag is shown both in the section header AND on the
+            card itself — when the user scrolls and the section header
+            is off-screen, the per-card flag keeps the country obvious. */}
+        <span aria-hidden className="text-base leading-none shrink-0">
+          {spot.countryFlag}
+        </span>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium truncate">{label}</div>
-          <div className="text-[11px] text-zinc-500 flex items-center gap-1.5 mt-0.5">
+          <div className="flex items-baseline gap-1.5">
+            <span
+              className="text-sm font-medium truncate"
+              title={spot.videoUrl}
+            >
+              {label}
+            </span>
+            <span className="font-mono text-[10px] uppercase text-zinc-500 shrink-0">
+              {spot.countryCode}
+            </span>
+          </div>
+          <div className="text-[11px] text-zinc-500 mt-0.5 flex items-center gap-1.5">
             {spot.deployments > 0 ? (
               <span className="text-emerald-700 dark:text-emerald-400">
                 {spot.deployments}× {t.plural(spot.deployments, "unit.campaign")}
@@ -295,17 +320,52 @@ function SpotCard({ spot }: { spot: DrawerSpot }) {
                 {t("spots_drawer.undeployed")}
               </span>
             )}
-            <span className="text-zinc-300 dark:text-zinc-600">·</span>
-            <a
-              href={spot.videoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="hover:underline truncate"
-            >
-              {spot.videoUrl}
-            </a>
+            {spot.productName && (
+              <>
+                <span className="text-zinc-300 dark:text-zinc-600">·</span>
+                <span className="truncate">{spot.productName}</span>
+              </>
+            )}
           </div>
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+          <a
+            href={spot.videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            {...stopDrag}
+            aria-label={t("spots_drawer.action.play")}
+            title={t("spots_drawer.action.play")}
+            className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+          >
+            <svg width="11" height="11" viewBox="0 0 9 9" fill="currentColor" aria-hidden>
+              <path d="M1.5 0.5l6.5 4-6.5 4z" />
+            </svg>
+          </a>
+          <Link
+            href={`/spots/${spot.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            {...stopDrag}
+            aria-label={t("spots_drawer.action.edit")}
+            title={t("spots_drawer.action.edit")}
+            className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M11.5 2.5l2 2-8 8-2.5.5.5-2.5 8-8z" />
+              <path d="M10 4l2 2" />
+            </svg>
+          </Link>
         </div>
       </div>
     </li>
