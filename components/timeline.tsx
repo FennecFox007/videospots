@@ -981,10 +981,18 @@ export function Timeline({
               const info =
                 laneInfoByChannel.get(ch.id) ??
                 ({ lanes: new Map(), laneCount: 1 } as LaneInfo);
+              // While dragging a spot over THIS row, reserve an extra lane at
+              // the bottom so the ghost can sit there cleanly without covering
+              // existing bars. The row gets taller, which naturally pushes the
+              // channels below it down — visual cue that "room is being made".
+              const isDragTarget =
+                dragPreview !== null && dragPreview.channelId === ch.id;
+              const displayLaneCount =
+                info.laneCount + (isDragTarget ? 1 : 0);
               const rowHeight =
                 dp.rowPadTop +
-                info.laneCount * dp.barHeight +
-                Math.max(0, info.laneCount - 1) * dp.laneGap +
+                displayLaneCount * dp.barHeight +
+                Math.max(0, displayLaneCount - 1) * dp.laneGap +
                 dp.rowPadBottom;
 
               return (
@@ -993,7 +1001,7 @@ export function Timeline({
                   className="flex border-b border-zinc-100 dark:border-zinc-800"
                 >
                   <div
-                    className={`w-32 sm:w-48 shrink-0 px-4 ${dp.channelLabelText} text-zinc-700 dark:text-zinc-300 border-r border-zinc-100 dark:border-zinc-800 truncate flex items-center sticky left-0 z-10 ${ROW_BG}`}
+                    className={`w-32 sm:w-48 shrink-0 px-4 ${dp.channelLabelText} text-zinc-700 dark:text-zinc-300 border-r border-zinc-100 dark:border-zinc-800 truncate flex items-center sticky left-0 z-10 transition-[min-height] duration-150 ${ROW_BG}`}
                     style={{ minHeight: rowHeight }}
                     onContextMenu={(e) => {
                       e.preventDefault();
@@ -1012,7 +1020,7 @@ export function Timeline({
                     )}
                   </div>
                   <div
-                    className="flex-1 relative cursor-copy"
+                    className="flex-1 relative cursor-copy transition-[height] duration-150"
                     style={{ height: rowHeight, ...panStyle }}
                     data-channel-id={ch.id}
                     title="Klikni pro vytvoření kampaně na tomto kanálu/datu"
@@ -1214,12 +1222,13 @@ export function Timeline({
                     })}
 
                     {/* Ghost preview while dragging a spot from <SpotsDrawer />.
-                     *  Dashed outline + semi-transparent indigo fill at lane 0
-                     *  so the user sees roughly where the bar will land.
-                     *  pointer-events:none keeps the underlying onDragOver
-                     *  hit-testing on the track unaffected. The actual lane
-                     *  assignment is done post-drop by the stacking algorithm —
-                     *  this is just a date-placement hint, not a final preview. */}
+                     *  Sits at the BOTTOM of the row in a freshly reserved lane
+                     *  (the row was already grown by displayLaneCount above),
+                     *  so existing bars are never covered — the new spot is
+                     *  visibly "added below". The actual lane assignment after
+                     *  drop is still up to the stacking algorithm; this is a
+                     *  date + placement hint, deliberately matching the user's
+                     *  mental model of "drop = new lane below." */}
                     {dragPreview && dragPreview.channelId === ch.id && (
                       <>
                         <div
@@ -1228,7 +1237,7 @@ export function Timeline({
                           style={{
                             left: `${dragPreview.startPct}%`,
                             width: `${dragPreview.widthPct}%`,
-                            top: `${dp.rowPadTop}px`,
+                            top: `${dp.rowPadTop + info.laneCount * (dp.barHeight + dp.laneGap)}px`,
                             height: `${dp.barHeight}px`,
                           }}
                         >
@@ -1241,9 +1250,10 @@ export function Timeline({
                          *  drop date without squinting at gridlines. */}
                         <div
                           aria-hidden
-                          className="absolute -translate-x-1/2 -top-7 px-2 py-0.5 rounded bg-indigo-600 text-white text-[11px] font-medium shadow pointer-events-none whitespace-nowrap z-[3]"
+                          className="absolute -translate-x-1/2 px-2 py-0.5 rounded bg-indigo-600 text-white text-[11px] font-medium shadow pointer-events-none whitespace-nowrap z-[3]"
                           style={{
                             left: `${dragPreview.startPct + dragPreview.widthPct / 2}%`,
+                            top: `${dp.rowPadTop + info.laneCount * (dp.barHeight + dp.laneGap) - 22}px`,
                           }}
                         >
                           {formatDate(dragPreview.startDate)} – {formatDate(dragPreview.endDate)}{" "}
