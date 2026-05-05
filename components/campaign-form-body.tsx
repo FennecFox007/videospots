@@ -45,15 +45,14 @@ export type CountryGroup = {
 };
 
 /** Lightweight spot summary for the per-country dropdown options.
- *  Approval timestamps so the picker can render "pending" / "rejected"
- *  warnings without a separate fetch. */
+ *  Approval timestamp lets the picker render the "pending" warning
+ *  without a separate fetch. */
 export type SpotOption = {
   id: number;
   name: string | null;
   videoUrl: string;
   productName: string | null;
   clientApprovedAt: Date | null;
-  rejectedAt: Date | null;
 };
 
 type Props = {

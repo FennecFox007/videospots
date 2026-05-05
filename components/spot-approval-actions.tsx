@@ -1,19 +1,18 @@
 "use client";
 
-// Client-side strip for /spots/[id] that wraps approve / reject / clear
-// in interactive prompt+confirm dialogs (we want a comment on approve, a
-// REQUIRED reason on reject, and a confirm before clearing). Mirrors the
-// pattern campaign-peek uses for clientApprovedAt.
+// Detail-page action strip: approve when pending, unapprove when
+// approved. Pulls the prompt+confirm flow through the dialog provider
+// so we capture the optional approval note.
+//
+// Two states (no rejection — see lib/spot-approval.ts):
+//   - pending:  primary "Schválit" button (with prompt for note)
+//   - approved: subtle "Zrušit schválení" link (with confirm)
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useDialog } from "@/components/dialog/dialog-provider";
 import { useT } from "@/lib/i18n/client";
-import {
-  approveSpot,
-  rejectSpot,
-  clearSpotApproval,
-} from "@/app/spots/actions";
+import { approveSpot, unapproveSpot } from "@/app/spots/actions";
 import {
   spotApprovalState,
   type SpotApprovalState,
@@ -22,14 +21,12 @@ import {
 type Props = {
   spotId: number;
   clientApprovedAt: Date | null;
-  rejectedAt: Date | null;
   archived: boolean;
 };
 
 export function SpotApprovalActions({
   spotId,
   clientApprovedAt,
-  rejectedAt,
   archived,
 }: Props) {
   const t = useT();
@@ -37,10 +34,7 @@ export function SpotApprovalActions({
   const { prompt, confirm, toast } = useDialog();
   const [isPending, startTransition] = useTransition();
 
-  const state: SpotApprovalState = spotApprovalState({
-    clientApprovedAt,
-    rejectedAt,
-  });
+  const state: SpotApprovalState = spotApprovalState({ clientApprovedAt });
 
   // Archived spots are read-only — hide the action strip entirely.
   if (archived) return null;
@@ -66,29 +60,7 @@ export function SpotApprovalActions({
     });
   }
 
-  async function handleReject() {
-    const reason = await prompt({
-      title: t("spots.approval.reject_prompt.title"),
-      message: t("spots.approval.reject_prompt.message"),
-      placeholder: t("spots.approval.reject_prompt.placeholder"),
-      validate: (v) =>
-        v.trim() ? null : t("spots.approval.reject_prompt.required"),
-      confirmLabel: t("spots.approval.reject_button"),
-      destructive: true,
-    });
-    if (!reason) return;
-    startTransition(async () => {
-      try {
-        await rejectSpot(spotId, reason);
-        toast.success(t("spots.approval.toast.rejected"));
-        router.refresh();
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : String(e));
-      }
-    });
-  }
-
-  async function handleClear() {
+  async function handleUnapprove() {
     const ok = await confirm({
       title: t("spots.approval.clear_confirm.title"),
       message: t("spots.approval.clear_confirm.message"),
@@ -97,7 +69,7 @@ export function SpotApprovalActions({
     if (!ok) return;
     startTransition(async () => {
       try {
-        await clearSpotApproval(spotId);
+        await unapproveSpot(spotId);
         toast.success(t("spots.approval.toast.cleared"));
         router.refresh();
       } catch (e) {
@@ -106,48 +78,27 @@ export function SpotApprovalActions({
     });
   }
 
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* Always show both Approve and Reject; the active one is implied
-       *  by the badge in the section header. Click on the same state
-       *  re-prompts (so you can update the note / reason). Click on the
-       *  opposite flips the state via the mutex in the server action. */}
+  if (state === "pending") {
+    return (
       <button
         type="button"
         onClick={handleApprove}
         disabled={isPending}
-        className={
-          "text-sm px-3 py-1.5 rounded-md font-medium transition-colors disabled:opacity-50 " +
-          (state === "approved"
-            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-            : "border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30")
-        }
+        className="text-sm px-4 py-2 rounded-md font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50 transition-colors"
       >
         ✓ {t("spots.approval.approve_button")}
       </button>
-      <button
-        type="button"
-        onClick={handleReject}
-        disabled={isPending}
-        className={
-          "text-sm px-3 py-1.5 rounded-md font-medium transition-colors disabled:opacity-50 " +
-          (state === "rejected"
-            ? "bg-red-600 hover:bg-red-700 text-white"
-            : "border border-red-300 dark:border-red-900 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30")
-        }
-      >
-        ✕ {t("spots.approval.reject_button")}
-      </button>
-      {state !== "pending" && (
-        <button
-          type="button"
-          onClick={handleClear}
-          disabled={isPending}
-          className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 underline ml-2 disabled:opacity-50"
-        >
-          {t("spots.approval.clear_button")}
-        </button>
-      )}
-    </div>
+    );
+  }
+  // Approved: small secondary "Zrušit schválení" link.
+  return (
+    <button
+      type="button"
+      onClick={handleUnapprove}
+      disabled={isPending}
+      className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 underline disabled:opacity-50"
+    >
+      {t("spots.approval.clear_button")}
+    </button>
   );
 }

@@ -53,7 +53,7 @@ import {
 type View = "all" | "undeployed" | "deployed" | "archived";
 type Sort = "created" | "name" | "deployments";
 type Group = "country" | "flat";
-type ApprovalFilter = "" | "pending" | "approved" | "rejected";
+type ApprovalFilter = "" | "pending" | "approved";
 
 function parseView(v: string | undefined): View {
   if (v === "all" || v === "deployed" || v === "archived") return v;
@@ -71,7 +71,7 @@ function parseGroup(g: string | undefined): Group {
 }
 
 function parseApproval(a: string | undefined): ApprovalFilter {
-  if (a === "pending" || a === "approved" || a === "rejected") return a;
+  if (a === "pending" || a === "approved") return a;
   return "";
 }
 
@@ -123,7 +123,6 @@ export default async function SpotsPage({
       authorEmail: users.email,
       deployments: spotDeploymentCountSql(),
       clientApprovedAt: spots.clientApprovedAt,
-      rejectedAt: spots.rejectedAt,
     })
     .from(spots)
     .leftJoin(products, eq(spots.productId, products.id))
@@ -445,7 +444,6 @@ type SpotRow = {
   authorEmail: string | null;
   deployments: number;
   clientApprovedAt: Date | null;
-  rejectedAt: Date | null;
 };
 
 function SpotTable({
@@ -622,25 +620,26 @@ function ApprovalCell({
   spot: {
     id: number;
     clientApprovedAt: Date | null;
-    rejectedAt: Date | null;
     archivedAt: Date | null;
   };
   t: Awaited<ReturnType<typeof getT>>;
 }) {
   const state = spotApprovalState(spot);
-  // Pending rows get inline approve/reject quick buttons (one-click
-  // approve from the list — most common partner ask). Resolved rows
-  // (approved/rejected) just show the pill; further state changes go
-  // through the detail page where reset + history are.
-  // Archived rows show only the pill (no quick actions on archived).
-  const showQuickButtons =
-    state === "pending" && spot.archivedAt === null;
+  // Both states get an inline action: pending → "Schválit" primary
+  // button, approved → "Zrušit schválení" subtle link. Archived rows
+  // show only the pill (no actions).
+  const showInlineAction = spot.archivedAt === null;
   return (
     <div className="inline-flex items-center gap-2 flex-wrap">
       <Pill size="sm" tone={spotApprovalTone(state)}>
         {t(spotApprovalLabelKey(state))}
       </Pill>
-      {showQuickButtons && <SpotApprovalQuickButtons spotId={spot.id} />}
+      {showInlineAction && (
+        <SpotApprovalQuickButtons
+          spotId={spot.id}
+          approved={state === "approved"}
+        />
+      )}
     </div>
   );
 }

@@ -112,7 +112,6 @@ export async function createSpotForPicker(formData: FormData): Promise<{
   productName: string | null;
   countryId: number;
   clientApprovedAt: Date | null;
-  rejectedAt: Date | null;
 }> {
   const userId = await requireUser();
 
@@ -166,9 +165,8 @@ export async function createSpotForPicker(formData: FormData): Promise<{
     productName: parsed.productName ?? null,
     countryId: parsed.countryId,
     // Fresh spots start pending — both timestamps null until an admin
-    // approves or rejects.
+    // approves.
     clientApprovedAt: null,
-    rejectedAt: null,
   };
 }
 
@@ -195,7 +193,6 @@ export async function updateSpot(spotId: number, formData: FormData) {
     .select({
       videoUrl: spots.videoUrl,
       clientApprovedAt: spots.clientApprovedAt,
-      rejectedAt: spots.rejectedAt,
     })
     .from(spots)
     .where(eq(spots.id, spotId))
@@ -203,9 +200,8 @@ export async function updateSpot(spotId: number, formData: FormData) {
   if (!before) throw new Error("Spot neexistuje");
 
   const urlChanged = before.videoUrl !== parsed.videoUrl;
-  const hadApprovalState =
-    before.clientApprovedAt !== null || before.rejectedAt !== null;
-  const shouldInvalidateApproval = urlChanged && hadApprovalState;
+  const wasApproved = before.clientApprovedAt !== null;
+  const shouldInvalidateApproval = urlChanged && wasApproved;
 
   const updateValues: Record<string, unknown> = {
     productId,
@@ -214,13 +210,10 @@ export async function updateSpot(spotId: number, formData: FormData) {
     name: parsed.name || null,
   };
   if (shouldInvalidateApproval) {
-    // Wipe both branches so the spot returns to the "pending" state.
+    // Wipe approval state so the spot returns to "pending".
     updateValues.clientApprovedAt = null;
     updateValues.clientApprovedComment = null;
     updateValues.approvedById = null;
-    updateValues.rejectedAt = null;
-    updateValues.rejectionReason = null;
-    updateValues.rejectedById = null;
   }
 
   await db.update(spots).set(updateValues).where(eq(spots.id, spotId));
@@ -244,15 +237,19 @@ export async function updateSpot(spotId: number, formData: FormData) {
 
 // ---------------------------------------------------------------------------
 // Approval workflow — mirrors campaigns.clientApprovedAt but applied to
-// the spot itself ("client signed off on this video creative").
-// approve / reject are mutually exclusive: each one wipes the other's
-// fields so the spot can't be in both states at once. Editing the spot's
-// videoUrl in updateSpot also clears both — different creative needs
-// fresh client sign-off.
+// the spot itself ("client signed off on this video creative"). Two
+// states only: approved or pending. Partner workflow is "spots must be
+// approved before deployment", so a third "rejected" state would be
+// dead weight — a not-yet-approved spot is "pending" until it gets
+// signed off; if the client wants changes, the team uploads a new URL
+// (which auto-clears any earlier approval via updateSpot).
+//
+// Editing the spot's videoUrl in updateSpot auto-clears approval —
+// different creative = previous client sign-off no longer applies.
 // ---------------------------------------------------------------------------
 
-/** Mark a spot as client-approved. Optional comment. Wipes any prior
- *  rejection state. */
+/** Mark a spot as client-approved. Optional comment captures intent
+ *  (e.g. "approved via email 2026-05-12"). */
 export async function approveSpot(spotId: number, comment?: string) {
   const userId = await requireUser();
 
@@ -265,10 +262,6 @@ export async function approveSpot(spotId: number, comment?: string) {
       clientApprovedAt: now,
       clientApprovedComment: trimmedComment || null,
       approvedById: userId,
-      // Mutex: clear any prior rejection.
-      rejectedAt: null,
-      rejectionReason: null,
-      rejectedById: null,
     })
     .where(eq(spots.id, spotId));
 
@@ -285,47 +278,11 @@ export async function approveSpot(spotId: number, comment?: string) {
   revalidatePath("/");
 }
 
-/** Mark a spot as client-rejected. Reason is required (so the team can
- *  act on it). Wipes any prior approval state. */
-export async function rejectSpot(spotId: number, reason: string) {
-  const userId = await requireUser();
-
-  const trimmedReason = reason.trim();
-  if (!trimmedReason) {
-    throw new Error("Důvod zamítnutí je povinný");
-  }
-  const now = new Date();
-
-  await db
-    .update(spots)
-    .set({
-      rejectedAt: now,
-      rejectionReason: trimmedReason,
-      rejectedById: userId,
-      // Mutex: clear any prior approval.
-      clientApprovedAt: null,
-      clientApprovedComment: null,
-      approvedById: null,
-    })
-    .where(eq(spots.id, spotId));
-
-  await db.insert(auditLog).values({
-    action: "rejected",
-    entity: "spot",
-    entityId: spotId,
-    userId,
-    changes: { reason: trimmedReason },
-  });
-
-  revalidatePath("/spots");
-  revalidatePath(`/spots/${spotId}`);
-  revalidatePath("/");
-}
-
-/** Reset spot to "pending approval" — clears both approval and rejection
- *  state. Use when an earlier sign-off needs to be re-evaluated without
- *  touching the spot's content. */
-export async function clearSpotApproval(spotId: number) {
+/** Send a spot back to "pending approval" — clears the approval. Use
+ *  when an earlier sign-off needs re-evaluation without touching the
+ *  spot's content. (For URL/content changes, plain `updateSpot` already
+ *  invalidates the approval automatically.) */
+export async function unapproveSpot(spotId: number) {
   const userId = await requireUser();
 
   await db
@@ -334,9 +291,6 @@ export async function clearSpotApproval(spotId: number) {
       clientApprovedAt: null,
       clientApprovedComment: null,
       approvedById: null,
-      rejectedAt: null,
-      rejectionReason: null,
-      rejectedById: null,
     })
     .where(eq(spots.id, spotId));
 

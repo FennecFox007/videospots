@@ -314,23 +314,17 @@ function SpotCard({ spot }: { spot: DrawerSpot }) {
           <div className="flex items-baseline gap-1.5">
             {/* Approval status dot — small visual cue without taking
              *  another row of vertical space. Tooltip on hover gives the
-             *  full label. */}
+             *  full label. Two states: approved (emerald) / pending (amber). */}
             <span
               aria-hidden
               title={t(
                 approval === "approved"
                   ? "spots.approval.status.approved"
-                  : approval === "rejected"
-                    ? "spots.approval.status.rejected"
-                    : "spots.approval.status.pending"
+                  : "spots.approval.status.pending"
               )}
               className={
                 "shrink-0 w-2 h-2 rounded-full " +
-                (approval === "approved"
-                  ? "bg-emerald-500"
-                  : approval === "rejected"
-                    ? "bg-red-500"
-                    : "bg-amber-500")
+                (approval === "approved" ? "bg-emerald-500" : "bg-amber-500")
               }
             />
             <span

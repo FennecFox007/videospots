@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { eq, and, desc, isNull } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import {
   db,
   spots,
@@ -107,7 +107,6 @@ export default async function SpotDetailPage({
   const deploymentCount = activeDeployments.length;
   const approvalState = spotApprovalState({
     clientApprovedAt: s.clientApprovedAt,
-    rejectedAt: s.rejectedAt,
   });
   const approvedBy = row.approvedByName ?? row.approvedByEmail ?? null;
 
@@ -161,9 +160,10 @@ export default async function SpotDetailPage({
         </Link>
       </div>
 
-      {/* Approval section — shows current state + actor + comment, plus
-          the approve/reject/reset buttons. Top-level so it's the first
-          thing the user reaches for after the title. */}
+      {/* Approval section — current state + actor + comment, plus the
+          single state-flip button (Schválit when pending, Zrušit
+          schválení when approved). Top-level so it's the first thing
+          the user reaches for after the title. */}
       <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
           {t("spots.approval.section.title")}
@@ -185,26 +185,10 @@ export default async function SpotDetailPage({
             </div>
           </div>
         )}
-        {approvalState === "rejected" && s.rejectedAt && (
-          <div className="text-sm text-zinc-700 dark:text-zinc-300 space-y-1">
-            <div>
-              {t("spots.approval.rejected_by", {
-                who: approvedBy ?? "—",
-              })}{" "}
-              <span className="text-zinc-500">
-                · {formatDate(s.rejectedAt)}
-              </span>
-            </div>
-            <div className="text-xs text-red-700 dark:text-red-400">
-              {s.rejectionReason}
-            </div>
-          </div>
-        )}
 
         <SpotApprovalActions
           spotId={spotId}
           clientApprovedAt={s.clientApprovedAt}
-          rejectedAt={s.rejectedAt}
           archived={isArchived}
         />
       </div>
@@ -381,7 +365,11 @@ export default async function SpotDetailPage({
 /** Map an audit log entry to a short Czech sentence fragment. Mirrors the
  *  campaign humanizer (app/campaigns/[id]/page.tsx) but scoped to spot
  *  actions. CS-only — admin-tier surface, EN translation skipped per
- *  i18n policy. */
+ *  i18n policy.
+ *
+ *  Older spots may have audit rows with action="rejected" from the
+ *  abandoned three-state flow. We render those as "zamítl(a)" for
+ *  readability; new code path doesn't produce them. */
 function humanizeSpotAuditAction(action: string, changes: unknown): string {
   const obj =
     changes && typeof changes === "object"
@@ -393,6 +381,7 @@ function humanizeSpotAuditAction(action: string, changes: unknown): string {
     return note ? `schválil(a) — „${note}"` : "schválil(a)";
   }
   if (action === "rejected") {
+    // Legacy — left in for old audit rows.
     const reason =
       obj && typeof obj.reason === "string" ? obj.reason.trim() : "";
     return reason ? `zamítl(a) — „${reason}"` : "zamítl(a)";

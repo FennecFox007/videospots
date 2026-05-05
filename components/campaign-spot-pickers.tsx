@@ -69,7 +69,7 @@ export function CampaignSpotPickers({
   function handleCreated(spot: CreatedSpot) {
     // Append into the country's added list, then auto-select. Uses ids as
     // strings to match the <select> value type. Fresh spots are
-    // pending — both approval timestamps null.
+    // pending (clientApprovedAt = null).
     setAddedByCountry((prev) => ({
       ...prev,
       [spot.countryId]: [
@@ -79,7 +79,6 @@ export function CampaignSpotPickers({
           videoUrl: spot.videoUrl,
           productName: spot.productName,
           clientApprovedAt: spot.clientApprovedAt,
-          rejectedAt: spot.rejectedAt,
         },
         ...(prev[spot.countryId] ?? []),
       ],
@@ -137,15 +136,11 @@ export function CampaignSpotPickers({
                     : s.productName
                       ? `${s.productName} · ${g.code}`
                       : `Spot · ${g.code}`;
-                  // Annotate the option label with state so the picker
-                  // shows status before the user even commits.
+                  // ✓ marks already-approved options so the picker
+                  // surfaces status before the user even commits.
+                  // Pending options have no mark (it's the default).
                   const state = spotApprovalState(s);
-                  const stateMark =
-                    state === "approved"
-                      ? " ✓"
-                      : state === "rejected"
-                        ? " ✕"
-                        : ""; // pending = no mark, default state
+                  const stateMark = state === "approved" ? " ✓" : "";
                   return (
                     <option key={s.id} value={String(s.id)}>
                       {label}
@@ -166,11 +161,6 @@ export function CampaignSpotPickers({
             {pickedState === "pending" && (
               <p className="text-xs text-amber-700 dark:text-amber-400 ml-[5.25rem]">
                 {t("spot_picker.warning.pending")}
-              </p>
-            )}
-            {pickedState === "rejected" && (
-              <p className="text-xs text-red-700 dark:text-red-400 ml-[5.25rem]">
-                {t("spot_picker.warning.rejected")}
               </p>
             )}
           </div>

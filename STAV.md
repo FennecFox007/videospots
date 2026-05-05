@@ -380,15 +380,16 @@ Po dokončení Tier 1-6 auditu jsem prošel celý codebase a sestavil priority l
 
 - Inline `<NewSpotModal>` z campaign formuláře (`<NewSpotModal>` + `<CampaignSpotPickers>` — `createSpotForPicker` returning místo redirect)
 - **Spots jako plnohodnotná entita v2** — approval workflow + richer detail (S1 + S3 + S4 z brainstormu):
-  - Schema: `spots.clientApprovedAt`, `clientApprovedComment`, `approvedById`, `rejectedAt`, `rejectionReason`, `rejectedById`. Mirror campaign approval, mutex na approve vs reject.
-  - Server actions: `approveSpot(id, comment?)`, `rejectSpot(id, reason)`, `clearSpotApproval(id)`. Každá píše do audit logu, requireEditor.
-  - Auto-invalidate při edit URL: `updateSpot` snapshot pre-update; pokud se změnila `videoUrl` a spot měl approval state, oba branche se vyčistí + audit `approvalInvalidatedByEdit: true`.
-  - `lib/spot-approval.ts` — `spotApprovalState()` derivace ze 2 timestamps + `spotApprovalTone()` Pill helper + i18n key map.
-  - **`/spots` list**: nový sloupec "Schválení" s `<Pill>` (emerald/red/amber), filter dropdown ve `<SpotsFilters>`. tabHref preserve approval param.
-  - **`/spots/[id]`**: nahoře pill vedle title + dedikovaná Approval section s informací kdo/kdy/komentářem/reason + `<SpotApprovalActions>` client component (interactive prompt na comment, REQUIRED reason na reject, confirm na clear). **Deployment history** rozšířena na past + present (archivované kampaně v sub-section). **Audit log** spotu (last 20) v dedikované sekci s humanized fragments — schválil(a) / zamítl(a) / vrátil(a) do "Čeká" / upravil(a) URL — schválení automaticky resetováno.
-  - **`<SpotsDrawer>` cards**: barevný dot (emerald/red/amber) vedle názvu spotu — instantní status bez extra řádku.
-  - **`<CampaignSpotPickers>`**: pod dropdown se zobrazí amber/red warning když picked spot je pending/rejected. V option labelu je "✓" / "✕" / nic označení podle stavu. Není blokující — editor může kampaň naplánovat i s pending spotem (schválení dorazí později).
-  - i18n klíče (CS+EN) v `lib/i18n/messages.ts`: `spots.approval.*` (~25 klíčů), `spots.col.approval`, `spots.filter.approval.*`, `spots.deployment_history.*`, `spots.audit.*`, `spot_picker.warning.*`.
+  - **Dvoustavový workflow**: spot je `pending` (čeká na schválení) nebo `approved`. Žádný "rejected" stav — partner workflow je "spoty se musí schválit před nasazením", takže když klient chce změnu, tým nahraje nové URL (což auto-invaliduje schválení).
+  - Schema: `spots.clientApprovedAt`, `clientApprovedComment`, `approvedById`. (Dřívější draft měl ještě `rejectedAt`/`rejectionReason`/`rejectedById` pro 3-state flow — partner odmítl, sloupce zůstaly v DB jako orphan storage per Tier 3 soft-removal pattern.)
+  - Server actions: `approveSpot(id, comment?)`, `unapproveSpot(id)`. Každá píše do audit logu, requireEditor.
+  - Auto-invalidate při edit URL: `updateSpot` snapshot pre-update; pokud se změnila `videoUrl` a spot byl `approved`, schválení se vyčistí + audit `approvalInvalidatedByEdit: true`.
+  - `lib/spot-approval.ts` — `spotApprovalState()` derivace z `clientApprovedAt` (set/null) + `spotApprovalTone()` Pill helper (emerald/amber) + i18n key map.
+  - **`/spots` list**: nový sloupec "Schválení" s `<Pill>` (emerald `Schváleno` / amber `Čeká`) + **inline action buttons**: pending řádek má primary `✓ Schválit`, approved řádek má subtle "Zrušit schválení" link. `<SpotApprovalQuickButtons>` client component, prompt na poznámku při schvalování, confirm při zrušení. Filter dropdown "Všechny stavy / Čeká / Schváleno". tabHref preserve approval param.
+  - **`/spots/[id]`**: nahoře pill vedle title + dedikovaná Approval section s informací kdo/kdy/komentářem + `<SpotApprovalActions>` (primary `✓ Schválit` button když pending, subtle "Zrušit schválení" link když approved). **Deployment history** rozšířena na past + present (archivované kampaně v sub-section). **Audit log** spotu (last 20) v dedikované sekci s humanized fragments — schválil(a) / vrátil(a) do "Čeká" / upravil(a) URL — schválení automaticky resetováno. (Legacy "zamítl(a)" branch zachován v humanizeru pro staré audit rows z 3-state draftu.)
+  - **`<SpotsDrawer>` cards**: barevný dot (emerald/amber) vedle názvu spotu — instantní status bez extra řádku.
+  - **`<CampaignSpotPickers>`**: pod dropdown se zobrazí amber warning když picked spot je `pending`. V option labelu je "✓" pro approved, nic pro pending. Není blokující — editor může kampaň naplánovat i s pending spotem (schválení dorazí později).
+  - i18n klíče (CS+EN) v `lib/i18n/messages.ts`: `spots.approval.*` (~12 klíčů, simplified z původních ~25), `spots.col.approval`, `spots.filter.approval.*`, `spots.deployment_history.*`, `spots.audit.*`, `spot_picker.warning.pending`.
 
 ## Klíčové soubory
 

@@ -1,35 +1,30 @@
 "use client";
 
-// Inline approve / reject buttons rendered next to the status Pill on
-// each PENDING row in /spots. The detail-page <SpotApprovalActions /> is
-// the full picture (incl. reset on already-resolved spots); this is the
-// hot path for "I just got the email from the client, mark it approved
-// without leaving the list".
+// Inline approve / unapprove button rendered next to the status Pill on
+// each row in /spots. The detail-page <SpotApprovalActions /> is the
+// full picture; this is the hot path for "I just got the email from the
+// client, mark it approved without leaving the list".
 //
-// Only renders for `pending` rows — once a spot is approved or rejected,
-// further state changes go through the detail page (less common, more
-// deliberate).
-//
-// Mirror the prompt flow of <SpotApprovalActions>:
-//   - Approve:  optional note prompt → approveSpot(id, note)
-//   - Reject:   REQUIRED reason prompt → rejectSpot(id, reason)
-// Both router.refresh() on success so the row re-renders with the new
-// pill + the buttons disappear (state moved out of pending).
+// Two states (no rejection — see lib/spot-approval.ts):
+//   - pending:   primary "✓ Schválit" button
+//   - approved:  small "Zrušit schválení" link (less urgent state-flip)
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useDialog } from "@/components/dialog/dialog-provider";
 import { useT } from "@/lib/i18n/client";
-import { approveSpot, rejectSpot } from "@/app/spots/actions";
+import { approveSpot, unapproveSpot } from "@/app/spots/actions";
 
 type Props = {
   spotId: number;
+  /** Drives which inline action to show. */
+  approved: boolean;
 };
 
-export function SpotApprovalQuickButtons({ spotId }: Props) {
+export function SpotApprovalQuickButtons({ spotId, approved }: Props) {
   const t = useT();
   const router = useRouter();
-  const { prompt, toast } = useDialog();
+  const { prompt, confirm, toast } = useDialog();
   const [isPending, startTransition] = useTransition();
 
   async function handleApprove() {
@@ -52,21 +47,17 @@ export function SpotApprovalQuickButtons({ spotId }: Props) {
     });
   }
 
-  async function handleReject() {
-    const reason = await prompt({
-      title: t("spots.approval.reject_prompt.title"),
-      message: t("spots.approval.reject_prompt.message"),
-      placeholder: t("spots.approval.reject_prompt.placeholder"),
-      validate: (v) =>
-        v.trim() ? null : t("spots.approval.reject_prompt.required"),
-      confirmLabel: t("spots.approval.reject_button"),
-      destructive: true,
+  async function handleUnapprove() {
+    const ok = await confirm({
+      title: t("spots.approval.clear_confirm.title"),
+      message: t("spots.approval.clear_confirm.message"),
+      confirmLabel: t("spots.approval.clear_button"),
     });
-    if (!reason) return;
+    if (!ok) return;
     startTransition(async () => {
       try {
-        await rejectSpot(spotId, reason);
-        toast.success(t("spots.approval.toast.rejected"));
+        await unapproveSpot(spotId);
+        toast.success(t("spots.approval.toast.cleared"));
         router.refresh();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : String(e));
@@ -74,27 +65,28 @@ export function SpotApprovalQuickButtons({ spotId }: Props) {
     });
   }
 
+  if (approved) {
+    return (
+      <button
+        type="button"
+        onClick={handleUnapprove}
+        disabled={isPending}
+        className="text-[11px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 underline disabled:opacity-50"
+        title={t("spots.approval.clear_button")}
+      >
+        {t("spots.approval.clear_button")}
+      </button>
+    );
+  }
   return (
-    <div className="inline-flex items-center gap-1">
-      <button
-        type="button"
-        onClick={handleApprove}
-        disabled={isPending}
-        className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50 transition-colors"
-        title={t("spots.approval.approve_button")}
-      >
-        ✓ {t("spots.approval.approve_button")}
-      </button>
-      <button
-        type="button"
-        onClick={handleReject}
-        disabled={isPending}
-        className="text-[11px] font-medium px-1.5 py-0.5 rounded-md border border-red-300 dark:border-red-900 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50 transition-colors"
-        title={t("spots.approval.reject_button")}
-        aria-label={t("spots.approval.reject_button")}
-      >
-        ✕
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={handleApprove}
+      disabled={isPending}
+      className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50 transition-colors"
+      title={t("spots.approval.approve_button")}
+    >
+      ✓ {t("spots.approval.approve_button")}
+    </button>
   );
 }

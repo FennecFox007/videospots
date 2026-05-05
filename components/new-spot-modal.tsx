@@ -27,11 +27,9 @@ export type CreatedSpot = {
   videoUrl: string;
   productName: string | null;
   countryId: number;
-  // Fresh spots are pending — both null. Forwarded so the picker can
-  // attach the status hint to the freshly added option without a
-  // separate fetch.
+  /** Fresh spots are pending (null). Forwarded so the picker can attach
+   *  the status hint to the freshly added option without a re-fetch. */
   clientApprovedAt: Date | null;
-  rejectedAt: Date | null;
 };
 
 export type NewSpotModalProps = {

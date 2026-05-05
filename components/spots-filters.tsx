@@ -98,7 +98,6 @@ export function SpotsFilters({ countries, products }: SpotsFiltersProps) {
         options={[
           { value: "pending", label: t("spots.filter.approval.pending") },
           { value: "approved", label: t("spots.filter.approval.approved") },
-          { value: "rejected", label: t("spots.filter.approval.rejected") },
         ]}
         placeholder={t("spots.filter.approval.all")}
       />

@@ -243,21 +243,20 @@ export const spots = pgTable("spot", {
   }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   // Approval lifecycle. Mirrors campaigns.clientApprovedAt — the *spot*
-  // got the client's blessing. Three derived states:
-  //   approvedAt && !rejectedAt  → Schváleno
-  //   rejectedAt && !approvedAt  → Zamítnuto
-  //   neither                    → Čeká na schválení
-  // The approve / reject server actions enforce mutex (each clears the
-  // other). Editing the spot's videoUrl auto-clears approval (different
-  // creative = needs re-approval).
+  // got the client's blessing. Two states:
+  //   clientApprovedAt set    → Schváleno
+  //   clientApprovedAt null   → Čeká na schválení
+  // Editing the spot's videoUrl auto-clears approval (different creative
+  // = client sign-off no longer applies).
+  //
+  // Earlier draft of this schema also had rejectedAt / rejectionReason /
+  // rejectedById columns for an explicit "rejected" state; partner asked
+  // to drop that — spots are either approved or pending, no third state.
+  // Those DB columns stay as orphan storage (Tier 3 soft-removal pattern,
+  // see STAV.md "Schema drift").
   clientApprovedAt: timestamp("client_approved_at", { mode: "date" }),
   clientApprovedComment: text("client_approved_comment"),
   approvedById: text("approved_by_id").references(() => users.id, {
-    onDelete: "set null",
-  }),
-  rejectedAt: timestamp("rejected_at", { mode: "date" }),
-  rejectionReason: text("rejection_reason"),
-  rejectedById: text("rejected_by_id").references(() => users.id, {
     onDelete: "set null",
   }),
 });
