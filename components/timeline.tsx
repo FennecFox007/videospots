@@ -36,6 +36,7 @@ import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { openCampaignPeek } from "@/lib/peek-store";
 import {
+  getCurrentDrag,
   setPendingDrop,
   SPOT_DRAG_MIME,
   type SpotDragPayload,
@@ -210,6 +211,30 @@ export function Timeline({
     bar: TimelineCampaign;
     rect: DOMRect;
   } | null>(null);
+
+  // Live placement preview while dragging a spot from <SpotsDrawer> over
+  // a channel row. channelId tells which row to render the ghost on;
+  // startPct/widthPct control its position. spotName is shown inside the
+  // ghost. Updates on every onDragOver, cleared on document `dragend`.
+  const [dragPreview, setDragPreview] = useState<{
+    channelId: number;
+    startPct: number;
+    widthPct: number;
+    startDate: Date;
+    endDate: Date;
+    spotName: string;
+  } | null>(null);
+
+  // Clear placement preview whenever ANY drag ends (drop or cancel).
+  // dragend fires on the source (spot card in the drawer); using a
+  // document-level listener catches both branches without coupling.
+  useEffect(() => {
+    function onDragEnd() {
+      setDragPreview(null);
+    }
+    document.addEventListener("dragend", onDragEnd);
+    return () => document.removeEventListener("dragend", onDragEnd);
+  }, []);
 
   // Per-channel override dialog target. Null = closed; an object opens the
   // dialog scoped to that (campaign × channel) pair. We carry the channel +
@@ -1028,12 +1053,39 @@ export function Timeline({
                         return;
                       }
                       e.preventDefault();
+                      // Country match? If yes, allow drop + paint ghost
+                      // preview; if no, set dropEffect="none" so the cursor
+                      // shows the not-allowed marker and skip the preview.
+                      const dragging = getCurrentDrag();
+                      if (!dragging || dragging.countryId !== g.id) {
+                        e.dataTransfer.dropEffect = "none";
+                        return;
+                      }
                       e.dataTransfer.dropEffect = "copy";
+                      // Snap drop date to whole day, then build a 14-day
+                      // ghost bar starting there. visual "endDate" is +14
+                      // days exclusive (matches how bars get rendered:
+                      // start..end+1d as percentage). The modal default is
+                      // 14 days, kept consistent so the preview matches
+                      // what you'll see post-drop.
+                      const startDate = dateAtClick(e.currentTarget, e.clientX);
+                      const visualEnd = addDays(startDate, 14);
+                      const startPct = pct(clamp(startDate));
+                      const endPct = pct(clamp(visualEnd));
+                      setDragPreview({
+                        channelId: ch.id,
+                        startPct,
+                        widthPct: Math.max(endPct - startPct, 0.5),
+                        startDate,
+                        endDate: addDays(startDate, 13),
+                        spotName: dragging.spotName,
+                      });
                     }}
                     onDrop={(e) => {
                       const raw = e.dataTransfer.getData(SPOT_DRAG_MIME);
                       if (!raw) return;
                       e.preventDefault();
+                      setDragPreview(null);
                       let payload: SpotDragPayload;
                       try {
                         payload = JSON.parse(raw) as SpotDragPayload;
@@ -1160,6 +1212,47 @@ export function Timeline({
                         />
                       );
                     })}
+
+                    {/* Ghost preview while dragging a spot from <SpotsDrawer />.
+                     *  Dashed outline + semi-transparent indigo fill at lane 0
+                     *  so the user sees roughly where the bar will land.
+                     *  pointer-events:none keeps the underlying onDragOver
+                     *  hit-testing on the track unaffected. The actual lane
+                     *  assignment is done post-drop by the stacking algorithm —
+                     *  this is just a date-placement hint, not a final preview. */}
+                    {dragPreview && dragPreview.channelId === ch.id && (
+                      <>
+                        <div
+                          aria-hidden
+                          className="absolute rounded border-2 border-dashed border-indigo-500 bg-indigo-500/20 dark:bg-indigo-400/20 pointer-events-none flex items-center px-2 overflow-hidden z-[2]"
+                          style={{
+                            left: `${dragPreview.startPct}%`,
+                            width: `${dragPreview.widthPct}%`,
+                            top: `${dp.rowPadTop}px`,
+                            height: `${dp.barHeight}px`,
+                          }}
+                        >
+                          <span className="text-[11px] font-medium text-indigo-700 dark:text-indigo-200 truncate">
+                            {dragPreview.spotName}
+                          </span>
+                        </div>
+                        {/* Floating date pill above the ghost — shows the exact
+                         *  range + day count in CZ format so the user reads the
+                         *  drop date without squinting at gridlines. */}
+                        <div
+                          aria-hidden
+                          className="absolute -translate-x-1/2 -top-7 px-2 py-0.5 rounded bg-indigo-600 text-white text-[11px] font-medium shadow pointer-events-none whitespace-nowrap z-[3]"
+                          style={{
+                            left: `${dragPreview.startPct + dragPreview.widthPct / 2}%`,
+                          }}
+                        >
+                          {formatDate(dragPreview.startDate)} – {formatDate(dragPreview.endDate)}{" "}
+                          <span className="opacity-75">
+                            (14 {pluralCs(14, "den", "dny", "dní")})
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );

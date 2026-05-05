@@ -22,6 +22,7 @@ import Link from "next/link";
 import type { DrawerSpot } from "@/lib/db/queries";
 import {
   SPOT_DRAG_MIME,
+  setCurrentDrag,
   type SpotDragPayload,
 } from "@/lib/spot-drop-store";
 import { useT } from "@/lib/i18n/client";
@@ -267,6 +268,14 @@ function SpotCard({ spot }: { spot: DrawerSpot }) {
     e.dataTransfer.setData(SPOT_DRAG_MIME, JSON.stringify(payload));
     e.dataTransfer.setData("text/plain", label);
     e.dataTransfer.effectAllowed = "copy";
+    // Also stash in module scope so Timeline's onDragOver can validate
+    // country + size the placement preview without reading dataTransfer
+    // (the spec hides it outside drop). Cleared on dragend below.
+    setCurrentDrag(payload);
+  }
+
+  function onDragEnd() {
+    setCurrentDrag(null);
   }
 
   // Stop drag-related events on action buttons so a click inside Play /
@@ -282,6 +291,7 @@ function SpotCard({ spot }: { spot: DrawerSpot }) {
     <li
       draggable
       onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       className="group rounded-md px-2 py-1.5 mb-1 cursor-grab active:cursor-grabbing hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
       title={t("spots_drawer.card_drag_hint")}
     >

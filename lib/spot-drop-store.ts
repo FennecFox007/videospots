@@ -75,3 +75,31 @@ export type SpotDragPayload = {
   countryFlag: string | null;
   countryName: string;
 };
+
+// ---------------------------------------------------------------------------
+// In-flight drag — read synchronously from Timeline's onDragOver
+//
+// The HTML5 spec hides dataTransfer.getData() from non-drop events
+// (security: a page shouldn't be able to read drag payloads from arbitrary
+// drags going across it). That means onDragOver only sees dataTransfer.types,
+// not the contents — so we can't tell which spot's country is being dragged
+// just from the event.
+//
+// Workaround: the drawer's onDragStart shoves the payload into this module
+// scope as well, so Timeline's onDragOver can `getCurrentDrag()` and decide
+// whether to show the placement preview. dragend (or our own drop) clears it.
+//
+// This is purely an aid for live preview / hit-testing; the drop itself
+// still gets its data from dataTransfer.getData() so it works even if the
+// drag started in a different tab / DevTools dragged the card / etc.
+// ---------------------------------------------------------------------------
+
+let currentDrag: SpotDragPayload | null = null;
+
+export function setCurrentDrag(payload: SpotDragPayload | null) {
+  currentDrag = payload;
+}
+
+export function getCurrentDrag(): SpotDragPayload | null {
+  return currentDrag;
+}
