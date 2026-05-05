@@ -7,8 +7,8 @@ import { CAMPAIGN_COLORS, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
 import { PRODUCT_KINDS, DEFAULT_PRODUCT_KIND } from "@/lib/products";
 import { COMMUNICATION_TYPES } from "@/lib/communication";
 import { ChannelsPicker } from "./channels-picker";
+import { CampaignSpotPickers } from "./campaign-spot-pickers";
 import { getT } from "@/lib/i18n/server";
-import { localizedCountryName } from "@/lib/i18n/country";
 
 export type CampaignFormDefaults = {
   name?: string;
@@ -239,58 +239,11 @@ export async function CampaignFormBody({
         title={t("form.section.video")}
         hint={t("form.section.video_hint")}
       >
-        <div className="space-y-2">
-          {groups.map((g) => {
-            const options = spotsByCountry[g.id] ?? [];
-            const selectedId = defaults?.spotsByCountry?.[g.id] ?? "";
-            return (
-              <div
-                key={g.id}
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-3"
-              >
-                <span className="inline-flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300 w-20 sm:w-24 shrink-0">
-                  <span className="text-base leading-none" aria-hidden>
-                    {g.flag}
-                  </span>
-                  <span
-                    className="font-mono text-xs uppercase"
-                    title={localizedCountryName(g.code, g.name, t.locale)}
-                  >
-                    {g.code}
-                  </span>
-                </span>
-                <select
-                  name={`spotId_${g.id}`}
-                  defaultValue={String(selectedId)}
-                  className={inputClass}
-                >
-                  <option value="">{t("form.video.no_spot")}</option>
-                  {options.map((s) => {
-                    const label = s.name
-                      ? s.name
-                      : s.productName
-                        ? `${s.productName} · ${g.code}`
-                        : `Spot · ${g.code}`;
-                    return (
-                      <option key={s.id} value={String(s.id)}>
-                        {label}
-                      </option>
-                    );
-                  })}
-                </select>
-                <a
-                  href="/spots/new"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-                  title={t("form.video.new_spot_tooltip")}
-                >
-                  {t("form.video.new_spot")}
-                </a>
-              </div>
-            );
-          })}
-        </div>
+        <CampaignSpotPickers
+          groups={groups}
+          initialSpotsByCountry={spotsByCountry}
+          initialSelected={defaults?.spotsByCountry ?? {}}
+        />
       </Section>
 
       <Section title={t("form.section.term")}>

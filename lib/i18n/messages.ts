@@ -321,6 +321,11 @@ const cs = {
   "spots.form.field.video_placeholder": "https://www.youtube.com/watch?v=…",
   "spots.form.submit_create": "Vytvořit spot",
   "spots.form.submit_save": "Uložit změny",
+  "spots.form.modal.title": "Nový spot",
+  "spots.form.modal.submit": "Vytvořit a vybrat",
+  "spots.form.modal.error_url_required": "Doplň URL videa.",
+  "spots.form.modal.error_url_invalid":
+    "URL nevypadá správně. Zkus to znovu.",
 
   // Dashboard: undeployed spots tile
   "dashboard.stats.undeployed_spots": "Nenasazené spoty",
@@ -863,6 +868,11 @@ const en: Record<keyof typeof cs, string> = {
   "spots.form.field.video_placeholder": "https://www.youtube.com/watch?v=…",
   "spots.form.submit_create": "Create spot",
   "spots.form.submit_save": "Save changes",
+  "spots.form.modal.title": "New spot",
+  "spots.form.modal.submit": "Create and select",
+  "spots.form.modal.error_url_required": "Fill in the video URL.",
+  "spots.form.modal.error_url_invalid":
+    "That URL doesn't look right. Try again.",
 
   // Dashboard: undeployed spots tile
   "dashboard.stats.undeployed_spots": "Undeployed spots",

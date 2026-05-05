@@ -97,6 +97,77 @@ export async function createSpot(formData: FormData) {
   redirect("/spots");
 }
 
+/**
+ * Same as createSpot but returns the newly created spot instead of
+ * redirecting. Used by the inline "+ Nový spot" modal in the campaign
+ * form: the caller appends the returned spot to the per-country dropdown
+ * and pre-selects it without leaving the page.
+ *
+ * Returns the minimum the dropdown needs (id, name, productName,
+ * videoUrl) — same shape as `SpotOption` so the client can `[...prev,
+ * created]` without conversion.
+ */
+export async function createSpotForPicker(formData: FormData): Promise<{
+  id: number;
+  name: string | null;
+  videoUrl: string;
+  productName: string | null;
+  countryId: number;
+}> {
+  const userId = await requireUser();
+
+  const parsed = upsertSchema.parse({
+    name: formData.get("name") || undefined,
+    productName: formData.get("productName") || undefined,
+    productKind: formData.get("productKind") || undefined,
+    countryId: formData.get("countryId"),
+    videoUrl: formData.get("videoUrl"),
+  });
+
+  const productId = await resolveProductId(
+    parsed.productName,
+    parsed.productKind
+  );
+
+  const [created] = await db
+    .insert(spots)
+    .values({
+      productId,
+      countryId: parsed.countryId,
+      videoUrl: parsed.videoUrl,
+      name: parsed.name || null,
+      createdById: userId,
+    })
+    .returning({ id: spots.id });
+
+  await db.insert(auditLog).values({
+    action: "created",
+    entity: "spot",
+    entityId: created.id,
+    userId,
+    changes: {
+      name: parsed.name ?? null,
+      videoUrl: parsed.videoUrl,
+      via: "campaign-form-inline",
+    },
+  });
+
+  // /spots and / both surface fresh spot lists — keep their caches stale
+  // so a follow-up navigation sees the new spot. The CALLING form stays on
+  // the campaign page (no redirect), and the dropdown updates locally via
+  // the returned object.
+  revalidatePath("/spots");
+  revalidatePath("/");
+
+  return {
+    id: created.id,
+    name: parsed.name || null,
+    videoUrl: parsed.videoUrl,
+    productName: parsed.productName ?? null,
+    countryId: parsed.countryId,
+  };
+}
+
 export async function updateSpot(spotId: number, formData: FormData) {
   const userId = await requireUser();
 

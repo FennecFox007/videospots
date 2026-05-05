@@ -239,7 +239,7 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
 
 **Diskutované, partner+kolega potvrdili odložit:**
 
-1. **Inline modal pro `/spots/new`** z campaign formuláře — místo "otevřít v nové záložce + refresh" by se otevřel modal, po uložení by se nový spot rovnou objevil v dropdownu. Hezčí UX.
+1. ~~**Inline modal pro `/spots/new`** z campaign formuláře~~ ✅ shipped — `<NewSpotModal>` + `<CampaignSpotPickers>`. Klik na "+ Nový spot" otevře inline modal s pre-fillem produktu (čte se z form fieldů `productName` + `productKind`) a uzamčenou zemí (podle řádku, ze kterého modal otevřeš). Submit volá `createSpotForPicker(formData)` (varianta `createSpot` co vrátí spot místo redirectu), parent picker prepende spot do options + auto-vybere ho. Žádný `router.refresh()`, žádný tab switching.
 2. **NAS sync** — automatický pull spotů z NAS adresáře (jmenná konvence pro country/chain mapping). Závislé na hosting strategii.
 3. **E-mailové notifikace** — SMTP (Atlas/Mailgun/Resend), upozornění na blížící se kampaně, schválení čeká, atd. _V V1 máme jen vizuální nudges (šrafování, dashed kroužky, filter chips, dashboard tiles, activity feed) — to partner akceptuje._
 4. **Release → Campaign hierarchie** — release jako parent kampaní (více kampaní per release: Pre-order, Launch, …). Aktuálně jsou kampaně samostatné, release = product.releaseDate informativně.
@@ -277,6 +277,8 @@ Z partnerova přepisu jsme za poslední iteraci shippnuli:
 - `components/spots-drawer.tsx` — toolbar tlačítko + slide-out s draggable spot kartičkami
 - `components/spot-drop-modal.tsx` — modal po drop spotu na timeline (vytvoří kampaň)
 - `components/spots-filters.tsx` — URL-driven filtry pro `/spots` (search + country + product + sort + group toggle)
+- `components/new-spot-modal.tsx` — inline modal pro vytvoření spotu z campaign formuláře (volá `createSpotForPicker` server action)
+- `components/campaign-spot-pickers.tsx` — klientský per-country picker s lokálním stavem (controlled `<select>`, prepend nově vytvořených spotů, auto-select po `<NewSpotModal>` close)
 - `components/filter-bar.tsx` — URL-driven filtry + saved views + approval + missingSpot
 - `components/saved-views-menu.tsx`
 - `components/communication-badge.tsx`, `components/status-badge.tsx`
