@@ -6,9 +6,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** Format a Date as "YYYY-MM-DD" for <input type="date">. */
+/**
+ * Format a Date as "YYYY-MM-DD" for <input type="date">.
+ *
+ * IMPORTANT: must use LOCAL components, not toISOString(). The previous
+ * ISO-based version silently shifted dates by a day for any timezone east
+ * of UTC: a Czech-local midnight (e.g. 2026-05-05 00:00 CEST) becomes
+ * 2026-05-04 22:00 UTC, and slicing the ISO string returned "2026-05-04"
+ * — one day earlier than what the user picked. Affected the click-to-
+ * create-campaign flow, the drag-and-drop modal pre-fill, and every URL
+ * param built from a snapped Date.
+ */
 export function toDateInputValue(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 /** Inclusive overlap test: do [aStart,aEnd] and [bStart,bEnd] share any time? */
