@@ -390,3 +390,62 @@ export async function getSpotsByCountry(): Promise<
   }
   return grouped;
 }
+
+export type DrawerSpot = {
+  id: number;
+  name: string | null;
+  videoUrl: string;
+  productName: string | null;
+  countryId: number;
+  countryCode: string;
+  countryFlag: string | null;
+  countryName: string;
+  /** How many non-archived campaigns currently use this spot. The drawer
+   *  shows it as a badge and uses 0-vs-N to populate the "Nenasazené" tab. */
+  deployments: number;
+};
+
+/**
+ * Spots for the timeline-page drawer. Same data as the /spots admin page
+ * but flattened to a single array (the drawer renders its own grouping).
+ * Always fetched server-side at /'s render time so the user can drag
+ * straight into the timeline without an API hop.
+ */
+export async function getSpotsForDrawer(): Promise<DrawerSpot[]> {
+  const rows = await db
+    .select({
+      id: spots.id,
+      name: spots.name,
+      videoUrl: spots.videoUrl,
+      productName: products.name,
+      countryId: countries.id,
+      countryCode: countries.code,
+      countryFlag: countries.flagEmoji,
+      countryName: countries.name,
+      countrySortOrder: countries.sortOrder,
+      deployments: sql<number>`(
+        SELECT count(*)::int
+        FROM ${campaignVideos} cv
+        INNER JOIN ${campaigns} c ON c.id = cv.campaign_id
+        WHERE cv.spot_id = ${spots.id}
+          AND c.archived_at IS NULL
+      )`,
+    })
+    .from(spots)
+    .leftJoin(products, eq(spots.productId, products.id))
+    .innerJoin(countries, eq(spots.countryId, countries.id))
+    .where(isNull(spots.archivedAt))
+    .orderBy(asc(countries.sortOrder), desc(spots.createdAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    videoUrl: r.videoUrl,
+    productName: r.productName,
+    countryId: r.countryId,
+    countryCode: r.countryCode,
+    countryFlag: r.countryFlag,
+    countryName: r.countryName,
+    deployments: r.deployments,
+  }));
+}

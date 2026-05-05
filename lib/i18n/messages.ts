@@ -323,6 +323,40 @@ const cs = {
   "filter.missing_spot.tooltip":
     "Kampaně, kde alespoň jedna země ještě nemá přiřazený spot.",
 
+  // Spots drawer (toolbar button on /, slide-out panel)
+  "spots_drawer.button": "Spoty",
+  "spots_drawer.button_tooltip":
+    "Otevřít knihovnu spotů. Můžeš spot přetáhnout na timeline a vytvořit z něj kampaň.",
+  "spots_drawer.aria_label": "Knihovna spotů",
+  "spots_drawer.heading": "Spoty",
+  "spots_drawer.hint": "Přetáhni spot na timeline pro vytvoření kampaně.",
+  "spots_drawer.search_placeholder": "Hledat spot…",
+  "spots_drawer.tab.undeployed": "Nenasazené",
+  "spots_drawer.tab.all": "Všechny",
+  "spots_drawer.empty.undeployed": "Žádné nenasazené spoty.",
+  "spots_drawer.empty.all": "Žádné spoty v knihovně.",
+  "spots_drawer.undeployed": "Nenasazený",
+  "spots_drawer.undeployed_count": "{count} nenasazených",
+  "spots_drawer.card_drag_hint": "Přetáhni na timeline",
+  "spots_drawer.footer_hint": "Přetáhni spot na řádek kanálu",
+  "spots_drawer.new_link": "+ Nový spot",
+
+  // Spot drop modal — opens after dragging a spot onto a channel row
+  "spot_drop.title": "Vytvořit kampaň ze spotu",
+  "spot_drop.field.name": "Název kampaně",
+  "spot_drop.field.channels": "Kanály",
+  "spot_drop.field.channels_hint":
+    "Přetáhnutý kanál je vybraný. Můžeš přidat další kanály ve stejné zemi.",
+  "spot_drop.dropped_here": "drop",
+  "spot_drop.approve_now": "Schválit hned",
+  "spot_drop.submit": "Vytvořit kampaň",
+  "spot_drop.created": "Kampaň vytvořena.",
+  "spot_drop.country_mismatch":
+    "Spot je pro {spot}, drop byl na {target}. Spot je pro jednu zemi.",
+  "spot_drop.error_name": "Vyplň název kampaně.",
+  "spot_drop.error_no_channels": "Vyber alespoň jeden kanál.",
+  "spot_drop.error_end_before_start": "Konec nemůže být před začátkem.",
+
   // Campaign form body (new + edit)
   "form.section.basic": "Základní údaje",
   "form.section.product": "Produkt",
@@ -815,6 +849,40 @@ const en: Record<keyof typeof cs, string> = {
   "filter.missing_spot.label": "Missing spot",
   "filter.missing_spot.tooltip":
     "Campaigns with at least one country still waiting for a spot.",
+
+  // Spots drawer
+  "spots_drawer.button": "Spots",
+  "spots_drawer.button_tooltip":
+    "Open the spot library. Drag a spot onto the timeline to create a campaign from it.",
+  "spots_drawer.aria_label": "Spot library",
+  "spots_drawer.heading": "Spots",
+  "spots_drawer.hint": "Drag a spot onto the timeline to create a campaign.",
+  "spots_drawer.search_placeholder": "Search spots…",
+  "spots_drawer.tab.undeployed": "Undeployed",
+  "spots_drawer.tab.all": "All",
+  "spots_drawer.empty.undeployed": "No undeployed spots.",
+  "spots_drawer.empty.all": "No spots in the library.",
+  "spots_drawer.undeployed": "Undeployed",
+  "spots_drawer.undeployed_count": "{count} undeployed",
+  "spots_drawer.card_drag_hint": "Drag onto the timeline",
+  "spots_drawer.footer_hint": "Drop a spot onto a channel row",
+  "spots_drawer.new_link": "+ New spot",
+
+  // Spot drop modal
+  "spot_drop.title": "Create campaign from spot",
+  "spot_drop.field.name": "Campaign name",
+  "spot_drop.field.channels": "Retailers",
+  "spot_drop.field.channels_hint":
+    "The retailer you dropped on is selected. Add other retailers in the same country if you want.",
+  "spot_drop.dropped_here": "drop",
+  "spot_drop.approve_now": "Approve now",
+  "spot_drop.submit": "Create campaign",
+  "spot_drop.created": "Campaign created.",
+  "spot_drop.country_mismatch":
+    "Spot is for {spot}, dropped on {target}. A spot is country-bound.",
+  "spot_drop.error_name": "Fill in the campaign name.",
+  "spot_drop.error_no_channels": "Pick at least one retailer.",
+  "spot_drop.error_end_before_start": "End cannot be before start.",
 
   // Campaign form body
   "form.section.basic": "Basics",

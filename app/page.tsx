@@ -26,6 +26,8 @@ import {
 } from "@/components/timeline";
 import { FilterBar } from "@/components/filter-bar";
 import { TimelineShareButton } from "@/components/timeline-share-button";
+import { SpotsDrawer } from "@/components/spots-drawer";
+import { SpotDropModal } from "@/components/spot-drop-modal";
 import {
   formatDate,
   addDays,
@@ -36,6 +38,7 @@ import {
   findCampaignIds,
   getFilterOptions,
   fetchTimelineCampaigns,
+  getSpotsForDrawer,
 } from "@/lib/db/queries";
 import { listSavedViews } from "@/app/saved-views/actions";
 import { auth } from "@/auth";
@@ -155,11 +158,10 @@ export default async function Dashboard({
     rangeEnd,
   };
   const matchingIds = await findCampaignIds(filters);
-  const campaignRows = await fetchTimelineCampaigns(
-    matchingIds,
-    rangeStart,
-    rangeEnd
-  );
+  const [campaignRows, drawerSpots] = await Promise.all([
+    fetchTimelineCampaigns(matchingIds, rangeStart, rangeEnd),
+    getSpotsForDrawer(),
+  ]);
 
   const distinctCampaignCount = new Set(
     campaignRows.map((c) => c.campaignId)
@@ -295,6 +297,11 @@ export default async function Dashboard({
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* SpotsDrawer renders both the toolbar trigger button and the
+              floating slide-out drawer. Click → drawer; drag a spot card
+              onto a Timeline channel row → SpotDropModal opens at the
+              bottom of the page (mounted below). */}
+          <SpotsDrawer spots={drawerSpots} />
           <TimelineShareButton />
           <a
             href={`/print/timeline?${queryParamsForward}${queryParamsForward.toString() ? "&" : ""}from=${toDateInputValue(rangeStart)}&to=${toDateInputValue(rangeEnd)}`}
@@ -498,6 +505,21 @@ export default async function Dashboard({
 
       {/* Dashboard stats */}
       <DashboardStats />
+
+      {/* Drag-from-drawer drop modal. Inert until something calls
+          setPendingDrop in spot-drop-store; kept at page level so it can
+          read the country → channels grouping the timeline already
+          computed (drives the checkbox list of "other channels in this
+          country"). */}
+      <SpotDropModal
+        groupsByCountry={groups.map((g) => ({
+          countryId: g.id,
+          channels: g.channels.map((c) => ({
+            id: c.id,
+            chainName: c.chainName,
+          })),
+        }))}
+      />
     </div>
   );
 }

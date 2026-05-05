@@ -35,6 +35,11 @@ import {
 import { useT } from "@/lib/i18n/client";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { openCampaignPeek } from "@/lib/peek-store";
+import {
+  setPendingDrop,
+  SPOT_DRAG_MIME,
+  type SpotDragPayload,
+} from "@/lib/spot-drop-store";
 import { ChannelOverrideDialog } from "@/components/channel-override-dialog";
 import { useDialog } from "@/components/dialog/dialog-provider";
 
@@ -1009,6 +1014,56 @@ export function Timeline({
                         x: e.clientX,
                         y: e.clientY,
                         items: buildEmptyTrackMenu(e, ch, g),
+                      });
+                    }}
+                    // HTML5 drag-and-drop landing for spots dragged from the
+                    // <SpotsDrawer />. Accepts only our custom MIME and only
+                    // when the spot's country matches this channel's country.
+                    // The drop handler reads the payload, computes the date
+                    // from the cursor x within the track, and pushes a
+                    // PendingDrop into spot-drop-store, which the modal
+                    // mounted at page level reacts to.
+                    onDragOver={(e) => {
+                      if (!e.dataTransfer.types.includes(SPOT_DRAG_MIME)) {
+                        return;
+                      }
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "copy";
+                    }}
+                    onDrop={(e) => {
+                      const raw = e.dataTransfer.getData(SPOT_DRAG_MIME);
+                      if (!raw) return;
+                      e.preventDefault();
+                      let payload: SpotDragPayload;
+                      try {
+                        payload = JSON.parse(raw) as SpotDragPayload;
+                      } catch {
+                        return;
+                      }
+                      if (payload.countryId !== g.id) {
+                        toast.error(
+                          t("spot_drop.country_mismatch", {
+                            spot: payload.countryCode,
+                            target: g.code,
+                          })
+                        );
+                        return;
+                      }
+                      const startDate = dateAtClick(
+                        e.currentTarget,
+                        e.clientX
+                      );
+                      setPendingDrop({
+                        spotId: payload.spotId,
+                        spotName: payload.spotName,
+                        spotProductName: payload.spotProductName,
+                        countryId: g.id,
+                        countryCode: g.code,
+                        countryFlag: g.flag,
+                        countryName: g.name,
+                        channelId: ch.id,
+                        channelName: ch.chainName,
+                        startDate,
                       });
                     }}
                   >
