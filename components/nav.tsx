@@ -13,10 +13,10 @@ import type { Theme } from "@/lib/theme/server";
 export async function Nav({ theme }: { theme: Theme }) {
   const session = await auth();
   const t = await getT();
-  // Role gates the visibility of the /admin nav links. Viewers + editors
-  // get the user-facing surfaces; only admins see /admin/templates +
-  // /admin. (The /admin layout enforces this server-side too — this is
-  // just to avoid showing a link that 403s.)
+  // Role gates the visibility of the /admin nav link. Viewers + editors
+  // get the user-facing surfaces; only admins see /admin. (The /admin
+  // layout enforces this server-side too — this is just to avoid
+  // showing a link that 403s.)
   const role = session?.user?.role ?? null;
   const isAdmin = role === "admin";
   const canMutate = role === "admin" || role === "editor";
@@ -72,15 +72,7 @@ export async function Nav({ theme }: { theme: Theme }) {
             )}
             <NavLink href="/spots">{t("nav.spots")}</NavLink>
             {isAdmin && (
-              <>
-                <NavLink
-                  href="/admin/templates"
-                  className="hidden md:inline-flex"
-                >
-                  {t("nav.templates")}
-                </NavLink>
-                <NavLink href="/admin">{t("nav.admin")}</NavLink>
-              </>
+              <NavLink href="/admin">{t("nav.admin")}</NavLink>
             )}
           </div>
         </div>

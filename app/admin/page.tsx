@@ -31,11 +31,6 @@ export default async function AdminIndexPage() {
         description={t("admin.card.users.desc")}
       />
       <AdminCard
-        href="/admin/templates"
-        title={t("admin.tab.templates")}
-        description={t("admin.card.templates.desc")}
-      />
-      <AdminCard
         href="/admin/import"
         title={t("admin.tab.import")}
         description={t("admin.card.import.desc")}

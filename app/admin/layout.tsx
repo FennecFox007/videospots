@@ -31,7 +31,6 @@ export default async function AdminLayout({
           <SubLink href="/admin/channels">{t("admin.tab.channels")}</SubLink>
           <SubLink href="/admin/products">{t("admin.tab.products")}</SubLink>
           <SubLink href="/admin/users">{t("admin.tab.users")}</SubLink>
-          <SubLink href="/admin/templates">{t("admin.tab.templates")}</SubLink>
           <SubLink href="/admin/share-links">
             {t("admin.tab.share_links")}
           </SubLink>

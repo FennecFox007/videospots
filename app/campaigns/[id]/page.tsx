@@ -36,7 +36,6 @@ import {
 } from "./actions";
 import { StatusBadge } from "@/components/status-badge";
 import { ShareButton } from "@/components/share-button";
-import { SaveAsTemplateButton } from "@/components/save-as-template-button";
 import { EditableCampaignTitle } from "@/components/editable-campaign-title";
 import { CommunicationBadge } from "@/components/communication-badge";
 import { CountryBadge } from "@/components/country-badge";
@@ -302,10 +301,6 @@ export default async function CampaignDetailPage({
             </button>
           </form>
           <ShareButton campaignId={campaignId} />
-          <SaveAsTemplateButton
-            campaignId={campaignId}
-            defaultName={c.name}
-          />
           <a
             href={`/print/campaigns/${campaignId}`}
             target="_blank"

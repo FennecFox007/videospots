@@ -25,7 +25,7 @@ export const LOCALE_LABELS: Record<Locale, string> = {
 const cs = {
   // Nav
   "nav.timeline": "Timeline",
-  "nav.releases": "Releasy",
+  "nav.releases": "Kalendář",
   "nav.list": "Plánované spoty",
   "nav.new": "+ Naplánovat",
   "nav.spots": "Video knihovna",
@@ -139,7 +139,9 @@ const cs = {
   "timeline.share": "Sdílet",
   "timeline.print": "Tisk / PDF",
   "timeline.list_link": "Plánované spoty",
-  "timeline.new_campaign": "+ Naplánovat spot",
+  // Plain text — the dashboard CTA renders a <Plus> icon next to it,
+  // so leading "+" in the label would double-up visually.
+  "timeline.new_campaign": "Naplánovat spot",
   "timeline.shift_back": "Posunout o týden zpět",
   "timeline.shift_forward": "Posunout o týden vpřed",
   "timeline.today": "Dnes",
@@ -728,7 +730,7 @@ const cs = {
 const en: Record<keyof typeof cs, string> = {
   // Nav
   "nav.timeline": "Timeline",
-  "nav.releases": "Releases",
+  "nav.releases": "Calendar",
   "nav.list": "Planned spots",
   "nav.new": "+ Plan",
   "nav.spots": "Video library",
@@ -842,7 +844,9 @@ const en: Record<keyof typeof cs, string> = {
   "timeline.share": "Share",
   "timeline.print": "Print / PDF",
   "timeline.list_link": "Planned spots",
-  "timeline.new_campaign": "+ Plan a spot",
+  // Plain text — the dashboard CTA renders a <Plus> icon next to it,
+  // so leading "+" in the label would double-up visually.
+  "timeline.new_campaign": "Plan a spot",
   "timeline.shift_back": "Shift one week back",
   "timeline.shift_forward": "Shift one week forward",
   "timeline.today": "Today",
