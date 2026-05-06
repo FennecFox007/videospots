@@ -93,11 +93,18 @@ export type TimelineCampaign = {
    *  campaign_channel row is non-null. Drives the small visual indicator
    *  on the bar. */
   hasChannelOverride: boolean;
-  /** Client approval timestamp. Null = waiting for approval — bar gets
-   *  diagonal stripes overlay so the agency sees at a glance which
-   *  campaigns the client hasn't blessed yet. Permanent once set; further
-   *  edits don't invalidate (per partner). */
+  /** Legacy campaign-level approval timestamp. Kept on the type for the
+   *  context-menu / peek panel buttons that still call approveCampaign;
+   *  visual rendering on the bar no longer reads it (spot status drives
+   *  hatched-vs-solid since Phase 2b). After Phase 3 + 4 the campaign
+   *  approval workflow disappears entirely. */
   clientApprovedAt: Date | null;
+  /** Production status of the (campaign × country) spot, joined into the
+   *  bar so we can render hatched (any non-schvalen) vs solid (schvalen).
+   *  Null when no spot is attached at all to that country — bar then
+   *  renders the dashed-circle "missing creative" affordance on top of
+   *  the hatched fill. */
+  spotProductionStatus: string | null;
   channelId: number;
 };
 
@@ -1808,18 +1815,23 @@ function DraggableBar({
           style={{ width: `${elapsedRatio * 100}%` }}
         />
       )}
-      {/* Diagonal stripes — campaign hasn't been client-approved yet. The
-          stripes sit on top of the campaign colour but below the text/icons
-          (transparent layer, non-interactive). Skipped for cancelled bars
+      {/* Diagonal stripes — the spot for this (campaign × country) hasn't
+          reached "schvalen" yet. Replaces the old "campaign approval" stripes
+          (Phase 2b of vocabulary refactor). Now means: production status is
+          anything but schvalen, OR there's no spot attached at all (null
+          spotProductionStatus from a left-join miss). Cancelled bars skip
           since their gray + line-through is already a stronger signal.
-          Softened from rgba(...,0.32) → 0.18 + wider transparent gap
-          (8px → 12px) so the bar reads as the campaign first, "pending"
-          second — less "fabric pattern", more "subtle hatch". */}
-      {!bar.clientApprovedAt && !isCancelled && (
+          Softened (alpha 0.18, 8/12px gap) so it reads as a subtle hatch,
+          not a fabric pattern. */}
+      {bar.spotProductionStatus !== "schvalen" && !isCancelled && (
         <span
           aria-hidden
           className="absolute inset-0 pointer-events-none"
-          title="Čeká na schválení klienta"
+          title={
+            bar.spotProductionStatus === null
+              ? "Spot ještě nepřiřazen"
+              : "Spot není schválen"
+          }
           style={{
             backgroundImage:
               "repeating-linear-gradient(45deg, transparent 0, transparent 8px, rgba(255,255,255,0.18) 8px, rgba(255,255,255,0.18) 12px)",
