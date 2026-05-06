@@ -147,7 +147,10 @@ export function spotStatusTone(status: DisplayStatus): PillTone {
   return TONE_BY_STATUS[status];
 }
 
-const LABEL_KEY_BY_STATUS: Record<DisplayStatus, string> = {
+// Narrowed to a literal-union return type so callers passing the result
+// to t() satisfy the strict i18n key type. Each entry is a `as const`
+// so the inferred string isn't widened.
+const LABEL_KEY_BY_STATUS = {
   bez_zadani: "spot_status.bez_zadani",
   zadan: "spot_status.zadan",
   ve_vyrobe: "spot_status.ve_vyrobe",
@@ -156,9 +159,12 @@ const LABEL_KEY_BY_STATUS: Record<DisplayStatus, string> = {
   naplanovan: "spot_status.naplanovan",
   bezi: "spot_status.bezi",
   skoncil: "spot_status.skoncil",
-};
+} as const satisfies Record<DisplayStatus, string>;
 
-export function spotStatusLabelKey(status: DisplayStatus): string {
+export type SpotStatusLabelKey =
+  (typeof LABEL_KEY_BY_STATUS)[keyof typeof LABEL_KEY_BY_STATUS];
+
+export function spotStatusLabelKey(status: DisplayStatus): SpotStatusLabelKey {
   return LABEL_KEY_BY_STATUS[status];
 }
 

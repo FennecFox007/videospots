@@ -358,6 +358,10 @@ const cs = {
   "spot_status.naplanovan": "Naplánován",
   "spot_status.bezi": "Běží",
   "spot_status.skoncil": "Skončil",
+  "spots.status.section.title": "Stav",
+  "spots.status.toast.changed": "Stav spotu změněn",
+  "spots.status.tooltip.approve_via_prompt":
+    "Schvalování zaznamená kdo a kdy — otevře se prompt na poznámku.",
 
   // Spot approval workflow — legacy two-state labels (Phase 3 migrates
   // call sites to the unified spot_status.* namespace above).
@@ -1053,6 +1057,10 @@ const en: Record<keyof typeof cs, string> = {
   "spot_status.naplanovan": "Scheduled",
   "spot_status.bezi": "Running",
   "spot_status.skoncil": "Ended",
+  "spots.status.section.title": "Status",
+  "spots.status.toast.changed": "Spot status updated",
+  "spots.status.tooltip.approve_via_prompt":
+    "Approval records who and when — opens a note prompt.",
 
   // Spot approval workflow — legacy two-state labels (Phase 3 migrates
   // call sites to the unified spot_status.* namespace above).

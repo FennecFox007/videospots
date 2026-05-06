@@ -25,12 +25,12 @@ import { formatDate } from "@/lib/utils";
 import { Pill } from "@/components/ui/pill";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CountryBadge } from "@/components/country-badge";
-import { SpotApprovalActions } from "@/components/spot-approval-actions";
+import { SpotStatusControls } from "@/components/spot-status-controls";
 import {
-  spotApprovalState,
-  spotApprovalTone,
-  spotApprovalLabelKey,
-} from "@/lib/spot-approval";
+  spotStatusTone,
+  spotStatusLabelKey,
+  type ProductionStatus,
+} from "@/lib/spot-status";
 
 export default async function SpotDetailPage({
   params,
@@ -106,9 +106,7 @@ export default async function SpotDetailPage({
   const action = updateSpot.bind(null, spotId);
   const isArchived = s.archivedAt !== null;
   const deploymentCount = activeDeployments.length;
-  const approvalState = spotApprovalState({
-    clientApprovedAt: s.clientApprovedAt,
-  });
+  const productionStatus = (s.productionStatus ?? "bez_zadani") as ProductionStatus;
   const approvedBy = row.approvedByName ?? row.approvedByEmail ?? null;
 
   return (
@@ -122,8 +120,8 @@ export default async function SpotDetailPage({
                   ? `${row.productName} · ${row.countryCode}`
                   : `Spot · ${row.countryCode}`)}
             </span>
-            <Pill size="md" tone={spotApprovalTone(approvalState)}>
-              {t(spotApprovalLabelKey(approvalState))}
+            <Pill size="md" tone={spotStatusTone(productionStatus)}>
+              {t(spotStatusLabelKey(productionStatus))}
             </Pill>
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 flex items-center gap-2 flex-wrap">
@@ -165,16 +163,18 @@ export default async function SpotDetailPage({
         </Link>
       </div>
 
-      {/* Approval section — current state + actor + comment, plus the
-          single state-flip button (Schválit when pending, Zrušit
-          schválení when approved). Top-level so it's the first thing
-          the user reaches for after the title. */}
+      {/* Status section — 5-step manual workflow stepper + (when approved)
+          approver metadata + "Zrušit schválení" link. Replaces the binary
+          approval section with the full lifecycle. Derived states
+          (Naplánován/Běží/Skončil) aren't manual targets here — they show
+          on the timeline bar based on deployment dates, not the spot
+          itself. */}
       <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          {t("spots.approval.section.title")}
+          {t("spots.status.section.title")}
         </h2>
 
-        {approvalState === "approved" && s.clientApprovedAt && (
+        {productionStatus === "schvalen" && s.clientApprovedAt && (
           <div className="text-sm text-zinc-700 dark:text-zinc-300 space-y-1">
             <div>
               {t("spots.approval.approved_by", {
@@ -191,9 +191,9 @@ export default async function SpotDetailPage({
           </div>
         )}
 
-        <SpotApprovalActions
+        <SpotStatusControls
           spotId={spotId}
-          clientApprovedAt={s.clientApprovedAt}
+          productionStatus={productionStatus}
           archived={isArchived}
         />
       </div>
