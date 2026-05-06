@@ -22,9 +22,10 @@ export type SpotApprovalState = "approved" | "pending";
 
 /** Compute the legacy binary state from the production status (or from
  *  the old clientApprovedAt timestamp — both shapes accepted for back-
- *  compat during the rename). */
+ *  compat during the rename). `productionStatus` typed as a wide string
+ *  so unnarrowed Drizzle row shapes (column is `text`) flow through. */
 export function spotApprovalState(spot: {
-  productionStatus?: ProductionStatus;
+  productionStatus?: ProductionStatus | string | null;
   clientApprovedAt?: Date | null;
 }): SpotApprovalState {
   if (spot.productionStatus) {

@@ -44,12 +44,15 @@ import { formatDate } from "@/lib/utils";
 import { SpotsFilters } from "@/components/spots-filters";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pill } from "@/components/ui/pill";
-import { SpotApprovalQuickButtons } from "@/components/spot-approval-quick-buttons";
+import { SpotStatusQuickPicker } from "@/components/spot-status-quick-picker";
 import {
-  spotApprovalState,
-  spotApprovalTone,
-  spotApprovalLabelKey,
-} from "@/lib/spot-approval";
+  isProductionStatus,
+  type ProductionStatus,
+} from "@/lib/spot-status";
+// Approval state is still used by the filter chip (binary "Čeká"/"Schváleno"
+// at list level), so the legacy compat shim stays imported. The cell-level
+// status now goes through spot-status (8-state) via the quick picker.
+import { spotApprovalState } from "@/lib/spot-approval";
 
 type View = "all" | "undeployed" | "deployed" | "archived";
 type Sort = "created" | "name" | "deployments";
@@ -124,6 +127,7 @@ export default async function SpotsPage({
       authorEmail: users.email,
       deployments: spotDeploymentCountSql(),
       clientApprovedAt: spots.clientApprovedAt,
+      productionStatus: spots.productionStatus,
     })
     .from(spots)
     .leftJoin(products, eq(spots.productId, products.id))
@@ -445,6 +449,7 @@ type SpotRow = {
   authorEmail: string | null;
   deployments: number;
   clientApprovedAt: Date | null;
+  productionStatus: string;
 };
 
 function SpotTable({
@@ -535,7 +540,7 @@ function SpotTable({
                 </td>
               )}
               <td className="px-4 py-2.5">
-                <ApprovalCell spot={s} t={t} />
+                <ApprovalCell spot={s} />
               </td>
               <td className="px-4 py-2.5">
                 {s.deployments > 0 ? (
@@ -625,31 +630,26 @@ function ViewTab({
 
 function ApprovalCell({
   spot,
-  t,
 }: {
   spot: {
     id: number;
     clientApprovedAt: Date | null;
     archivedAt: Date | null;
+    productionStatus: string;
   };
-  t: Awaited<ReturnType<typeof getT>>;
 }) {
-  const state = spotApprovalState(spot);
-  // Both states get an inline action: pending → "Schválit" primary
-  // button, approved → "Zrušit schválení" subtle link. Archived rows
-  // show only the pill (no actions).
-  const showInlineAction = spot.archivedAt === null;
+  // Cell renders the full 5-state production status (defensive cast in
+  // case a row predates the column or has a bogus value — falls back to
+  // bez_zadani). Click on the Pill opens a dropdown with all states for
+  // inline transitions; archived rows show a read-only Pill.
+  const status: ProductionStatus = isProductionStatus(spot.productionStatus)
+    ? spot.productionStatus
+    : "bez_zadani";
   return (
-    <div className="inline-flex items-center gap-2 flex-wrap">
-      <Pill size="sm" tone={spotApprovalTone(state)}>
-        {t(spotApprovalLabelKey(state))}
-      </Pill>
-      {showInlineAction && (
-        <SpotApprovalQuickButtons
-          spotId={spot.id}
-          approved={state === "approved"}
-        />
-      )}
-    </div>
+    <SpotStatusQuickPicker
+      spotId={spot.id}
+      productionStatus={status}
+      archived={spot.archivedAt !== null}
+    />
   );
 }
