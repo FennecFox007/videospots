@@ -358,6 +358,92 @@ Kombinace pokryjí všechny scénáře bez `client_editor` hybrid role:
 
 **Implementační odhad** (až bude zelená): ~3 hod čisté práce. Schema migrace (`isClient` ADD column, vyžaduje `db:push --force`), `lib/auth-helpers.ts` extension (nová `requireClient`), `lib/roles.ts` doplnění typu, `auth.config.ts` JWT propagace `isClient`, server actions update (4 server actions přepnout na `requireClient`), UI gates (4 míst kde se "Schvaluji" button renderuje), `/admin/users` create/edit form rozšířit o checkbox, audit log — žádné změny (entries už dnes mají userId, kdo vidí kdo schválil).
 
+### 🚨 PRIORITA Č. 2 — Spot vocabulary refactor (kampaň jako koncept zmizí)
+
+**Kontext.** V reálném workflow tým neplánuje "kampaně, které mají spoty" — plánuje **spoty, které mají běžet od Sony**. Aplikace dnes mluví o kampaních jako primární entitě, což vytváří dvojí mentální model (kampaň + spot) s kolidujícími stavy (kampaň schválena vs. spot schválen), kdy reálně schvalování probíhá per-země-spot. Po jednání s druhou AI a iteracích s partnerem se sjednotil směr:
+
+> Aplikace přestane mluvit jazykem "kampaní". Hlavní entitou v UI bude **plánovaný spot**. Datový model zůstává strukturálně stejný — `campaigns` tabulka přežije jako interní reprezentace plánu, ale uživatel ji nikdy nevidí pod tímhle jménem.
+
+**Klíčové: čistě konceptuální + UI refaktor, ne strukturální.** Žádný velký data-model převrat. Změna mentálního modelu, jazyka chrome a logiky schvalování. Reverzibilní commit-by-commit.
+
+**Vztah k Prioritě č. 1 (Sony in-app):** ortogonální. Vocabulary refaktor mění *jak se to v UI jmenuje*, Sony-in-app mění *kdo schvaluje*. Mohou se shippovat odděleně, ale je rozumné je zavřít v jednom batchi (oba přepisují schvalovací UI a chrome). **V2 začíná s vocabulary refaktorem nezávisle** (i bez Sony onboardingu funguje), Sony-in-app se nakope až po partnerově callu.
+
+**Tříslovník (canonical):**
+
+| Dnes (UI label) | Nově (UI label) | Datová reprezentace |
+|---|---|---|
+| Kampaň / Campaign | **Plánovaný spot** *(v kontextu pevné, jinak zkráceně "spot")* | `campaigns` tabulka (interně beze změny názvu) |
+| Spot (knihovna kreativ) | **Video** / **Kreativa** | `spots` tabulka |
+| (žádný explicitní pojem) | **Nasazení** *(jen tam, kde je per-channel rozdíl — override dialog, šablony)* | `campaign_channels` junction |
+
+**Pravidlo:** *"nasazení"* se v běžném UI nepoužívá, jen tam, kde reálně rozlišuje per-retailer věci (override dialog, šablony nasazení v adminu). Jinak je to skryté.
+
+**Status workflow spotu (8 stavů, 5 manuálních + 3 derived):**
+
+| # | Stav | Druh | Vstup |
+|---|---|---|---|
+| 1 | Bez zadání | manuální | default při vytvoření spotu bez `videoUrl` |
+| 2 | Zadán | manuální | editor toggle ("Sony zadalo, začneme dělat") |
+| 3 | Ve výrobě | manuální | editor toggle ("aktuálně se vyrábí") |
+| 4 | Čeká na schválení | manuální | auto když se nastaví `videoUrl` (pokud nebyl už schválen) |
+| 5 | Schválen | manuální | Sony klikne "schvaluji" *(v Sony-in-app režimu gated `requireClient()`)* |
+| 6 | **Naplánován** | derived | `schvalen + startsAt > today` (z deployment kontextu) |
+| 7 | **Běží** | derived | `schvalen + startsAt ≤ today ≤ endsAt` |
+| 8 | **Skončil** | derived | `schvalen + endsAt < today` |
+
+Derived stavy se počítají v *deployment kontextu* (per-bar na timeline), protože jeden spot může mít více nasazení s různými termíny. Per-spot stránka `/spots/[id]` ukazuje hlavní `productionStatus` + výpis aktivních nasazení s jejich derived stavy.
+
+**Schema změny (minimální):**
+- `spots.productionStatus` enum NOT NULL DEFAULT `'bez_zadani'` — hlavní změna
+- `spots.clientApprovedAt` + `clientApprovedComment` + `approvedById` zůstávají (zaznamenávají moment schválení)
+- `campaigns.clientApprovedAt` + `clientApprovedComment` + `approvedById` přestáváme používat (Tier 3 soft-removal — kód je nečte ani nepíše, sloupce zůstanou pro recovery)
+
+**UI rename map (vybrané důležité):**
+
+| Dnes | Nově |
+|---|---|
+| `+ Nová kampaň` | `+ Naplánovat spot` |
+| Top nav "Spoty" → `/spots` (knihovna) | "Video knihovna" → `/videos` *(nebo nech URL `/spots`, jen relabel)* |
+| `/campaigns` heading "Kampaně" | "Plánované spoty" |
+| `/campaigns/[id]` heading "Detail kampaně" | "Detail spotu" |
+| Bar context menu "Schvaluji" / "Zrušit schválení" | totéž, ale gated na productionStatus přechody |
+| Filter "Čeká na schválení" v `/campaigns` | "Čeká na schválení" — význam změní (čte spot status, ne campaign approval) |
+| Filter "Bez spotu" v `/campaigns` | "Bez videa" |
+| Dashboard tile "Nenasazené spoty" | "Video bez nasazení" |
+| `/admin/templates` "Šablony kampaní" | "Šablony nasazení" |
+| Audit log entity "campaign" | interně beze změny, humanized: "spot" / "plán spotu" |
+| Email/share view "campaign" | "spot" |
+| Print view "Tisk kampaně" | "Tisk plánu" *(plán = celá komunikace, např. Saros Launch)* |
+
+**Vizuální mapping na timeline (přerámcování existujícího vocabulary):**
+
+| Stav | Bar |
+|---|---|
+| Bez zadání | dashed outline, šedý |
+| Zadán | světle šedý / světle modrý solid |
+| Ve výrobě | modrý / indigo solid bez play ikony |
+| Čeká na schválení | barevný solid s **subtilním šrafováním** *(přerámcuje dnešní "neschválená kampaň" = šrafy)* |
+| Schválen | solid + play |
+| Naplánován | solid + play, leží před dnes-linkou |
+| Běží | solid + play, protíná dnes-linku |
+| Skončil | solid s nižší opacity, leží za dnes-linkou |
+
+**Implementační fáze:**
+
+1. **Phase 1a — Schema + foundation library** (~1.5 hod): `spots.productionStatus` ADD column, backfill existujících rows, refactor `lib/spot-approval.ts` → `lib/spot-status.ts` s plnou 8-status logikou, helper funkce, i18n key map.
+2. **Phase 1b — Server actions** (~1 hod): `approveSpot` / `unapproveSpot` přepsat na status transitions, nová `setSpotProductionStatus(id, status)`, `updateSpot` auto-transitions (videoURL set → ceka_na_schvaleni).
+3. **Phase 2 — Timeline + peek render logic** (~2 hod): bar visual přepojit z `campaign.clientApprovedAt` na `spot.productionStatus + deployment dates`. Status workflow buttons na `/spots/[id]`. Šablona "Schvaluji" na campaign vyhodit (peek footer + context menu).
+4. **Phase 3 — i18n batch rename** (~3-4 hod): všechny CS+EN labels napříč chrome (~80–120 klíčů). Audit log humanizér. Share + print views.
+5. **Phase 4 — Routes + nav** (~1 hod): top nav rename, dashboard CTA, filter chips, empty states. `/admin/templates` label change.
+
+Total ~8–11 hod čisté práce, doporučeně ve 4–5 commitech, každý reverzibilní.
+
+**Otevřené otázky pro partnerský call** (kromě Priority č. 1):
+1. **Slovník schválen?** Plánovaný spot / Video / Nasazení. Pokud má kolega lepší slovo z agenturní praxe, brát jeho.
+2. **Knihovna URL** — `/spots` → `/videos` (čistější) **nebo** nechat URL `/spots`, jen relabel (žádný reverse-route impact)? Můj návrh: **relabel only**, žádný route change.
+3. **Šablony URL** — `/admin/templates` zůstává, jen UI label "Šablony nasazení"?
+4. **8 stavů (s Naplánován)** vs. 7 (bez Naplánován)? Můj návrh: 8, protože uživatel reálně ocení rozdíl mezi "schválené, čeká na start" a "běží teď".
+
 ### 🥇 Top 3 — udělat HNED (next batch ~2 dny)
 
 **A. Per-user role (admin / editor / viewer)** ✅ shipped (commit `69ada56`, dashboard polish v `9e07b71`)
