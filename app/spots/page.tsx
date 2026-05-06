@@ -45,13 +45,14 @@ import { SpotsFilters } from "@/components/spots-filters";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pill } from "@/components/ui/pill";
 import { SpotStatusQuickPicker } from "@/components/spot-status-quick-picker";
+import { SpotApprovalQuickPicker } from "@/components/spot-approval-quick-picker";
 import {
+  approvalStatusFrom,
   isProductionStatus,
   type ProductionStatus,
 } from "@/lib/spot-status";
 // Approval state is still used by the filter chip (binary "Čeká"/"Schváleno"
-// at list level), so the legacy compat shim stays imported. The cell-level
-// status now goes through spot-status (8-state) via the quick picker.
+// at list level). Cell-level pickers handle their own axis directly.
 import { spotApprovalState } from "@/lib/spot-approval";
 
 type View = "all" | "undeployed" | "deployed" | "archived";
@@ -484,6 +485,9 @@ function SpotTable({
               </th>
             )}
             <th className="text-left px-4 py-2 font-medium">
+              {t("spots.col.production")}
+            </th>
+            <th className="text-left px-4 py-2 font-medium">
               {t("spots.col.approval")}
             </th>
             <th className="text-left px-4 py-2 font-medium">
@@ -539,6 +543,9 @@ function SpotTable({
                   </span>
                 </td>
               )}
+              <td className="px-4 py-2.5">
+                <ProductionStatusCell spot={s} />
+              </td>
               <td className="px-4 py-2.5">
                 <ApprovalCell spot={s} />
               </td>
@@ -628,20 +635,16 @@ function ViewTab({
   );
 }
 
-function ApprovalCell({
+// Production-axis cell: 3-state quick picker (Bez zadání / Zadán / Ve výrobě).
+function ProductionStatusCell({
   spot,
 }: {
   spot: {
     id: number;
-    clientApprovedAt: Date | null;
     archivedAt: Date | null;
     productionStatus: string;
   };
 }) {
-  // Cell renders the full 5-state production status (defensive cast in
-  // case a row predates the column or has a bogus value — falls back to
-  // bez_zadani). Click on the Pill opens a dropdown with all states for
-  // inline transitions; archived rows show a read-only Pill.
   const status: ProductionStatus = isProductionStatus(spot.productionStatus)
     ? spot.productionStatus
     : "bez_zadani";
@@ -649,6 +652,29 @@ function ApprovalCell({
     <SpotStatusQuickPicker
       spotId={spot.id}
       productionStatus={status}
+      archived={spot.archivedAt !== null}
+    />
+  );
+}
+
+// Approval-axis cell: 2-state quick picker (Čeká / Schváleno) derived
+// from clientApprovedAt. Independent of the production cell.
+function ApprovalCell({
+  spot,
+}: {
+  spot: {
+    id: number;
+    clientApprovedAt: Date | null;
+    archivedAt: Date | null;
+  };
+}) {
+  const approvalStatus = approvalStatusFrom({
+    clientApprovedAt: spot.clientApprovedAt,
+  });
+  return (
+    <SpotApprovalQuickPicker
+      spotId={spot.id}
+      approvalStatus={approvalStatus}
       archived={spot.archivedAt !== null}
     />
   );

@@ -866,11 +866,10 @@ async function DashboardStats() {
         })
         .from(auditLog)
         .where(gte(auditLog.createdAt, sevenDaysAgo)),
-      // "Awaiting approval" = unapproved campaigns that haven't ended yet,
-      // Spots awaiting approval — productionStatus === 'ceka_na_schvaleni'
-      // (the explicit "creative is hotová, čeká na Sony" state). After
-      // Phase 2c approval is per-spot only; the campaign-level pending
-      // count this tile used to compute is gone with that workflow.
+      // Spots awaiting approval — clientApprovedAt IS NULL on the
+      // approval axis (the canonical signal for "Sony hasn't signed off
+      // yet"). Independent of production axis, so a spot in ve_vyrobe
+      // with no URL counts the same as one with URL waiting for review.
       // Split into running/upcoming using whether ANY non-archived
       // campaign deploys this spot with startsAt ≤ today vs in the future.
       db
@@ -895,7 +894,7 @@ async function DashboardStats() {
         .where(
           and(
             isNull(spots.archivedAt),
-            eq(spots.productionStatus, "ceka_na_schvaleni")
+            isNull(spots.clientApprovedAt)
           )
         ),
       // Undeployed spots: not archived, and not currently referenced by

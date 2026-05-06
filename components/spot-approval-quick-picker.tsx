@@ -1,16 +1,13 @@
 "use client";
 
-// Inline production-status picker for /spots list rows. Pill-as-trigger
-// pattern — click opens a portal-rendered dropdown with the 3 manual
-// production states. Approval axis is rendered separately by
-// <SpotApprovalQuickPicker>.
+// Inline approval-status picker for /spots list rows. Two states:
+// "Čeká na schválení" / "Schváleno". Mirrors the production picker
+// pattern (Pill-as-trigger + portal-rendered dropdown) so the two
+// columns feel uniform on the row.
 //
-// Portal rendering: the menu is mounted to document.body via createPortal
-// so it escapes the table's overflow-hidden. Position is computed from
-// the trigger's getBoundingClientRect with position: fixed; flips upward
-// when there's not enough room below.
-//
-// Archived rows render a read-only Pill (no dropdown).
+// Picking "Schváleno" opens the approve prompt (capture optional
+// note + approver via approveSpot). Picking "Čeká na schválení"
+// rolls back via unapproveSpot. Independent of production axis.
 
 import {
   useEffect,
@@ -22,20 +19,20 @@ import {
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Check } from "lucide-react";
-import { setSpotProductionStatus } from "@/app/spots/actions";
+import { approveSpot, unapproveSpot } from "@/app/spots/actions";
 import { useDialog } from "@/components/dialog/dialog-provider";
 import { useT } from "@/lib/i18n/client";
 import { Pill } from "@/components/ui/pill";
 import {
-  PRODUCTION_STATUSES,
-  productionStatusLabelKey,
-  productionStatusTone,
-  type ProductionStatus,
+  APPROVAL_STATUSES,
+  approvalStatusLabelKey,
+  approvalStatusTone,
+  type ApprovalStatus,
 } from "@/lib/spot-status";
 
 const MENU_WIDTH_PX = 208;
 const MENU_GAP_PX = 4;
-const MENU_HEIGHT_PX = 115; // 3 items × ~32px + 8px y-padding
+const MENU_HEIGHT_PX = 85; // 2 items × ~32px + 8px y-padding
 
 type MenuPosition = {
   top: number;
@@ -45,18 +42,18 @@ type MenuPosition = {
 
 type Props = {
   spotId: number;
-  productionStatus: ProductionStatus;
+  approvalStatus: ApprovalStatus;
   archived: boolean;
 };
 
-export function SpotStatusQuickPicker({
+export function SpotApprovalQuickPicker({
   spotId,
-  productionStatus,
+  approvalStatus,
   archived,
 }: Props) {
   const t = useT();
   const router = useRouter();
-  const { toast } = useDialog();
+  const { prompt, toast } = useDialog();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -106,22 +103,43 @@ export function SpotStatusQuickPicker({
 
   if (archived) {
     return (
-      <Pill size="sm" tone={productionStatusTone(productionStatus)}>
-        {t(productionStatusLabelKey(productionStatus))}
+      <Pill size="sm" tone={approvalStatusTone(approvalStatus)}>
+        {t(approvalStatusLabelKey(approvalStatus))}
       </Pill>
     );
   }
 
-  function transitionTo(target: ProductionStatus) {
-    if (target === productionStatus) {
+  async function transitionTo(target: ApprovalStatus) {
+    if (target === approvalStatus) {
       setOpen(false);
       return;
     }
     setOpen(false);
+    if (target === "schvaleno") {
+      const note = await prompt({
+        title: t("spots.approval.approve_prompt.title"),
+        message: t("spots.approval.approve_prompt.message"),
+        placeholder: t("spots.approval.approve_prompt.placeholder"),
+        validate: () => null,
+        confirmLabel: t("spots.approval.approve_button"),
+      });
+      if (note === null) return;
+      startTransition(async () => {
+        try {
+          await approveSpot(spotId, note);
+          toast.success(t("spots.approval.toast.approved"));
+          router.refresh();
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : String(e));
+        }
+      });
+      return;
+    }
+    // target === "ceka_na_schvaleni" → unapprove
     startTransition(async () => {
       try {
-        await setSpotProductionStatus(spotId, target);
-        toast.success(t("spots.status.toast.changed"));
+        await unapproveSpot(spotId);
+        toast.success(t("spots.approval.toast.cleared"));
         router.refresh();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : String(e));
@@ -142,8 +160,9 @@ export function SpotStatusQuickPicker({
               width: MENU_WIDTH_PX,
             }}
           >
-            {PRODUCTION_STATUSES.map((status) => {
-              const isCurrent = status === productionStatus;
+            {APPROVAL_STATUSES.map((status) => {
+              const isCurrent = status === approvalStatus;
+              const isApproveStep = status === "schvaleno";
               return (
                 <button
                   key={status}
@@ -151,6 +170,11 @@ export function SpotStatusQuickPicker({
                   role="menuitem"
                   onClick={() => transitionTo(status)}
                   disabled={isCurrent || pending}
+                  title={
+                    isApproveStep && !isCurrent
+                      ? t("spots.status.tooltip.approve_via_prompt")
+                      : undefined
+                  }
                   className={
                     "w-full px-3 py-1.5 text-left text-sm flex items-center gap-2 transition-colors " +
                     (isCurrent
@@ -162,7 +186,7 @@ export function SpotStatusQuickPicker({
                     {isCurrent && <Check className="w-3.5 h-3.5" strokeWidth={2.5} />}
                   </span>
                   <span className="flex-1">
-                    {t(productionStatusLabelKey(status))}
+                    {t(approvalStatusLabelKey(status))}
                   </span>
                 </button>
               );
@@ -183,9 +207,9 @@ export function SpotStatusQuickPicker({
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <Pill size="sm" tone={productionStatusTone(productionStatus)}>
+        <Pill size="sm" tone={approvalStatusTone(approvalStatus)}>
           <span className="inline-flex items-center gap-1">
-            {t(productionStatusLabelKey(productionStatus))}
+            {t(approvalStatusLabelKey(approvalStatus))}
             <ChevronDown
               className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity"
               strokeWidth={2.5}

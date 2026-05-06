@@ -331,7 +331,8 @@ const cs = {
   "spots.col.name": "Spot",
   "spots.col.product": "Produkt",
   "spots.col.country": "Země",
-  "spots.col.deployments": "Stav",
+  "spots.col.production": "Výroba",
+  "spots.col.deployments": "Nasazení",
   "spots.col.created": "Vytvořeno",
   "spots.empty.undeployed": "Žádné nenasazené spoty — všechno běží.",
   "spots.empty.generic": "Žádné spoty v této kategorii.",
@@ -353,18 +354,24 @@ const cs = {
   "spots.filter.approval.approved": "Schváleno",
   "spots.col.approval": "Schválení",
 
-  // Spot status — 5 manual + 3 derived states. Derived ones (naplanovan /
-  // bezi / skoncil) are computed from deployment dates; see lib/spot-status.ts.
+  // Two independent state axes — production (manual, agency-controlled)
+  // and approval (derived from clientApprovedAt, Sony-controlled). Plus
+  // three derived deployment-time states. See lib/spot-status.ts.
+  // Production axis:
   "spot_status.bez_zadani": "Bez zadání",
   "spot_status.zadan": "Zadán",
   "spot_status.ve_vyrobe": "Ve výrobě",
+  // Approval axis:
   "spot_status.ceka_na_schvaleni": "Čeká na schválení",
-  "spot_status.schvalen": "Schválen",
+  "spot_status.schvaleno": "Schváleno",
+  // Derived deployment-time:
   "spot_status.naplanovan": "Naplánován",
   "spot_status.bezi": "Běží",
   "spot_status.skoncil": "Skončil",
   "spots.status.section.title": "Stav",
-  "spots.status.toast.changed": "Stav spotu změněn",
+  "spots.status.section.production": "Stav výroby",
+  "spots.status.section.approval": "Schválení",
+  "spots.status.toast.changed": "Stav výroby změněn",
   "spots.status.tooltip.approve_via_prompt":
     "Schvalování zaznamená kdo a kdy — otevře se prompt na poznámku.",
 
@@ -1036,7 +1043,8 @@ const en: Record<keyof typeof cs, string> = {
   "spots.col.name": "Spot",
   "spots.col.product": "Product",
   "spots.col.country": "Country",
-  "spots.col.deployments": "Status",
+  "spots.col.production": "Production",
+  "spots.col.deployments": "Deployment",
   "spots.col.created": "Created",
   "spots.empty.undeployed": "No undeployed spots — everything's scheduled.",
   "spots.empty.generic": "No spots in this view.",
@@ -1058,18 +1066,19 @@ const en: Record<keyof typeof cs, string> = {
   "spots.filter.approval.approved": "Approved",
   "spots.col.approval": "Approval",
 
-  // Spot status — 5 manual + 3 derived states. Derived ones (naplanovan /
-  // bezi / skoncil) are computed from deployment dates; see lib/spot-status.ts.
+  // Two-axis state set — see CS comment above for the rationale.
   "spot_status.bez_zadani": "No brief",
   "spot_status.zadan": "Briefed",
   "spot_status.ve_vyrobe": "In production",
   "spot_status.ceka_na_schvaleni": "Awaiting approval",
-  "spot_status.schvalen": "Approved",
+  "spot_status.schvaleno": "Approved",
   "spot_status.naplanovan": "Scheduled",
   "spot_status.bezi": "Running",
   "spot_status.skoncil": "Ended",
   "spots.status.section.title": "Status",
-  "spots.status.toast.changed": "Spot status updated",
+  "spots.status.section.production": "Production status",
+  "spots.status.section.approval": "Approval",
+  "spots.status.toast.changed": "Production status updated",
   "spots.status.tooltip.approve_via_prompt":
     "Approval records who and when — opens a note prompt.",
 

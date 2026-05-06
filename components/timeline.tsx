@@ -97,12 +97,12 @@ export type TimelineCampaign = {
    *  hatched-vs-solid since Phase 2b). After Phase 3 + 4 the campaign
    *  approval workflow disappears entirely. */
   clientApprovedAt: Date | null;
-  /** Production status of the (campaign × country) spot, joined into the
-   *  bar so we can render hatched (any non-schvalen) vs solid (schvalen).
-   *  Null when no spot is attached at all to that country — bar then
-   *  renders the dashed-circle "missing creative" affordance on top of
-   *  the hatched fill. */
-  spotProductionStatus: string | null;
+  /** Approval timestamp on the (campaign × country) spot, joined into
+   *  the bar so we can render hatched (not approved) vs solid (approved).
+   *  Null when no spot is attached at all OR the spot is unapproved.
+   *  The bar overlays the dashed-circle "missing creative" affordance
+   *  separately when there's no spot at all (videoUrl falsy). */
+  spotApprovedAt: Date | null;
   channelId: number;
 };
 
@@ -1799,22 +1799,17 @@ function DraggableBar({
         />
       )}
       {/* Diagonal stripes — the spot for this (campaign × country) hasn't
-          reached "schvalen" yet. Replaces the old "campaign approval" stripes
-          (Phase 2b of vocabulary refactor). Now means: production status is
-          anything but schvalen, OR there's no spot attached at all (null
-          spotProductionStatus from a left-join miss). Cancelled bars skip
-          since their gray + line-through is already a stronger signal.
-          Softened (alpha 0.18, 8/12px gap) so it reads as a subtle hatch,
-          not a fabric pattern. */}
-      {bar.spotProductionStatus !== "schvalen" && !isCancelled && (
+          been approved by the client yet. Reads from spot.clientApprovedAt
+          directly (the approval axis); production axis (Bez zadání /
+          Zadán / Ve výrobě) doesn't affect bar visual. Cancelled bars
+          skip since gray + line-through is already a stronger signal.
+          Softened (alpha 0.18, 8/12px gap) so it reads as a subtle
+          hatch, not a fabric pattern. */}
+      {!bar.spotApprovedAt && !isCancelled && (
         <span
           aria-hidden
           className="absolute inset-0 pointer-events-none"
-          title={
-            bar.spotProductionStatus === null
-              ? "Spot ještě nepřiřazen"
-              : "Spot není schválen"
-          }
+          title="Spot není schválen klientem"
           style={{
             backgroundImage:
               "repeating-linear-gradient(45deg, transparent 0, transparent 8px, rgba(255,255,255,0.18) 8px, rgba(255,255,255,0.18) 12px)",

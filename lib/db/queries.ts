@@ -319,12 +319,13 @@ export async function fetchTimelineCampaigns(
       communicationType: campaigns.communicationType,
       clientApprovedAt: campaigns.clientApprovedAt,
       videoUrl: spots.videoUrl,
-      // Production status of the spot attached to this (campaign × country).
-      // Drives the bar's hatched-vs-solid visual: solid when 'schvalen',
+      // Approval timestamp on the SPOT attached to this (campaign ×
+      // country). Drives the bar's hatched-vs-solid visual: solid when
+      // the spot has been approved by the client (clientApprovedAt set),
       // hatched otherwise. Null when no spot is attached at all (left
-      // join miss); the bar then renders the "missing spot" affordance
+      // join miss); bar then renders the "missing creative" affordance
       // (dashed play-circle) on top of hatched fill.
-      spotProductionStatus: spots.productionStatus,
+      spotApprovedAt: spots.clientApprovedAt,
       coverUrl: products.coverUrl,
       masterStartsAt: campaigns.startsAt,
       masterEndsAt: campaigns.endsAt,
@@ -364,7 +365,7 @@ export async function fetchTimelineCampaigns(
     communicationType: r.communicationType,
     clientApprovedAt: r.clientApprovedAt,
     videoUrl: r.videoUrl,
-    spotProductionStatus: r.spotProductionStatus,
+    spotApprovedAt: r.spotApprovedAt,
     coverUrl: r.coverUrl,
     // Effective: per-channel override falls back to master.
     startsAt: r.channelStartsAt ?? r.masterStartsAt,

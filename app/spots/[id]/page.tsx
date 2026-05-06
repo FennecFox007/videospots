@@ -26,9 +26,14 @@ import { Pill } from "@/components/ui/pill";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CountryBadge } from "@/components/country-badge";
 import { SpotStatusControls } from "@/components/spot-status-controls";
+import { SpotApprovalControls } from "@/components/spot-approval-controls";
 import {
-  spotStatusTone,
-  spotStatusLabelKey,
+  productionStatusTone,
+  productionStatusLabelKey,
+  approvalStatusTone,
+  approvalStatusLabelKey,
+  approvalStatusFrom,
+  isProductionStatus,
   type ProductionStatus,
 } from "@/lib/spot-status";
 
@@ -106,7 +111,12 @@ export default async function SpotDetailPage({
   const action = updateSpot.bind(null, spotId);
   const isArchived = s.archivedAt !== null;
   const deploymentCount = activeDeployments.length;
-  const productionStatus = (s.productionStatus ?? "bez_zadani") as ProductionStatus;
+  // Two independent axes — production (manual) and approval (derived
+  // from clientApprovedAt). See lib/spot-status.ts.
+  const productionStatus: ProductionStatus = isProductionStatus(s.productionStatus)
+    ? s.productionStatus
+    : "bez_zadani";
+  const approvalStatus = approvalStatusFrom({ clientApprovedAt: s.clientApprovedAt });
   const approvedBy = row.approvedByName ?? row.approvedByEmail ?? null;
 
   return (
@@ -120,8 +130,11 @@ export default async function SpotDetailPage({
                   ? `${row.productName} · ${row.countryCode}`
                   : `Spot · ${row.countryCode}`)}
             </span>
-            <Pill size="md" tone={spotStatusTone(productionStatus)}>
-              {t(spotStatusLabelKey(productionStatus))}
+            <Pill size="md" tone={productionStatusTone(productionStatus)}>
+              {t(productionStatusLabelKey(productionStatus))}
+            </Pill>
+            <Pill size="md" tone={approvalStatusTone(approvalStatus)}>
+              {t(approvalStatusLabelKey(approvalStatus))}
             </Pill>
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 flex items-center gap-2 flex-wrap">
@@ -163,39 +176,51 @@ export default async function SpotDetailPage({
         </Link>
       </div>
 
-      {/* Status section — 5-step manual workflow stepper + (when approved)
-          approver metadata + "Zrušit schválení" link. Replaces the binary
-          approval section with the full lifecycle. Derived states
-          (Naplánován/Běží/Skončil) aren't manual targets here — they show
-          on the timeline bar based on deployment dates, not the spot
-          itself. */}
-      <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          {t("spots.status.section.title")}
-        </h2>
+      {/* Two independent state axes — production (agency: 3-step
+          stepper) and approval (Sony: schvalen / čeká binary).
+          Each section is self-contained; toggling one doesn't auto-
+          flip the other. Derived "Běží/Skončil" states show on the
+          timeline bar via deployment dates, not here. */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            {t("spots.status.section.production")}
+          </h2>
+          <SpotStatusControls
+            spotId={spotId}
+            productionStatus={productionStatus}
+            archived={isArchived}
+          />
+        </div>
 
-        {productionStatus === "schvalen" && s.clientApprovedAt && (
-          <div className="text-sm text-zinc-700 dark:text-zinc-300 space-y-1">
-            <div>
-              {t("spots.approval.approved_by", {
-                who: approvedBy ?? "—",
-              })}{" "}
-              <span className="text-zinc-500">
-                · {formatDate(s.clientApprovedAt)}
-              </span>
-            </div>
-            <div className="text-xs text-zinc-500 italic">
-              {s.clientApprovedComment?.trim() ||
-                t("spots.approval.no_comment")}
-            </div>
-          </div>
-        )}
+        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            {t("spots.status.section.approval")}
+          </h2>
 
-        <SpotStatusControls
-          spotId={spotId}
-          productionStatus={productionStatus}
-          archived={isArchived}
-        />
+          {approvalStatus === "schvaleno" && s.clientApprovedAt && (
+            <div className="text-sm text-zinc-700 dark:text-zinc-300 space-y-1">
+              <div>
+                {t("spots.approval.approved_by", {
+                  who: approvedBy ?? "—",
+                })}{" "}
+                <span className="text-zinc-500">
+                  · {formatDate(s.clientApprovedAt)}
+                </span>
+              </div>
+              <div className="text-xs text-zinc-500 italic">
+                {s.clientApprovedComment?.trim() ||
+                  t("spots.approval.no_comment")}
+              </div>
+            </div>
+          )}
+
+          <SpotApprovalControls
+            spotId={spotId}
+            approvalStatus={approvalStatus}
+            archived={isArchived}
+          />
+        </div>
       </div>
 
       {/* Inline video preview — handy when re-checking what's actually

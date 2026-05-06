@@ -376,7 +376,19 @@ Shippnuto v 9 commitech (`7ab8089` → `65c8dab`) ve čtyřech fázích:
 - *Video* / *Kreativa* (UI) ≡ row v `spots` table (DB)
 - *Nasazení* (UI, jen v override dialog + šablonách) ≡ row v `campaign_channels` (DB)
 
-**8 stavů spotu:** `bez_zadani` / `zadan` / `ve_vyrobe` / `ceka_na_schvaleni` / `schvalen` (manuální) + `naplanovan` / `bezi` / `skoncil` (derived per-deployment z `campaigns.startsAt/endsAt` vs. now).
+**Stav spotu — DVĚ ORTOGONÁLNÍ OSY** (post-iterace `b9a8e5f` — viz "Two-axis status split" níž):
+
+- **Production axis** (interní, agentura řídí; sloupec `spots.production_status`): `bez_zadani` / `zadan` / `ve_vyrobe` (3 manuální stavy)
+- **Approval axis** (klient/Sony řídí; derived z `spots.client_approved_at`): null = `ceka_na_schvaleni`, set = `schvaleno`
+- **Derived deployment-time** (z campaign × today): `naplanovan` / `bezi` / `skoncil` — počítá se per-deployment, jen pokud approval = `schvaleno`. Žádný sloupec.
+
+Spot může být v libovolné kombinaci dvou os: `{ve_vyrobe, schvaleno}` (Sony schválil draft, doděláváme final), `{bez_zadani, ceka_na_schvaleni}` (čistý nový spot), atd. Editace každé osy je nezávislá:
+- `setSpotProductionStatus(id, status)` — jen production
+- `approveSpot(id, comment)` / `unapproveSpot(id)` — jen approval
+
+Auto-rules při edit videoUrl:
+- URL set poprvé na bez_zadani/zadan → bump production na `ve_vyrobe` (creative je v práci)
+- URL replaced AND was approved → wipe approval timestamps (nová verze, předchozí sign-off neplatí). Production unaffected.
 
 **DB unchanged:** `campaigns` / `campaign_videos` / `campaign_channels` table names zůstaly. `campaigns.clientApprovedAt` + `clientApprovedComment` + `approvedById` columns zůstávají v DB jako Tier 3 soft-removal — kód je nečte ani nepíše, sloupce přežívají pro recovery.
 
@@ -504,7 +516,7 @@ Shippnuto v 9 commitech (`7ab8089` → `65c8dab`) ve čtyřech fázích:
 - `lib/i18n/{messages,server,client,country}.ts` + `lib/theme/server.ts`
 - `lib/peek-store.ts` — module-level subscriber pro peek panel
 - `lib/spot-drop-store.ts` — module-level subscriber pro drag-drop spot → timeline (PendingDrop, SPOT_DRAG_MIME) + `currentDrag` paralelní state pro live preview (HTML5 omezení v dragover)
-- `lib/spot-status.ts` — **canonical 8-state lifecycle** spotu (5 manuální + 3 derived per-deployment), `resolveSpotDisplayStatus()` helper, `autoTransitionForUrlChange()` (URL set → ceka_na_schvaleni; URL replaced while schvalen → reset), `backfillProductionStatus()` (one-shot migration), Pill tone + i18n key (literal-union typed).
+- `lib/spot-status.ts` — **dvě ortogonální osy spotu**. Production axis (3 manuální stavy: bez_zadani / zadan / ve_vyrobe) + Approval axis (derived z clientApprovedAt). Helpers `approvalStatusFrom()`, `resolveDeploymentTimeState()` (per-deployment derived), `autoTransitionForUrlChange()`, `shouldInvalidateApprovalOnUrlChange()`. Pill tones + i18n keys per axis (literal-union typed).
 - `lib/spot-approval.ts` — **legacy compat shim** s binárním approved/pending API. New code uses `lib/spot-status.ts`; this stays alive while existing call sites get migrated.
 - `components/spot-status-controls.tsx` — horizontal stepper na `/spots/[id]` všech 5 manuálních stavů. "Schválen" routes through approve prompt. "Zrušit schválení" link když approved.
 - `lib/auth-helpers.ts` — `requireUser` / `requireEditor` / `requireAdmin` / `requireRole(min)` / `getCurrentRole`
