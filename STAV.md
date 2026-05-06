@@ -362,7 +362,8 @@ Kombinace pokryjí všechny scénáře bez `client_editor` hybrid role:
 
 Shippnuto v 9 commitech (`7ab8089` → `65c8dab`) ve čtyřech fázích:
 
-- **Phase 1a** `7ab8089` — schema (`spots.production_status` enum NOT NULL DEFAULT `'bez_zadani'`) + backfill script (2 existing spots s URL → `ceka_na_schvaleni`) + `lib/spot-status.ts` (8-state state machine, derived states helper, auto-transition rules, Pill tones, i18n key map, type-narrowed `SpotStatusLabelKey`). `lib/spot-approval.ts` zachován jako compat shim.
+- **Phase 1a** `7ab8089` — schema (`spots.production_status` text NOT NULL DEFAULT `'bez_zadani'`) + backfill script + `lib/spot-status.ts` (state machine, derived states, auto-transitions, Pill tones, typed i18n keys). `lib/spot-approval.ts` zachován jako compat shim.
+- **Phase 1a-iter** `961879e` → `8c83221` — partner měl výhrady k linear modelu. Po dvou iteracích finální tvar: **Status (5 stages, agency) + Schválení (Sony's separate click) — nezávislé**. Status zahrnuje `ceka_na_schvaleni` + `schvaleno` jako agentura's interní acknowledgment (např. „Sony nám potvrdilo mailem"). Sony's actual click v appce = separátní `clientApprovedAt`. Toggle Status nezpůsobí Sony approval ani naopak. UI: `/spots` list má dva sloupce, detail dvě sekce vedle sebe. Viz "Stav spotu" sekce výš.
 - **Phase 1b** `0bebc67` — server actions: `createSpot` / `createSpotForPicker` set initial status by URL presence; `updateSpot` wires `autoTransitionForUrlChange` (URL set → `ceka_na_schvaleni`, URL replaced while `schvalen` → `ceka_na_schvaleni` + wipe approval timestamps); `approveSpot` flips to `schvalen`; `unapproveSpot` rolls back to `ceka_na_schvaleni`/`bez_zadani` based on URL; new `setSpotProductionStatus(spotId, status)` mutator (refuses target = `schvalen`, idempotent, rollback from `schvalen` wipes approval timestamps).
 - **Phase 2a** `8593c62` — `<SpotStatusControls>` na `/spots/[id]`: horizontal stepper všech 5 manuálních stavů, current highlight, completed step Check icon, "Schválen" routes through approve prompt, "Zrušit schválení" link když approved. Title pill teď ukazuje plný production status (8 labels), ne binary approved/pending.
 - **Phase 2b** `5a25c3f` — timeline bar shrafy přepojené z `campaign.clientApprovedAt` na `spot.productionStatus !== 'schvalen'`. `fetchTimelineCampaigns` pulluje `spotProductionStatus` per (campaign × country). Tooltip rozlišuje "spot není přiřazen" (null) vs "spot není schválen".
@@ -376,19 +377,30 @@ Shippnuto v 9 commitech (`7ab8089` → `65c8dab`) ve čtyřech fázích:
 - *Video* / *Kreativa* (UI) ≡ row v `spots` table (DB)
 - *Nasazení* (UI, jen v override dialog + šablonách) ≡ row v `campaign_channels` (DB)
 
-**Stav spotu — DVĚ ORTOGONÁLNÍ OSY** (post-iterace `b9a8e5f` — viz "Two-axis status split" níž):
+**Stav spotu — DVĚ NEZÁVISLÉ OSY** (finální tvar, commit `8c83221`):
 
-- **Production axis** (interní, agentura řídí; sloupec `spots.production_status`): `bez_zadani` / `zadan` / `ve_vyrobe` (3 manuální stavy)
-- **Approval axis** (klient/Sony řídí; derived z `spots.client_approved_at`): null = `ceka_na_schvaleni`, set = `schvaleno`
-- **Derived deployment-time** (z campaign × today): `naplanovan` / `bezi` / `skoncil` — počítá se per-deployment, jen pokud approval = `schvaleno`. Žádný sloupec.
+- **Status** (interní, agentura řídí; sloupec `spots.production_status`): **5 manuálních stavů**
+  `bez_zadani` → `zadan` → `ve_vyrobe` → `ceka_na_schvaleni` → `schvaleno`
+  *Všechno manuální editor klika.* I „Schváleno" v tomhle sloupci je agentura's interní záznam (např. „Sony nám to potvrdilo e-mailem") — neznamená automaticky, že Sony reálně klikl v aplikaci.
+- **Schválení** (Sony's actual click; sloupec `spots.client_approved_at` timestamp): binární signál — null = neschváleno, set = Sony klikl `Schvaluji` dne X (+ optional comment + approver).
+- **Derived deployment-time** (z campaign × today): `naplanovan` / `bezi` / `skoncil` — počítá se per-deployment, jen pokud Sony reálně schválil (`clientApprovedAt` set). Žádný sloupec.
 
-Spot může být v libovolné kombinaci dvou os: `{ve_vyrobe, schvaleno}` (Sony schválil draft, doděláváme final), `{bez_zadani, ceka_na_schvaleni}` (čistý nový spot), atd. Editace každé osy je nezávislá:
-- `setSpotProductionStatus(id, status)` — jen production
-- `approveSpot(id, comment)` / `unapproveSpot(id)` — jen approval
+**Klíčové: Status a Schválení jsou nezávislé.** Toggle Status = "Schváleno" *nezpůsobí* `clientApprovedAt` set. Sony klik `Schvaluji` *nezasáhne* do Statusu. Můžou se rozcházet — agent vidí Status = `Schváleno` (potvrzeno mailem), Sony ještě nelogoval. Nebo Sony klikl `Schvaluji`, ale Status zůstává `Ve výrobě` (final cut není hotový).
 
-Auto-rules při edit videoUrl:
-- URL set poprvé na bez_zadani/zadan → bump production na `ve_vyrobe` (creative je v práci)
-- URL replaced AND was approved → wipe approval timestamps (nová verze, předchozí sign-off neplatí). Production unaffected.
+**Editace každé osy nezávisle:**
+- `setSpotProductionStatus(id, status)` — jen Status, žádný side-effect na schválení
+- `approveSpot(id, comment)` / `unapproveSpot(id)` — jen `clientApprovedAt`, žádný side-effect na Status
+
+**Auto-rules při edit videoUrl:**
+- URL set poprvé na `bez_zadani`/`zadan` → bump Status na `ve_vyrobe` (creative je v práci). Žádný auto-progress přes `ceka_na_schvaleni` → `schvaleno`, ty jsou explicitní agent klik.
+- URL replaced AND Sony had approved → wipe `clientApprovedAt`/`approvedById`/`clientApprovedComment` (nová verze, předchozí sign-off neplatí). Status zůstává.
+
+**UI mapping:**
+- `/spots` list: dva sloupce — **Status** (5-state portal dropdown picker) + **Schválení** (binary: `[Schváleno][✕]` když approved, `[✓ Schválit]` chip když ne).
+- `/spots/[id]` detail: dvě sekce vedle sebe — *Status* (5-step stepper) + *Schválení* (primary `✓ Schválit` button nebo `Zrušit schválení` link s metadaty kdo/kdy/komentář).
+- Title row na detailu: produkční Pill vždy + emerald `✓ Schváleno` Pill jen když Sony reálně schválil.
+- Timeline bar šrafy: `clientApprovedAt IS NULL` (Sony's signál; deploy-readiness). Status sám se na baru vizuálně neukazuje.
+- Dashboard tile "Čeká na schválení": `clientApprovedAt IS NULL`, nezávislé na Status.
 
 **DB unchanged:** `campaigns` / `campaign_videos` / `campaign_channels` table names zůstaly. `campaigns.clientApprovedAt` + `clientApprovedComment` + `approvedById` columns zůstávají v DB jako Tier 3 soft-removal — kód je nečte ani nepíše, sloupce přežívají pro recovery.
 
@@ -516,9 +528,12 @@ Auto-rules při edit videoUrl:
 - `lib/i18n/{messages,server,client,country}.ts` + `lib/theme/server.ts`
 - `lib/peek-store.ts` — module-level subscriber pro peek panel
 - `lib/spot-drop-store.ts` — module-level subscriber pro drag-drop spot → timeline (PendingDrop, SPOT_DRAG_MIME) + `currentDrag` paralelní state pro live preview (HTML5 omezení v dragover)
-- `lib/spot-status.ts` — **dvě ortogonální osy spotu**. Production axis (3 manuální stavy: bez_zadani / zadan / ve_vyrobe) + Approval axis (derived z clientApprovedAt). Helpers `approvalStatusFrom()`, `resolveDeploymentTimeState()` (per-deployment derived), `autoTransitionForUrlChange()`, `shouldInvalidateApprovalOnUrlChange()`. Pill tones + i18n keys per axis (literal-union typed).
-- `lib/spot-approval.ts` — **legacy compat shim** s binárním approved/pending API. New code uses `lib/spot-status.ts`; this stays alive while existing call sites get migrated.
-- `components/spot-status-controls.tsx` — horizontal stepper na `/spots/[id]` všech 5 manuálních stavů. "Schválen" routes through approve prompt. "Zrušit schválení" link když approved.
+- `lib/spot-status.ts` — **canonical Status (5 stages) state machine**. `PRODUCTION_STATUSES` = bez_zadani / zadan / ve_vyrobe / ceka_na_schvaleni / schvaleno (vše manuální). `resolveDeploymentTimeState()` per-deployment derived (jen když Sony reálně schválil). `autoTransitionForUrlChange()` (URL set first → bump na ve_vyrobe, jinak no-op), `shouldInvalidateApprovalOnUrlChange()` (URL replaced + was approved → wipe Sony approval; Status unaffected). Pill tones + literal-union typed i18n keys.
+- `lib/spot-approval.ts` — **legacy compat shim** s binárním approved/pending API (čte čistě `clientApprovedAt`). Existující call sites se postupně migrují přímo na `clientApprovedAt`.
+- `components/spot-status-controls.tsx` — 5-step horizontal stepper na `/spots/[id]` (Bez zadání → Zadán → Ve výrobě → Čeká na schválení → Schváleno). Klik na non-current stav = `setSpotProductionStatus`. Žádná special routing logic; Status je čistě editor's věc.
+- `components/spot-status-quick-picker.tsx` — portal-rendered dropdown s 5 Status stavy pro `/spots` list (kompletně escapuje table's overflow-hidden).
+- `components/spot-approval-controls.tsx` — Sony's approval primary `✓ Schválit` button (s prompt) / `Zrušit schválení` link na detail page. Vůbec se nedotýká Status.
+- `components/spot-approval-cell.tsx` — kompaktní inline cell pro `/spots` list. Renderuje `[Schváleno pill][✕]` když approved (✕ = direct unapprove, no confirm), `[✓ Schválit]` chip když ne.
 - `lib/auth-helpers.ts` — `requireUser` / `requireEditor` / `requireAdmin` / `requireRole(min)` / `getCurrentRole`
 - `lib/roles.ts` — Role union "admin"|"editor"|"viewer" + helpers
 - `lib/communication.ts`, `lib/products.ts`, `lib/colors.ts`
