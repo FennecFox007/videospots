@@ -45,6 +45,7 @@ import { getT } from "@/lib/i18n/server";
 import { localizedCountryName } from "@/lib/i18n/country";
 import { formatDate } from "@/lib/utils";
 import { SpotsFilters } from "@/components/spots-filters";
+import { SavedViewsMenu } from "@/components/saved-views-menu";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pill } from "@/components/ui/pill";
 import { SpotStatusQuickPicker } from "@/components/spot-status-quick-picker";
@@ -333,12 +334,23 @@ export default async function SpotsPage({
             {t("spots.subhead")}
           </p>
         </div>
-        <Link
-          href="/spots/new"
-          className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5"
-        >
-          + {t("spots.new")}
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Saved views live in the header (not the filter row) — they're
+              navigation/bookmark UX, not a per-filter chip. Keeping them
+              up here also frees the filter row to fit on a single line on
+              standard viewports. */}
+          <SavedViewsMenu
+            scope="spots"
+            destinationPath="/spots"
+            views={savedViewsForUser}
+          />
+          <Link
+            href="/spots/new"
+            className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5"
+          >
+            + {t("spots.new")}
+          </Link>
+        </div>
       </div>
 
       <div className="inline-flex rounded-md border border-zinc-300 dark:border-zinc-700 overflow-hidden text-sm">
@@ -377,7 +389,6 @@ export default async function SpotsPage({
         countries={countriesForFilter}
         products={productsForFilter}
         campaigns={campaignsForFilter}
-        savedViews={savedViewsForUser}
       />
 
       {filtered.length === 0 ? (

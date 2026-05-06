@@ -16,8 +16,8 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { LayoutGrid, List } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
-import { SavedViewsMenu, type SavedView } from "@/components/saved-views-menu";
 
 export type SpotsFiltersProps = {
   countries: Array<{ code: string; label: string }>;
@@ -27,16 +27,18 @@ export type SpotsFiltersProps = {
    *  to include as long as the label hints at their state — passing all
    *  here lets the user filter on past campaigns too. */
   campaigns: Array<{ id: number; label: string }>;
-  /** User's saved views with scope = "spots". Rendered as a dropdown
-   *  alongside the filter row. */
-  savedViews: SavedView[];
 };
+
+// <SavedViewsMenu> moved to the page header (alongside "+ Nový spot")
+// to free up filter-row real estate. The filter row was wrapping onto
+// two lines; pulling out the bookmark-navigation surface (which isn't a
+// per-filter chip anyway) keeps everything on one line on standard
+// viewports. Group toggle also tightened to icon-only.
 
 export function SpotsFilters({
   countries,
   products,
   campaigns,
-  savedViews,
 }: SpotsFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -150,33 +152,36 @@ export function SpotsFilters({
         forceFallback={false}
       />
 
-      {/* Group toggle. Two-state pill: "Po zemích" vs "Plochý seznam". */}
+      {/* Group toggle — icon-only. Saves real estate on the filter row;
+          tooltip carries the label for clarity. */}
       <div className="inline-flex rounded-md border border-zinc-300 dark:border-zinc-700 overflow-hidden text-xs">
         <button
           type="button"
           onClick={() => setParam("group", group === "country" ? "" : "country")}
           className={
-            "px-2.5 py-1 transition-colors " +
+            "px-2 py-1 transition-colors inline-flex items-center " +
             (group !== "flat"
               ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
               : "hover:bg-zinc-100 dark:hover:bg-zinc-800 border-r border-zinc-300 dark:border-zinc-700")
           }
-          title={t("spots.filter.group.country_tooltip")}
+          title={t("spots.filter.group.country")}
+          aria-label={t("spots.filter.group.country")}
         >
-          {t("spots.filter.group.country")}
+          <LayoutGrid className="w-3.5 h-3.5" strokeWidth={2} />
         </button>
         <button
           type="button"
           onClick={() => setParam("group", "flat")}
           className={
-            "px-2.5 py-1 transition-colors " +
+            "px-2 py-1 transition-colors inline-flex items-center " +
             (group === "flat"
               ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
               : "hover:bg-zinc-100 dark:hover:bg-zinc-800 border-l border-zinc-300 dark:border-zinc-700")
           }
-          title={t("spots.filter.group.flat_tooltip")}
+          title={t("spots.filter.group.flat")}
+          aria-label={t("spots.filter.group.flat")}
         >
-          {t("spots.filter.group.flat")}
+          <List className="w-3.5 h-3.5" strokeWidth={2} />
         </button>
       </div>
 
@@ -189,14 +194,6 @@ export function SpotsFilters({
           {t("common.clear_filters")}
         </button>
       )}
-
-      <div className="ml-auto">
-        <SavedViewsMenu
-          scope="spots"
-          destinationPath={pathname}
-          views={savedViews}
-        />
-      </div>
     </div>
   );
 }
