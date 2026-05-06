@@ -24,7 +24,7 @@ export type SavedView = {
 };
 
 type Props = {
-  scope: "timeline" | "campaigns";
+  scope: "timeline" | "campaigns" | "spots";
   /** Path to navigate to when applying a view. Same scope as `scope` arg. */
   destinationPath: string;
   views: SavedView[];
@@ -243,6 +243,12 @@ function summarizePayload(
         return t("saved_views.payload.from");
       case "to":
         return t("saved_views.payload.to");
+      case "product":
+        return t("saved_views.payload.product");
+      case "view":
+        return t("saved_views.payload.view");
+      case "campaign":
+        return t("saved_views.payload.campaign");
       default:
         return k;
     }

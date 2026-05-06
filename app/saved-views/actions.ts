@@ -5,32 +5,51 @@ import { and, asc, eq } from "drizzle-orm";
 import { db, savedViews } from "@/lib/db/client";
 import { requireUser } from "@/lib/auth-helpers";
 
-// Whitelist of URL params we'll persist in a saved view. Other keys (like
-// `template`, `sort`, `order` from the campaigns list) are intentionally NOT
-// included — sort order especially is a per-session preference, not a saved
-// filter intent.
+// Whitelist of URL params we'll persist in a saved view, keyed by scope.
+// The page each scope renders has its own filter shape, so each gets its
+// own list — saving a "spots" view shouldn't accept campaign-only keys
+// like `runState` (and vice versa).
 //
-// Must mirror what FilterBar can produce. Earlier this list was missing
-// `approval` + `missingSpot` (silently dropped on save) and still carried
-// `client` + `communicationType` after those filters were removed (saved
-// dead keys). Now: only the live FilterBar params.
-const ALLOWED_PARAMS = [
-  "q",
-  "country",
-  "chain",
-  "status",
-  "runState",
-  "approval",
-  "missingSpot",
-  "tag",
-  "from",
-  "to",
-] as const;
+// Sort order (`sort`/`order`) is intentionally NOT stored — it's a per-
+// session preference, not part of "this filter intent". Same for the
+// /spots `group=country` toggle, which is layout, not filter.
+const ALLOWED_BY_SCOPE = {
+  timeline: [
+    "q",
+    "country",
+    "chain",
+    "runState",
+    "approval",
+    "missingSpot",
+    "tag",
+    "from",
+    "to",
+  ],
+  campaigns: [
+    "q",
+    "country",
+    "chain",
+    "status",
+    "runState",
+    "approval",
+    "missingSpot",
+    "tag",
+    "from",
+    "to",
+  ],
+  // /spots is the video library. Filterable by free-text, country,
+  // product, approval, and (Phase 1 of project-organization milestone)
+  // by which campaign uses the creative. `view` (tab — undeployed/all/
+  // archived) is included because saved views are how users effectively
+  // get "project folders" — pinning a tab AND a filter together gives
+  // them the equivalent.
+  spots: ["q", "country", "product", "approval", "view", "campaign"],
+} as const;
 
-type Scope = "timeline" | "campaigns";
+type Scope = keyof typeof ALLOWED_BY_SCOPE;
 
 function isScope(s: string): s is Scope {
-  return s === "timeline" || s === "campaigns";
+  return s in ALLOWED_BY_SCOPE;
 }
 
 // Saved views are personal bookmarks. Any signed-in user may save / load /
@@ -41,8 +60,8 @@ function isScope(s: string): s is Scope {
  *
  * Called from the client when the user clicks "Uložit pohled" in the FilterBar.
  * `payloadEntries` is whatever the client read out of `useSearchParams()` —
- * we re-validate against the whitelist server-side so a malicious caller
- * can't stuff arbitrary keys into the JSONB column.
+ * we re-validate against the scope-specific whitelist server-side so a
+ * malicious caller can't stuff arbitrary keys into the JSONB column.
  */
 export async function createSavedView(
   name: string,
@@ -55,8 +74,9 @@ export async function createSavedView(
   if (trimmedName.length > 80) throw new Error("Název je příliš dlouhý");
   if (!isScope(scope)) throw new Error("Neplatný scope pohledu");
 
+  const allowed: readonly string[] = ALLOWED_BY_SCOPE[scope];
   const safe: Record<string, string> = {};
-  for (const k of ALLOWED_PARAMS) {
+  for (const k of allowed) {
     const v = payloadEntries[k];
     if (typeof v === "string" && v.trim()) safe[k] = v;
   }
@@ -68,9 +88,11 @@ export async function createSavedView(
     payload: safe,
   });
 
-  // Both pages render saved-view dropdowns; revalidate them broadly.
+  // Three pages render saved-view dropdowns; revalidate them all so the
+  // freshly-saved view shows up in the menu without a hard reload.
   revalidatePath("/");
   revalidatePath("/campaigns");
+  revalidatePath("/spots");
 }
 
 /** Delete a saved view. Only the owner can delete it. */
@@ -81,6 +103,7 @@ export async function deleteSavedView(viewId: number) {
     .where(and(eq(savedViews.id, viewId), eq(savedViews.userId, userId)));
   revalidatePath("/");
   revalidatePath("/campaigns");
+  revalidatePath("/spots");
 }
 
 /** Per-user list of saved views in a given scope. Used by the FilterBar. */

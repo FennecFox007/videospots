@@ -419,6 +419,32 @@ Shippnuto v 9 commitech (`7ab8089` → `65c8dab`) ve čtyřech fázích:
 - `approveCampaign` / `clearCampaignApproval` legacy server actions zůstaly v kódu — žádný caller je nevolá, ale technický cleanup je separate task
 - DB column `campaigns.clientApprovedAt` ne-dropnuto (budoucí Tier 3 cleanup společně s ostatními legacy)
 
+### 📂 Video knihovna organizace (milník 1, shipped) — projects = pohledy
+
+**Kontext.** Knihovna spotů (`/spots`) bude růst — partner měl obavu, jak organizovat creativy do "projektů/složek". Po debatě jsme se rozhodli pro **levné, reverzibilní řešení místo full projects entity** (varianta 3 ze tří byla rozumně držena na "až bude reálná bolest"). Důvod: model „projektu" (granularity, multi-membership, hierarchie, archive lifecycle) ještě nikdo doopravdy nezná a předčasné rozhodnutí se obvykle za měsíc trhá.
+
+**Milník 1 — co jsme shippli (commit `<TBD>`):**
+
+- **Filter `?campaign=` na `/spots`** — dropdown "Použité v plánu", obsahuje všechny plánované spoty (active + archived; archivované visually odlišené `(archiv)` v label). Backend: `campaign_videos` junction → resolved ID set → in-memory match.
+- **Saved views pro `/spots`** — extended `savedViews.scope` z `{timeline, campaigns}` na `{timeline, campaigns, spots}`. ALLOWED list je teď per-scope (`ALLOWED_BY_SCOPE` v `app/saved-views/actions.ts`); spots scope povoluje `q` / `country` / `product` / `approval` / `view` / `campaign`. Žádný DB schema change — `savedViews` table má `scope text`, jen jsme rozšířili UNION typ na klientovi.
+- **`<SavedViewsMenu>`** rozšířen o `"spots"` scope (typing change), reused as-is na `/spots` filter row (vpravo, `ml-auto`). UI identický s `/` a `/campaigns`: dropdown se seznamem pohledů + "Uložit aktuální".
+
+**Praktický effect**: pokud agent chce „Saros 2026 projekt", aplikuje filter `product=Saros` (+ `view=all` + co potřebuje) → klikne "Uložit aktuální" → pojmenuje "Saros 2026". Příště klik na pohled = předfiltrované spoty. Lze sdílet jako URL. Pohled se neschová, dokud ho nesmaže.
+
+**Co milník 1 NEdává** *(pokud začne reálně chybět, ekalovat na milník 3):*
+- Bulk akce nad projektem (např. "schválit všechny Saros spoty naráz")
+- Status rollup ("Saros: 3/4 schváleno")
+- Archive celého projektu naráz
+- Vlastní detail page projektu s metadaty (ownerId, klient, rozpočet…)
+- Multi-membership (creative belongs do víc projektů zároveň — dnes filterem nevyřešíš)
+
+**Eskalační kritéria pro milník 3** (`projects` entita):
+1. Reálná bolest na bulk akcích (uživatel říká "tohle bych potřeboval naráz pro 12 spotů")
+2. Status rollup je vidět chybět na dashboardu nebo v knihovně
+3. Multi-membership reálně existuje (creative se používá v 2+ projektech a chceš to vidět)
+
+Před tím rozhodnutím doptat se na: granularity (kampaňová iniciativa vs. roční rámec), single vs. multi-parent, hierarchie, archive behavior.
+
 ### 🥇 Top 3 — udělat HNED (next batch ~2 dny)
 
 **A. Per-user role (admin / editor / viewer)** ✅ shipped (commit `69ada56`, dashboard polish v `9e07b71`)

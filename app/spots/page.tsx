@@ -35,7 +35,10 @@ import {
   countries,
   products,
   users,
+  campaigns,
+  campaignVideos,
 } from "@/lib/db/client";
+import { listSavedViews } from "@/app/saved-views/actions";
 import { ProductKindIcon } from "@/components/product-kind-icon";
 import { CountryBadge } from "@/components/country-badge";
 import { getT } from "@/lib/i18n/server";
@@ -84,6 +87,7 @@ type SearchParams = {
   q?: string;
   country?: string;
   product?: string;
+  campaign?: string;
   sort?: string;
   group?: string;
   approval?: string;
@@ -101,8 +105,23 @@ export default async function SpotsPage({
   const q = (sp.q ?? "").trim().toLowerCase();
   const countryFilter = sp.country ?? "";
   const productFilter = sp.product ? Number(sp.product) : null;
+  const campaignFilter = sp.campaign ? Number(sp.campaign) : null;
   const approvalFilter = parseApproval(sp.approval);
   const t = await getT();
+
+  // ---- Resolve campaign filter to a Set of spot IDs that the campaign
+  // uses (via campaign_videos). Done as a separate small query so the
+  // main spots SELECT stays simple. Empty set when no filter active.
+  const spotIdsInCampaign = await (async () => {
+    if (campaignFilter === null || !Number.isFinite(campaignFilter)) {
+      return null;
+    }
+    const rows = await db
+      .select({ spotId: campaignVideos.spotId })
+      .from(campaignVideos)
+      .where(eq(campaignVideos.campaignId, campaignFilter));
+    return new Set(rows.map((r) => r.spotId));
+  })();
 
   // Pull every spot with its product + country + author, plus a count of
   // non-archived campaigns currently referencing it. Single SELECT —
@@ -144,10 +163,11 @@ export default async function SpotsPage({
     return true; // "all"
   });
 
-  // ---- Apply secondary filters (q + country + product + approval)
+  // ---- Apply secondary filters (q + country + product + campaign + approval)
   const filtered = viewFiltered.filter((r) => {
     if (countryFilter && r.countryCode !== countryFilter) return false;
     if (productFilter !== null && r.productId !== productFilter) return false;
+    if (spotIdsInCampaign && !spotIdsInCampaign.has(r.id)) return false;
     if (approvalFilter) {
       const state = spotApprovalState(r);
       if (state !== approvalFilter) return false;
@@ -191,6 +211,7 @@ export default async function SpotsPage({
   const matchesSecondary = (r: (typeof rows)[number]) => {
     if (countryFilter && r.countryCode !== countryFilter) return false;
     if (productFilter !== null && r.productId !== productFilter) return false;
+    if (spotIdsInCampaign && !spotIdsInCampaign.has(r.id)) return false;
     if (approvalFilter) {
       const state = spotApprovalState(r);
       if (state !== approvalFilter) return false;
@@ -250,6 +271,32 @@ export default async function SpotsPage({
         .map((r) => [r.productId!, { id: r.productId!, name: r.productName! }])
     ).values()
   ).sort((a, b) => a.name.localeCompare(b.name));
+
+  // Campaigns dropdown for the filter — most recent first. Both active
+  // and archived are shown so users can pin past projects too; archived
+  // ones are visually muted via the "(archiv)" suffix in the label.
+  const campaignsForFilter = await (async () => {
+    const rows = await db
+      .select({
+        id: campaigns.id,
+        name: campaigns.name,
+        startsAt: campaigns.startsAt,
+        archivedAt: campaigns.archivedAt,
+      })
+      .from(campaigns)
+      .orderBy(desc(campaigns.startsAt))
+      .limit(200);
+    return rows.map((c) => ({
+      id: c.id,
+      label:
+        `${c.name} · ${formatDate(c.startsAt)}` +
+        (c.archivedAt ? ` (${t("spots.tab.archived").toLowerCase()})` : ""),
+    }));
+  })();
+
+  // User's saved views in the spots scope. Listed in the SavedViewsMenu
+  // dropdown; clicking applies the filter combo via router.push.
+  const savedViewsForUser = await listSavedViews("spots");
 
   // ---- Group rows for rendering
   const groupedByCountry = new Map<
@@ -329,6 +376,8 @@ export default async function SpotsPage({
       <SpotsFilters
         countries={countriesForFilter}
         products={productsForFilter}
+        campaigns={campaignsForFilter}
+        savedViews={savedViewsForUser}
       />
 
       {filtered.length === 0 ? (

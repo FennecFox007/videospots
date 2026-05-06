@@ -81,6 +81,9 @@ const cs = {
   "saved_views.payload.tag": "štítek",
   "saved_views.payload.from": "od",
   "saved_views.payload.to": "do",
+  "saved_views.payload.product": "produkt",
+  "saved_views.payload.view": "záložka",
+  "saved_views.payload.campaign": "spot",
   "saved_views.payload.empty": "(prázdné)",
 
   // Campaigns table aria-labels
@@ -340,6 +343,7 @@ const cs = {
     "Žádný spot neodpovídá nastaveným filtrům. Zkus filtr uvolnit nebo Vymazat filtry.",
   "spots.filter.search_placeholder": "Hledat (název, produkt, URL)…",
   "spots.filter.all_products": "Všechny produkty",
+  "spots.filter.all_campaigns": "Všechny spoty",
   "spots.filter.sort.created": "Nejnovější",
   "spots.filter.sort.name": "Abecedně",
   "spots.filter.sort.deployments": "Podle nasazení",
@@ -793,6 +797,9 @@ const en: Record<keyof typeof cs, string> = {
   "saved_views.payload.tag": "tag",
   "saved_views.payload.from": "from",
   "saved_views.payload.to": "to",
+  "saved_views.payload.product": "product",
+  "saved_views.payload.view": "tab",
+  "saved_views.payload.campaign": "spot",
   "saved_views.payload.empty": "(empty)",
 
   // Campaigns table aria-labels
@@ -1052,6 +1059,7 @@ const en: Record<keyof typeof cs, string> = {
     "No spot matches the current filters. Try relaxing them or click Clear filters.",
   "spots.filter.search_placeholder": "Search (name, product, URL)…",
   "spots.filter.all_products": "All products",
+  "spots.filter.all_campaigns": "All spots",
   "spots.filter.sort.created": "Newest first",
   "spots.filter.sort.name": "By name",
   "spots.filter.sort.deployments": "By deployments",

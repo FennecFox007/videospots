@@ -2,7 +2,13 @@
 
 // URL-driven filter row for /spots — same pattern as <FilterBar /> for
 // campaigns, scoped to spot-library facets:
-//   ?q=&country=&product=&sort=&group=
+//   ?q=&country=&product=&approval=&campaign=&sort=&group=
+//
+// `campaign` is the milestone-1 substitute for "folders/projects": pinning
+// a creative to the planned spot it's used in. Combined with saved views
+// (the dropdown rendered alongside this row), users can name and bookmark
+// "Saros 2026" / "Days of Play" filter combos as project surrogates. See
+// STAV.md "Video knihovna organizace".
 //
 // Mounted under the view tabs (Nenasazené / Nasazené / Všechny / Archiv).
 // The tabs are still primary; these filters intersect with the active tab.
@@ -11,13 +17,27 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/lib/i18n/client";
+import { SavedViewsMenu, type SavedView } from "@/components/saved-views-menu";
 
 export type SpotsFiltersProps = {
   countries: Array<{ code: string; label: string }>;
   products: Array<{ id: number; name: string }>;
+  /** All non-archived planned spots (= campaigns), most recent first.
+   *  Drives the "Použité v plánu" dropdown. Archived ones are also fine
+   *  to include as long as the label hints at their state — passing all
+   *  here lets the user filter on past campaigns too. */
+  campaigns: Array<{ id: number; label: string }>;
+  /** User's saved views with scope = "spots". Rendered as a dropdown
+   *  alongside the filter row. */
+  savedViews: SavedView[];
 };
 
-export function SpotsFilters({ countries, products }: SpotsFiltersProps) {
+export function SpotsFilters({
+  countries,
+  products,
+  campaigns,
+  savedViews,
+}: SpotsFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -50,16 +70,22 @@ export function SpotsFilters({ countries, products }: SpotsFiltersProps) {
 
   const country = searchParams.get("country") ?? "";
   const product = searchParams.get("product") ?? "";
+  const campaign = searchParams.get("campaign") ?? "";
   const approval = searchParams.get("approval") ?? "";
   const sort = searchParams.get("sort") ?? "created";
   const group = searchParams.get("group") ?? "country";
 
   const hasFilters =
-    !!search || !!country || !!product || !!approval || sort !== "created";
+    !!search ||
+    !!country ||
+    !!product ||
+    !!campaign ||
+    !!approval ||
+    sort !== "created";
 
   function clearAll() {
     const params = new URLSearchParams(searchParams);
-    ["q", "country", "product", "approval", "sort"].forEach((k) =>
+    ["q", "country", "product", "campaign", "approval", "sort"].forEach((k) =>
       params.delete(k)
     );
     setSearch("");
@@ -90,6 +116,16 @@ export function SpotsFilters({ countries, products }: SpotsFiltersProps) {
         onChange={(v) => setParam("product", v)}
         options={products.map((p) => ({ value: String(p.id), label: p.name }))}
         placeholder={t("spots.filter.all_products")}
+      />
+
+      <Select
+        value={campaign}
+        onChange={(v) => setParam("campaign", v)}
+        options={campaigns.map((c) => ({
+          value: String(c.id),
+          label: c.label,
+        }))}
+        placeholder={t("spots.filter.all_campaigns")}
       />
 
       <Select
@@ -153,6 +189,14 @@ export function SpotsFilters({ countries, products }: SpotsFiltersProps) {
           {t("common.clear_filters")}
         </button>
       )}
+
+      <div className="ml-auto">
+        <SavedViewsMenu
+          scope="spots"
+          destinationPath={pathname}
+          views={savedViews}
+        />
+      </div>
     </div>
   );
 }
