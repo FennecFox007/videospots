@@ -30,9 +30,6 @@ import { SpotApprovalControls } from "@/components/spot-approval-controls";
 import {
   productionStatusTone,
   productionStatusLabelKey,
-  approvalStatusTone,
-  approvalStatusLabelKey,
-  approvalStatusFrom,
   isProductionStatus,
   type ProductionStatus,
 } from "@/lib/spot-status";
@@ -111,12 +108,14 @@ export default async function SpotDetailPage({
   const action = updateSpot.bind(null, spotId);
   const isArchived = s.archivedAt !== null;
   const deploymentCount = activeDeployments.length;
-  // Two independent axes — production (manual) and approval (derived
-  // from clientApprovedAt). See lib/spot-status.ts.
+  // Two independent axes — Status (agency, 5-state stored in production
+  // _status) and Schválení (Sony's actual click, stored as
+  // clientApprovedAt timestamp). See lib/spot-status.ts for the
+  // conceptual split.
   const productionStatus: ProductionStatus = isProductionStatus(s.productionStatus)
     ? s.productionStatus
     : "bez_zadani";
-  const approvalStatus = approvalStatusFrom({ clientApprovedAt: s.clientApprovedAt });
+  const isApproved = s.clientApprovedAt !== null;
   const approvedBy = row.approvedByName ?? row.approvedByEmail ?? null;
 
   return (
@@ -133,9 +132,11 @@ export default async function SpotDetailPage({
             <Pill size="md" tone={productionStatusTone(productionStatus)}>
               {t(productionStatusLabelKey(productionStatus))}
             </Pill>
-            <Pill size="md" tone={approvalStatusTone(approvalStatus)}>
-              {t(approvalStatusLabelKey(approvalStatus))}
-            </Pill>
+            {isApproved && (
+              <Pill size="md" tone="emerald">
+                ✓ {t("spots.approval.status.approved")}
+              </Pill>
+            )}
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 flex items-center gap-2 flex-wrap">
             <CountryBadge
@@ -176,15 +177,16 @@ export default async function SpotDetailPage({
         </Link>
       </div>
 
-      {/* Two independent state axes — production (agency: 3-step
-          stepper) and approval (Sony: schvalen / čeká binary).
-          Each section is self-contained; toggling one doesn't auto-
-          flip the other. Derived "Běží/Skončil" states show on the
-          timeline bar via deployment dates, not here. */}
+      {/* Two independent things — Status (5-step manual stepper, agency
+          owns) and Schválení (Sony's separate click, binary). Status's
+          terminal "Schváleno" state is the agency's INTERNAL acknow-
+          ledgment (e.g. they got an email confirming) and is NOT
+          coupled to Schválení = Sony actually clicked in app. They can
+          differ — that's a feature. */}
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            {t("spots.status.section.production")}
+            {t("spots.status.section.title")}
           </h2>
           <SpotStatusControls
             spotId={spotId}
@@ -198,7 +200,7 @@ export default async function SpotDetailPage({
             {t("spots.status.section.approval")}
           </h2>
 
-          {approvalStatus === "schvaleno" && s.clientApprovedAt && (
+          {isApproved && s.clientApprovedAt && (
             <div className="text-sm text-zinc-700 dark:text-zinc-300 space-y-1">
               <div>
                 {t("spots.approval.approved_by", {
@@ -217,7 +219,7 @@ export default async function SpotDetailPage({
 
           <SpotApprovalControls
             spotId={spotId}
-            approvalStatus={approvalStatus}
+            isApproved={isApproved}
             archived={isArchived}
           />
         </div>

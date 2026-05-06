@@ -45,14 +45,13 @@ import { SpotsFilters } from "@/components/spots-filters";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pill } from "@/components/ui/pill";
 import { SpotStatusQuickPicker } from "@/components/spot-status-quick-picker";
-import { SpotApprovalQuickPicker } from "@/components/spot-approval-quick-picker";
+import { SpotApprovalCell } from "@/components/spot-approval-cell";
 import {
-  approvalStatusFrom,
   isProductionStatus,
   type ProductionStatus,
 } from "@/lib/spot-status";
 // Approval state is still used by the filter chip (binary "Čeká"/"Schváleno"
-// at list level). Cell-level pickers handle their own axis directly.
+// at list level). Cells handle their own axis directly.
 import { spotApprovalState } from "@/lib/spot-approval";
 
 type View = "all" | "undeployed" | "deployed" | "archived";
@@ -485,7 +484,7 @@ function SpotTable({
               </th>
             )}
             <th className="text-left px-4 py-2 font-medium">
-              {t("spots.col.production")}
+              {t("spots.col.status")}
             </th>
             <th className="text-left px-4 py-2 font-medium">
               {t("spots.col.approval")}
@@ -657,8 +656,9 @@ function ProductionStatusCell({
   );
 }
 
-// Approval-axis cell: 2-state quick picker (Čeká / Schváleno) derived
-// from clientApprovedAt. Independent of the production cell.
+// Approval cell: Sony's separate signal — independent of the status
+// column. Renders [Schváleno + ✕] when approved, [Schválit] button when
+// not. Approving prompts for an optional comment via approveSpot.
 function ApprovalCell({
   spot,
 }: {
@@ -668,13 +668,10 @@ function ApprovalCell({
     archivedAt: Date | null;
   };
 }) {
-  const approvalStatus = approvalStatusFrom({
-    clientApprovedAt: spot.clientApprovedAt,
-  });
   return (
-    <SpotApprovalQuickPicker
+    <SpotApprovalCell
       spotId={spot.id}
-      approvalStatus={approvalStatus}
+      clientApprovedAt={spot.clientApprovedAt}
       archived={spot.archivedAt !== null}
     />
   );

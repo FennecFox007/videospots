@@ -1,39 +1,46 @@
-// Spot status — TWO INDEPENDENT AXES.
+// Spot status — TWO INDEPENDENT axes that share NO derivation:
 //
-// **Production axis** (agentura controls): how far the team got with
-// making the creative. Three manual states stored in spots.production
-// Status:
-//   bez_zadani         "Bez zadání"     Sony nezadalo
-//   zadan              "Zadán"          máme brief, zatím se nedělá
-//   ve_vyrobe          "Ve výrobě"      pracujeme
+// **Status** (náš, agency-controlled) — stored in spots.production_status:
+//   bez_zadani         "Bez zadání"        Sony nezadalo
+//   zadan              "Zadán"             máme brief, nezačali jsme
+//   ve_vyrobe          "Ve výrobě"         pracujeme
+//   ceka_na_schvaleni  "Čeká na schválení" odeslali jsme klientovi, čekáme
+//   schvaleno          "Schváleno"         interně víme, že to klient odsouhlasil
+//                                          (přes mail / call / cokoli)
 //
-// **Approval axis** (Sony controls): whether the client signed off.
-// Derived from spots.clientApprovedAt (Date | null) — same column we've
-// always had:
-//   null               "Čeká na schválení"   ceka_na_schvaleni
-//   set                "Schváleno"           schvaleno
+// All 5 are MANUAL — agency clicks them. There's no auto-progression
+// based on URL or anything else; the agent owns this column.
 //
-// The two axes are independent. A spot can be {ve_vyrobe, schvaleno}
-// (Sony approved a draft, we're polishing the final cut), or
-// {bez_zadani, ceka_na_schvaleni} (waiting for brief AND no approval),
-// any combo. Display shows both pills side by side; transitions on each
-// axis are independent (setSpotProductionStatus vs approveSpot).
+// **Schválení** (Sony's actual click in app) — stored in spots.client
+// ApprovedAt timestamp:
+//   null  → Sony hasn't clicked Schvaluji
+//   set   → Sony clicked Schvaluji on date X (also captures
+//            approvedById + clientApprovedComment)
 //
-// Three derived states ("naplanovan" / "bezi" / "skoncil") are still
-// computed per-deployment from campaign dates relative to today;
-// they ride on top of the approval axis (only "schvaleno" can be
-// further classified by date).
+// CRITICAL: status and schválení are independent. Status "Schváleno"
+// (agentura's internal acknowledgment) is NOT the same as schválení =
+// Sony actually clicked. They can disagree: agent marks Status =
+// Schváleno based on email approval; Sony hasn't logged in yet. Or:
+// Sony clicks Schvaluji while agent still has Status = Ve výrobě (because
+// final cut isn't quite done).
+//
+// Three "deployment time" states ("naplanovan" / "bezi" / "skoncil")
+// are derived per-deployment from campaign dates relative to today —
+// shown on the timeline bar, not as a status. They ride on top of the
+// Sony-approval signal (the bar is hatched until Sony actually approves).
 
 import type { PillTone } from "@/components/ui/pill";
 
 // ---------------------------------------------------------------------------
-// Production axis (manual, stored in spots.production_status)
+// Status axis (manual, stored in spots.production_status)
 // ---------------------------------------------------------------------------
 
 export const PRODUCTION_STATUSES = [
   "bez_zadani",
   "zadan",
   "ve_vyrobe",
+  "ceka_na_schvaleni",
+  "schvaleno",
 ] as const;
 
 export type ProductionStatus = (typeof PRODUCTION_STATUSES)[number];
@@ -46,35 +53,21 @@ export function isProductionStatus(s: unknown): s is ProductionStatus {
 }
 
 // ---------------------------------------------------------------------------
-// Approval axis (derived from clientApprovedAt)
-// ---------------------------------------------------------------------------
-
-export const APPROVAL_STATUSES = [
-  "ceka_na_schvaleni",
-  "schvaleno",
-] as const;
-
-export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
-
-export function approvalStatusFrom(
-  spot: { clientApprovedAt: Date | null }
-): ApprovalStatus {
-  return spot.clientApprovedAt !== null ? "schvaleno" : "ceka_na_schvaleni";
-}
-
-// ---------------------------------------------------------------------------
-// Derived "where in time" state — only meaningful when approval = schvaleno
-// AND there's a deployment context (campaign × dates relative to today).
+// Derived deployment-time state — computed from (campaign dates × today)
 // ---------------------------------------------------------------------------
 
 export type DeploymentTimeState = "naplanovan" | "bezi" | "skoncil";
 
+/** Compute per-deployment time state. Only meaningful when the spot
+ *  has been APPROVED BY SONY (clientApprovedAt set) — otherwise we
+ *  don't talk about "running" or "ended", the bar shows hatched
+ *  approval-pending instead. */
 export function resolveDeploymentTimeState(
-  approvalStatus: ApprovalStatus,
+  approvedAt: Date | null,
   dates: { startsAt: Date | null; endsAt: Date | null } | null,
   now: Date = new Date()
 ): DeploymentTimeState | null {
-  if (approvalStatus !== "schvaleno") return null;
+  if (!approvedAt) return null;
   if (!dates) return null;
   const { startsAt, endsAt } = dates;
   if (startsAt && startsAt > now) return "naplanovan";
@@ -88,12 +81,14 @@ export function resolveDeploymentTimeState(
 // ---------------------------------------------------------------------------
 
 /**
- * When videoUrl changes, decide what to do with the production status.
+ * Status auto-transition on videoUrl change. Conservative — we only
+ * push the agent FORWARD on the first URL set (creative is in flight),
+ * never auto-progress through ceka_na_schvaleni or schvaleno (those are
+ * explicit agent decisions reflecting outside-app communication).
  *
- *   - URL going from empty → set, status was bez_zadani/zadan
- *     → bump to ve_vyrobe (creative work is now in flight)
- *   - URL changing OR being cleared while status was ve_vyrobe
- *     → no production change (manual state; editor handles it)
+ *   - URL set first time, status was bez_zadani/zadan
+ *     → ve_vyrobe (creative work is now in flight)
+ *   - any other URL change       → no auto-transition (manual state owned by editor)
  *
  * Returns null when no transition fires.
  */
@@ -114,10 +109,13 @@ export function autoTransitionForUrlChange(
 }
 
 /**
- * Approval reset rule — orthogonal from production. If videoUrl is
- * REPLACED (not just set for the first time) AND the spot was approved,
- * the previous client sign-off no longer applies; caller should clear
- * clientApprovedAt + comment + approver.
+ * Sony approval reset rule — independent of status. If videoUrl is
+ * REPLACED (not just set for the first time) AND Sony had approved,
+ * clear the clientApprovedAt timestamps (different creative, prior
+ * sign-off no longer applies). Caller does the actual write.
+ *
+ * The agency's status column is NOT touched here — that's for the
+ * editor to decide.
  */
 export function shouldInvalidateApprovalOnUrlChange(
   prevUrl: string | null,
@@ -139,9 +137,6 @@ const PRODUCTION_TONE: Record<ProductionStatus, PillTone> = {
   bez_zadani: "zinc",
   zadan: "zinc",
   ve_vyrobe: "blue",
-};
-
-const APPROVAL_TONE: Record<ApprovalStatus, PillTone> = {
   ceka_na_schvaleni: "amber",
   schvaleno: "emerald",
 };
@@ -156,26 +151,17 @@ export function productionStatusTone(s: ProductionStatus): PillTone {
   return PRODUCTION_TONE[s];
 }
 
-export function approvalStatusTone(s: ApprovalStatus): PillTone {
-  return APPROVAL_TONE[s];
-}
-
 export function deploymentTimeStateTone(s: DeploymentTimeState): PillTone {
   return DEPLOYMENT_TIME_TONE[s];
 }
 
-// Literal-union i18n keys so callers passing through t() get strict
-// type-checking against the message dictionary.
 const PRODUCTION_LABEL_KEY = {
   bez_zadani: "spot_status.bez_zadani",
   zadan: "spot_status.zadan",
   ve_vyrobe: "spot_status.ve_vyrobe",
-} as const satisfies Record<ProductionStatus, string>;
-
-const APPROVAL_LABEL_KEY = {
   ceka_na_schvaleni: "spot_status.ceka_na_schvaleni",
   schvaleno: "spot_status.schvaleno",
-} as const satisfies Record<ApprovalStatus, string>;
+} as const satisfies Record<ProductionStatus, string>;
 
 const DEPLOYMENT_TIME_LABEL_KEY = {
   naplanovan: "spot_status.naplanovan",
@@ -185,8 +171,6 @@ const DEPLOYMENT_TIME_LABEL_KEY = {
 
 export type ProductionStatusLabelKey =
   (typeof PRODUCTION_LABEL_KEY)[keyof typeof PRODUCTION_LABEL_KEY];
-export type ApprovalStatusLabelKey =
-  (typeof APPROVAL_LABEL_KEY)[keyof typeof APPROVAL_LABEL_KEY];
 export type DeploymentTimeLabelKey =
   (typeof DEPLOYMENT_TIME_LABEL_KEY)[keyof typeof DEPLOYMENT_TIME_LABEL_KEY];
 
@@ -196,34 +180,8 @@ export function productionStatusLabelKey(
   return PRODUCTION_LABEL_KEY[s];
 }
 
-export function approvalStatusLabelKey(
-  s: ApprovalStatus
-): ApprovalStatusLabelKey {
-  return APPROVAL_LABEL_KEY[s];
-}
-
 export function deploymentTimeLabelKey(
   s: DeploymentTimeState
 ): DeploymentTimeLabelKey {
   return DEPLOYMENT_TIME_LABEL_KEY[s];
-}
-
-// ---------------------------------------------------------------------------
-// Backfill helpers — used by the one-shot migration that narrows the
-// production_status column from the legacy 5-state set to the 3-state set.
-// Kept here for documentation; one run lives in scripts/.
-// ---------------------------------------------------------------------------
-
-/** Normalise a legacy production_status value (which may have included
- *  'ceka_na_schvaleni' or 'schvalen') to the new 3-state production
- *  axis. Approval information should be preserved separately via
- *  clientApprovedAt — this function only handles the production side. */
-export function narrowLegacyProductionStatus(legacy: string): ProductionStatus {
-  if (legacy === "bez_zadani" || legacy === "zadan" || legacy === "ve_vyrobe") {
-    return legacy;
-  }
-  // Both 'ceka_na_schvaleni' and 'schvalen' (legacy) collapse to
-  // ve_vyrobe — they signaled "creative exists" + an approval state on
-  // top. The approval state is captured by clientApprovedAt independently.
-  return "ve_vyrobe";
 }

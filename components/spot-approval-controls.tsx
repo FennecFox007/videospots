@@ -1,31 +1,33 @@
 "use client";
 
-// Detail-page approval-axis controls. Two states (Čeká na schválení /
-// Schváleno) with a primary "Schválit" button when pending and a subtle
-// "Zrušit schválení" link when approved. Independent of the production
-// axis — see <SpotStatusControls> for that.
+// Detail-page approval controls — Sony's separate signal, independent
+// of the agency's status column.
 //
-// In Sony-in-app phase (see STAV.md PRIORITA Č. 1), the actions will be
-// gated requireClient() server-side; this component already routes
-// through approveSpot/unapproveSpot which is the right server-action
-// surface for that.
+//   - approved (clientApprovedAt set):
+//       small "Zrušit schválení" link
+//   - not approved:
+//       primary "Schválit" button (with prompt for an optional note)
+//
+// Independent from <SpotStatusControls> (which manages the agency's
+// 5-step Status workflow). Setting Status = "Schváleno" doesn't approve;
+// approving doesn't change Status. See lib/spot-status.ts.
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useDialog } from "@/components/dialog/dialog-provider";
 import { useT } from "@/lib/i18n/client";
 import { approveSpot, unapproveSpot } from "@/app/spots/actions";
-import type { ApprovalStatus } from "@/lib/spot-status";
 
 type Props = {
   spotId: number;
-  approvalStatus: ApprovalStatus;
+  /** Sony's actual approval click — null = not approved, set = approved. */
+  isApproved: boolean;
   archived: boolean;
 };
 
 export function SpotApprovalControls({
   spotId,
-  approvalStatus,
+  isApproved,
   archived,
 }: Props) {
   const t = useT();
@@ -73,7 +75,7 @@ export function SpotApprovalControls({
     });
   }
 
-  if (approvalStatus === "schvaleno") {
+  if (isApproved) {
     return (
       <button
         type="button"

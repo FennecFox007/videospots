@@ -1,9 +1,11 @@
 "use client";
 
-// Inline production-status picker for /spots list rows. Pill-as-trigger
-// pattern — click opens a portal-rendered dropdown with the 3 manual
-// production states. Approval axis is rendered separately by
-// <SpotApprovalQuickPicker>.
+// Inline status picker for /spots list rows. Pill-as-trigger pattern —
+// click opens a portal-rendered dropdown with all 5 manual status states
+// (Bez zadání → Zadán → Ve výrobě → Čeká na schválení → Schváleno).
+// Sony's actual approval click in /admin is rendered separately by
+// <SpotApprovalCell> as an independent signal — see lib/spot-status.ts
+// for the conceptual split.
 //
 // Portal rendering: the menu is mounted to document.body via createPortal
 // so it escapes the table's overflow-hidden. Position is computed from
@@ -35,7 +37,7 @@ import {
 
 const MENU_WIDTH_PX = 208;
 const MENU_GAP_PX = 4;
-const MENU_HEIGHT_PX = 115; // 3 items × ~32px + 8px y-padding
+const MENU_HEIGHT_PX = 175; // 5 items × ~32px + 8px y-padding
 
 type MenuPosition = {
   top: number;
