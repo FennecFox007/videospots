@@ -200,7 +200,7 @@ function roleLabel(r: Role): string {
     case "admin":
       return "Admin (vše)";
     case "editor":
-      return "Editor (kampaně + spoty)";
+      return "Editor (spoty + videa)";
     case "viewer":
       return "Viewer (jen čtení)";
   }
