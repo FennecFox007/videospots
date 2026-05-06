@@ -242,18 +242,33 @@ export const spots = pgTable("spot", {
     onDelete: "set null",
   }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  // Approval lifecycle. Mirrors campaigns.clientApprovedAt — the *spot*
-  // got the client's blessing. Two states:
-  //   clientApprovedAt set    → Schváleno
-  //   clientApprovedAt null   → Čeká na schválení
-  // Editing the spot's videoUrl auto-clears approval (different creative
-  // = client sign-off no longer applies).
+  // Production status — manual workflow states + the "schvalen" terminal
+  // state set by client approval. Drives the timeline bar visual and the
+  // /spots list filter. See lib/spot-status.ts for the full state machine
+  // + i18n + Pill tone helpers.
   //
-  // Earlier draft of this schema also had rejectedAt / rejectionReason /
-  // rejectedById columns for an explicit "rejected" state; partner asked
-  // to drop that — spots are either approved or pending, no third state.
-  // Those DB columns stay as orphan storage (Tier 3 soft-removal pattern,
-  // see STAV.md "Schema drift").
+  // States:
+  //   bez_zadani         → spot doesn't have a videoUrl yet (or never set)
+  //   zadan              → editor flagged "Sony zadalo, začneme dělat"
+  //   ve_vyrobe          → editor flagged "aktuálně se vyrábí"
+  //   ceka_na_schvaleni  → has videoUrl, waiting for client approval
+  //   schvalen           → client clicked "schvaluji" (also sets clientApprovedAt)
+  //
+  // Three derived states ("naplanovan" / "bezi" / "skoncil") are computed
+  // per-deployment from campaign_channel dates relative to today; they're
+  // never stored. See resolveSpotDisplayStatus() in lib/spot-status.ts.
+  //
+  // Auto-transitions on updateSpot:
+  //   - videoUrl set first time AND status was bez_zadani/zadan/ve_vyrobe
+  //     → ceka_na_schvaleni
+  //   - videoUrl changed AND status was schvalen
+  //     → ceka_na_schvaleni (resets approval — different creative, sign-off
+  //       no longer applies)
+  productionStatus: text("production_status").notNull().default("bez_zadani"),
+  // Set when productionStatus transitions to "schvalen". Kept as a separate
+  // timestamp so we know *when* it was approved (status alone is just current
+  // state). Cleared on auto-reset (videoUrl change). Mirrored on the
+  // (now deprecated) campaigns.clientApprovedAt for the legacy 1.x model.
   clientApprovedAt: timestamp("client_approved_at", { mode: "date" }),
   clientApprovedComment: text("client_approved_comment"),
   approvedById: text("approved_by_id").references(() => users.id, {

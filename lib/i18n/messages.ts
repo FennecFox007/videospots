@@ -348,7 +348,19 @@ const cs = {
   "spots.filter.approval.approved": "Schváleno",
   "spots.col.approval": "Schválení",
 
-  // Spot approval workflow — two states: pending / approved.
+  // Spot status — 5 manual + 3 derived states. Derived ones (naplanovan /
+  // bezi / skoncil) are computed from deployment dates; see lib/spot-status.ts.
+  "spot_status.bez_zadani": "Bez zadání",
+  "spot_status.zadan": "Zadán",
+  "spot_status.ve_vyrobe": "Ve výrobě",
+  "spot_status.ceka_na_schvaleni": "Čeká na schválení",
+  "spot_status.schvalen": "Schválen",
+  "spot_status.naplanovan": "Naplánován",
+  "spot_status.bezi": "Běží",
+  "spot_status.skoncil": "Skončil",
+
+  // Spot approval workflow — legacy two-state labels (Phase 3 migrates
+  // call sites to the unified spot_status.* namespace above).
   "spots.approval.status.pending": "Čeká",
   "spots.approval.status.approved": "Schváleno",
   "spots.approval.approve_button": "Schválit",
@@ -1031,7 +1043,19 @@ const en: Record<keyof typeof cs, string> = {
   "spots.filter.approval.approved": "Approved",
   "spots.col.approval": "Approval",
 
-  // Spot approval workflow — two states: pending / approved.
+  // Spot status — 5 manual + 3 derived states. Derived ones (naplanovan /
+  // bezi / skoncil) are computed from deployment dates; see lib/spot-status.ts.
+  "spot_status.bez_zadani": "No brief",
+  "spot_status.zadan": "Briefed",
+  "spot_status.ve_vyrobe": "In production",
+  "spot_status.ceka_na_schvaleni": "Awaiting approval",
+  "spot_status.schvalen": "Approved",
+  "spot_status.naplanovan": "Scheduled",
+  "spot_status.bezi": "Running",
+  "spot_status.skoncil": "Ended",
+
+  // Spot approval workflow — legacy two-state labels (Phase 3 migrates
+  // call sites to the unified spot_status.* namespace above).
   "spots.approval.status.pending": "Pending",
   "spots.approval.status.approved": "Approved",
   "spots.approval.approve_button": "Approve",

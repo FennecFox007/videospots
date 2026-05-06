@@ -1,30 +1,50 @@
-// Derived approval state for spots. The DB stores one timestamp
-// (clientApprovedAt) — set or null = approved or pending. There's no
-// third "rejected" state; partner's workflow is "spots must be approved
-// before deployment", so the binary works.
+// DEPRECATED — kept as a compatibility shim during the spot vocabulary
+// refactor. New code should use `lib/spot-status.ts` directly.
 //
-// This file consolidates the derivation so the list page, detail page,
-// drawer card, campaign-form picker and audit log humanizer all read
-// the same source of truth.
+// The old binary "approved/pending" is now the upper end of the 8-state
+// production-status workflow:
+//   approved → "schvalen"
+//   pending  → anything else, but in practice only "ceka_na_schvaleni"
+//              for spots that have a videoUrl
+//
+// Callers using `spotApprovalState` get a coarse-grained view; if they
+// need the fine-grained 8 states they should switch to
+// `resolveSpotDisplayStatus`.
 
+import {
+  spotStatusTone,
+  spotStatusLabelKey,
+  type ProductionStatus,
+} from "@/lib/spot-status";
 import type { PillTone } from "@/components/ui/pill";
 
 export type SpotApprovalState = "approved" | "pending";
 
-/** Compute the derived state from the approval timestamp. */
+/** Compute the legacy binary state from the production status (or from
+ *  the old clientApprovedAt timestamp — both shapes accepted for back-
+ *  compat during the rename). */
 export function spotApprovalState(spot: {
-  clientApprovedAt: Date | null;
+  productionStatus?: ProductionStatus;
+  clientApprovedAt?: Date | null;
 }): SpotApprovalState {
-  return spot.clientApprovedAt !== null ? "approved" : "pending";
+  if (spot.productionStatus) {
+    return spot.productionStatus === "schvalen" ? "approved" : "pending";
+  }
+  return spot.clientApprovedAt ? "approved" : "pending";
 }
 
 /** Pill tone matching the visual signal in the UI: approved = emerald,
  *  pending = amber. */
 export function spotApprovalTone(state: SpotApprovalState): PillTone {
-  return state === "approved" ? "emerald" : "amber";
+  return state === "approved"
+    ? spotStatusTone("schvalen")
+    : spotStatusTone("ceka_na_schvaleni");
 }
 
-/** i18n key for the localized status label. */
+/** i18n key for the localized status label. Kept on the legacy
+ *  `spots.approval.status.*` namespace for back-compat — Phase 3 migrates
+ *  existing call sites to the canonical `spot_status.*` keys returned by
+ *  `spotStatusLabelKey()`. Don't read into this list. */
 export function spotApprovalLabelKey(
   state: SpotApprovalState
 ): "spots.approval.status.approved" | "spots.approval.status.pending" {
@@ -32,3 +52,7 @@ export function spotApprovalLabelKey(
     ? "spots.approval.status.approved"
     : "spots.approval.status.pending";
 }
+
+// Re-export so callers currently importing the unused symbol don't break
+// during the gradual migration in Phase 3.
+void spotStatusLabelKey;
