@@ -857,7 +857,7 @@ const en: Record<keyof typeof cs, string> = {
   "timeline.channel_col": "Channel",
   "timeline.no_channels": "No channels yet. Set up the matrix in",
   "timeline.no_channels_link": "Admin",
-  "timeline.no_campaigns_in_range": "No campaigns in this range yet.",
+  "timeline.no_campaigns_in_range": "No spots in this range yet.",
   "timeline.create_first": "Create the first one",
   "timeline.now_marker": "NOW",
   "timeline.bar_play": "Play the spot in a new tab",
@@ -874,17 +874,17 @@ const en: Record<keyof typeof cs, string> = {
 
   // Dashboard widgets
   "dashboard.running.empty_title": "Nothing is running right now",
-  "dashboard.running.empty_desc": "No active campaign is currently playing.",
+  "dashboard.running.empty_desc": "No active spot is currently playing.",
   "dashboard.running.title": "Running now",
   "dashboard.upcoming.empty_title": "Nothing scheduled",
   "dashboard.upcoming.empty_desc":
-    "No approved campaign is scheduled for the next {days} days.",
+    "No approved spot is scheduled for the next {days} days.",
   "dashboard.upcoming.title": "Scheduled in next {days} days",
   "dashboard.ending.empty_title": "Nothing ending soon",
   "dashboard.ending.empty_desc":
-    "No active campaign ends in the next {days} days.",
+    "No running spot ends in the next {days} days.",
   "dashboard.ending.title": "Ending within {days} days",
-  "dashboard.stats.total_campaigns": "Total campaigns",
+  "dashboard.stats.total_campaigns": "Total spots",
   "dashboard.stats.this_month": "running in {month}",
   "dashboard.stats.awaiting_approval": "Awaiting approval",
   "dashboard.stats.awaiting_none": "All approved",
@@ -897,10 +897,11 @@ const en: Record<keyof typeof cs, string> = {
   "dashboard.today": "today",
   "dashboard.until": "until {date}",
 
-  // Campaigns list
-  "list.heading": "Campaigns",
+  // Planned spots list (formerly "campaigns" — same data, renamed UI per
+  // STAV.md Priority #2)
+  "list.heading": "Planned spots",
   "list.export_csv": "Export CSV",
-  "list.col.campaign": "Campaign",
+  "list.col.campaign": "Spot",
   "list.col.client": "Client",
   "list.col.product": "Product",
   "list.col.start": "Start",
@@ -908,14 +909,14 @@ const en: Record<keyof typeof cs, string> = {
   "list.col.channels": "Channels",
   "list.col.status": "Status",
   "list.col.tags": "Tags",
-  "list.empty.title": "No campaigns match the filters.",
+  "list.empty.title": "No spots match the filters.",
   "list.empty.clear": "Clear filters",
   "list.bulk.cancel": "Cancel (historic)",
   "list.bulk.color": "Color",
   "list.bulk.archive": "Archive",
   "list.bulk.selected": "selected",
   "list.tip":
-    "Pick campaigns with the left checkbox; a bulk action bar appears at the bottom (delete / cancel / change color).",
+    "Pick spots with the left checkbox; a bulk action bar appears at the bottom (delete / cancel / change color).",
 
   // Filter bar
   "filter.search_placeholder": "Search (name, client, product)…",
@@ -947,7 +948,7 @@ const en: Record<keyof typeof cs, string> = {
   "detail.product_released": "Released {date}",
   "detail.videos_section": "Spots by country",
   "detail.spot_pending":
-    "No spot assigned yet — the campaign is scheduled, attach a spot later.",
+    "No video assigned yet — the spot is scheduled, attach a video later.",
   "detail.assign_spots": "Assign spots",
   "detail.channels_section": "Channels",
   "detail.no_channels": "No channels.",
@@ -966,7 +967,7 @@ const en: Record<keyof typeof cs, string> = {
   "releases.empty": "No upcoming releases.",
   "releases.empty_link": "Add a product with a release date",
   "releases.released_on": "Released {date}",
-  "releases.launch_campaign": "+ Launch campaign",
+  "releases.launch_campaign": "+ Launch spot",
   "releases.launch_campaign_tooltip":
     "Pre-fills the form with this product and a ±7-day launch window",
   "releases.status.released_days_ago": "Released {n} {unit} ago",
@@ -974,9 +975,9 @@ const en: Record<keyof typeof cs, string> = {
   "releases.status.in_days": "In {n} {unit}",
 
   // Timeline context menu
-  "ctx.create_here": "+ New campaign here ({chain}, from {date})",
-  "ctx.create_for_country": "+ New campaign for all of {country}",
-  "ctx.create_for_chain": "+ New campaign for {chain}",
+  "ctx.create_here": "+ Plan a spot here ({chain}, from {date})",
+  "ctx.create_for_country": "+ Plan a spot for all of {country}",
+  "ctx.create_for_chain": "+ Plan a spot for {chain}",
   "ctx.filter_chain": "Filter by {chain}",
   "ctx.filter_country": "Filter by {country}",
   "ctx.open_detail": "Open detail",
@@ -999,15 +1000,15 @@ const en: Record<keyof typeof cs, string> = {
   // Per-channel override dialog
   "override.title": "Edit only this retailer",
   "override.scope_note":
-    "This change applies ONLY to this retailer. Other retailers in the campaign stay unchanged.",
-  "override.cancel_in_channel": "Turn campaign off in this retailer",
-  "override.master_dates": "Campaign-wide dates",
+    "This change applies ONLY to this retailer. Other retailers in the plan stay unchanged.",
+  "override.cancel_in_channel": "Turn the spot off in this retailer",
+  "override.master_dates": "Spot-wide dates",
   "override.clear": "Clear override",
   "override.saved": "Saved.",
   "override.cleared": "Override cleared.",
   "override.error_end_before_start": "End cannot be before start.",
   "override.indicator_title":
-    "This retailer has its own schedule, different from the campaign.",
+    "This retailer has its own schedule, different from the others.",
 
   // Approval (auth-gated; share view is read-only)
   "approval.waiting": "Waiting for approval",
@@ -1017,11 +1018,13 @@ const en: Record<keyof typeof cs, string> = {
   "approval.unapprove": "Clear approval",
   "approval.approved_by": "Approved by {who}",
 
-  // Spots
-  "spots.heading": "Spots",
+  // Video library (formerly /spots renamed in UI per Phase 3 — DB still
+  // calls them "spots" but in UI we say "Video library" to disambiguate
+  // from the planned-spot list)
+  "spots.heading": "Video library",
   "spots.subhead":
-    "Library of every video creative. Spots not in any active campaign get an amber heads-up.",
-  "spots.new": "New spot",
+    "Library of every video creative. Videos not currently deployed get an amber heads-up.",
+  "spots.new": "New video",
   "spots.tab.undeployed": "Undeployed",
   "spots.tab.deployed": "Deployed",
   "spots.tab.all": "All",
@@ -1088,31 +1091,31 @@ const en: Record<keyof typeof cs, string> = {
 
   // Spot detail richer view
   "spots.deployment_history.title": "Deployment history",
-  "spots.deployment_history.empty": "Spot has never been deployed yet.",
+  "spots.deployment_history.empty": "Never been deployed yet.",
   "spots.audit.title": "Activity",
   "spots.audit.empty": "No recorded activity.",
 
-  // Campaign form spot-picker warnings
+  // Spot picker warnings (in spot/plan create form)
   "spot_picker.warning.pending":
-    "⚠️ This spot has not been client-approved yet.",
+    "⚠️ This creative hasn't been client-approved yet.",
   "spots.undeployed_label": "Undeployed",
   "spots.archived_at": "Archived {date}",
   "spots.play": "Play",
   "spots.back_to_list": "Back to list",
   "spots.section.preview": "Preview",
-  "spots.section.deployments": "Active campaigns",
+  "spots.section.deployments": "Active deployments",
   "spots.deployments.empty":
-    "This spot isn't currently used in any active campaign.",
+    "This creative isn't currently in any active deployment.",
   "spots.action.archive": "Archive",
   "spots.action.archive_tooltip":
-    "Hides the spot from default lists. Campaign history stays intact.",
+    "Hides the creative from default lists. Deployment history stays intact.",
   "spots.action.unarchive": "Restore from archive",
   "spots.action.delete": "Delete permanently",
   "spots.action.delete_tooltip":
-    "Only works if the spot isn't referenced by any campaign.",
-  "spots.form.heading_new": "New spot",
+    "Only works if the creative isn't in any deployment.",
+  "spots.form.heading_new": "New video",
   "spots.form.subhead_new":
-    "Register a video creative for later use in campaigns.",
+    "Register a video creative for later deployment.",
   "spots.form.section.basics": "Basics",
   "spots.form.section.product": "Product",
   "spots.form.section.where": "Country",
@@ -1137,59 +1140,61 @@ const en: Record<keyof typeof cs, string> = {
   "spots.form.modal.error_url_invalid":
     "That URL doesn't look right. Try again.",
 
-  // Dashboard: undeployed spots tile
-  "dashboard.stats.undeployed_spots": "Undeployed spots",
-  "dashboard.stats.undeployed_none": "All scheduled",
+  // Dashboard: undeployed creatives tile
+  "dashboard.stats.undeployed_spots": "Videos without deployment",
+  "dashboard.stats.undeployed_none": "All deployed",
   "dashboard.stats.undeployed_sub": "produced but unused",
   "filter.approval.all": "Approval",
   "filter.approval.pending": "Awaiting approval",
   "filter.approval.approved": "Approved",
-  "filter.missing_spot.label": "Missing spot",
+  "filter.missing_spot.label": "Missing video",
   "filter.missing_spot.tooltip":
-    "Campaigns with at least one country still waiting for a spot.",
+    "Planned spots with at least one country still waiting for a creative.",
 
-  // Spots drawer — see CS comment above for naming rationale.
+  // Video library drawer — quick drag-onto-timeline surface
   "spots_drawer.button": "Library",
   "spots_drawer.button_tooltip":
-    "Open the spot library. Drag a spot onto the timeline to create a campaign from it.",
-  "spots_drawer.aria_label": "Spot library",
-  "spots_drawer.heading": "Spot library",
-  "spots_drawer.hint": "Drag a spot onto the timeline to create a campaign.",
-  "spots_drawer.search_placeholder": "Search spots…",
+    "Open the video library. Drag a video onto the timeline to plan a spot from it.",
+  "spots_drawer.aria_label": "Video library",
+  "spots_drawer.heading": "Video library",
+  "spots_drawer.hint": "Drag a video onto the timeline to plan a spot.",
+  "spots_drawer.search_placeholder": "Search…",
   "spots_drawer.tab.undeployed": "Undeployed",
   "spots_drawer.tab.all": "All",
-  "spots_drawer.empty.undeployed": "No undeployed spots.",
-  "spots_drawer.empty.all": "No spots in the library.",
+  "spots_drawer.empty.undeployed": "No undeployed videos.",
+  "spots_drawer.empty.all": "Library is empty.",
   "spots_drawer.undeployed": "Undeployed",
   "spots_drawer.undeployed_count": "{count} undeployed",
   "spots_drawer.card_drag_hint": "Drag onto the timeline",
-  "spots_drawer.footer_hint": "Drop a spot onto a channel row",
-  "spots_drawer.new_link": "+ New spot",
+  "spots_drawer.footer_hint": "Drop a video onto a channel row",
+  "spots_drawer.new_link": "+ New video",
   "spots_drawer.action.play": "Play",
   "spots_drawer.action.edit": "Edit",
 
-  // Spot drop modal
-  "spot_drop.title": "Create campaign from spot",
-  "spot_drop.field.name": "Campaign name",
+  // Spot drop modal — opens after dragging a video onto a channel row.
+  // Creates a planned spot with this video already attached for the
+  // matching country.
+  "spot_drop.title": "Plan a spot from this video",
+  "spot_drop.field.name": "Spot name",
   "spot_drop.field.channels": "Retailers",
   "spot_drop.field.channels_hint":
     "The retailer you dropped on is selected. Add other retailers in the same country if you want.",
   "spot_drop.dropped_here": "drop",
   "spot_drop.approve_now": "Approve now",
-  "spot_drop.submit": "Create campaign",
-  "spot_drop.created": "Campaign created.",
+  "spot_drop.submit": "Plan the spot",
+  "spot_drop.created": "Spot planned.",
   "spot_drop.country_mismatch":
-    "Spot is for {spot}, dropped on {target}. A spot is country-bound.",
-  "spot_drop.error_name": "Fill in the campaign name.",
+    "Video is for {spot}, dropped on {target}. Each video is country-bound.",
+  "spot_drop.error_name": "Fill in the spot name.",
   "spot_drop.error_no_channels": "Pick at least one retailer.",
   "spot_drop.error_end_before_start": "End cannot be before start.",
 
-  // Campaign form body
+  // Planned spot form (new + edit) — formerly "campaign form"
   "form.section.basic": "Basics",
   "form.section.product": "Product",
-  "form.section.video": "Spots (one per country)",
+  "form.section.video": "Videos (one per country)",
   "form.section.video_hint":
-    "Pick a spot from the library for each country. If the spot you need doesn't exist yet, click \"+ New spot\" — it opens in another tab; reload this page after creating.",
+    "Pick a video from the library for each country. If the one you need doesn't exist yet, click \"+ New video\" — it opens in another tab; reload this page after creating.",
   "form.section.term": "Schedule",
   "form.section.channels": "Retailers",
   "form.section.channels_hint":
@@ -1197,15 +1202,15 @@ const en: Record<keyof typeof cs, string> = {
   "form.section.notes": "Notes",
   "form.section.recurring": "Repeat (optional)",
   "form.section.recurring_hint":
-    "Creates several campaigns at once with shifted dates. Useful for recurring spots.",
+    "Creates several planned spots at once with shifted dates. Useful for recurring deployment.",
   "form.section.product_hint":
-    "What this campaign promotes — game, console, controller, accessory… Optional but helps grouping.",
-  "form.field.name": "Campaign name",
+    "What this spot promotes — game, console, controller, accessory… Optional but helps grouping.",
+  "form.field.name": "Spot name",
   "form.field.name_placeholder": "e.g. Saros — launch trailer",
   "form.field.client": "Client",
   "form.field.comm_type": "Communication type",
   "form.field.comm_type_hint":
-    "What exactly this campaign does relative to the product release",
+    "What exactly this spot does relative to the product release",
   "form.field.tags": "Tags",
   "form.field.tags_hint": "Comma-separated: \"priority, spring, …\"",
   "form.field.tags_placeholder": "priority, season, …",
@@ -1230,21 +1235,21 @@ const en: Record<keyof typeof cs, string> = {
   "form.recurring.freq_weekly": "every week",
   "form.recurring.freq_biweekly": "every 2 weeks",
   "form.recurring.freq_monthly": "every 4 weeks",
-  "form.recurring.count": "Number of campaigns",
+  "form.recurring.count": "Number of spots",
   "form.recurring.note":
-    "Each subsequent campaign will be named \"Name (n/N)\". Channel selection and product carry over to all of them.",
+    "Each subsequent spot will be named \"Name (n/N)\". Channel selection and product carry over to all of them.",
   "form.video.placeholder": "YouTube / Vimeo / direct mp4 URL",
-  "form.video.no_spot": "— no spot —",
-  "form.video.new_spot": "+ New spot",
+  "form.video.no_spot": "— no video —",
+  "form.video.new_spot": "+ New video",
   "form.video.new_spot_tooltip":
-    "Opens the spots library in a new tab. Reload this page after you've created the spot.",
-  "form.submit_create": "Create campaign",
+    "Opens the video library in a new tab. Reload this page after you've created the video.",
+  "form.submit_create": "Plan the spot",
   "form.submit_save": "Save changes",
   "form.cancel": "Cancel",
-  "form.new_campaign_title": "New campaign",
-  "form.edit_campaign_title": "Edit campaign",
+  "form.new_campaign_title": "Plan a spot",
+  "form.edit_campaign_title": "Edit spot",
   "form.hint_default":
-    "Schedule a video spot on selected retailers in the chosen window.",
+    "Schedule a video on selected retailers in the chosen window.",
   "form.hint_template": "Pre-filled from template \"{name}\".",
   "form.hint_release": "Pre-filled from release calendar for product \"{name}\".",
   "form.hint_timeline": "Pre-filled from timeline (channels and date range).",
@@ -1259,8 +1264,8 @@ const en: Record<keyof typeof cs, string> = {
   // Find-slot
   "findslot.heading": "Find an available slot",
   "findslot.subtitle":
-    "Pick channels and the required duration — I'll find the nearest free window where no approved campaign overlaps on any selected channel. Searches {days} days ahead.",
-  "findslot.field.duration": "Campaign duration (days)",
+    "Pick channels and the required duration — I'll find the nearest free window where no approved spot overlaps on any selected channel. Searches {days} days ahead.",
+  "findslot.field.duration": "Spot duration (days)",
   "findslot.field.from": "Search from",
   "findslot.field.channels": "Channels",
   "findslot.find": "Find available slot",
@@ -1300,24 +1305,24 @@ const en: Record<keyof typeof cs, string> = {
   "admin.share_links.col.expires": "Validity",
   "admin.share_links.col.actions": "Actions",
   "admin.share_links.target_timeline": "Timeline",
-  "admin.share_links.campaign_unnamed": "Campaign #{id}",
-  "admin.share_links.campaign_deleted": "(campaign deleted)",
+  "admin.share_links.campaign_unnamed": "Spot #{id}",
+  "admin.share_links.campaign_deleted": "(spot deleted)",
   "admin.card.countries.desc":
-    "Markets we operate campaigns in. CZ, SK, HU, PL — any can be added.",
+    "Markets we deploy spots in. CZ, SK, HU, PL — any can be added.",
   "admin.card.chains.desc":
     "Retail brands hosting our screens — Datart, Alza, MediaMarkt…",
   "admin.card.channels.desc":
     "Country × Retailer matrix. Mark which combinations actually exist.",
   "admin.card.products.desc":
-    "Games, consoles, controllers, accessories… with release dates and covers. Campaigns link to them.",
+    "Games, consoles, controllers, accessories… with release dates and covers. Spots link to them.",
   "admin.card.users.desc":
     "Add, remove, and reset passwords for team members.",
   "admin.card.templates.desc":
-    "Stored campaign configurations (client, color, channels, tags, length) for fast reuse.",
+    "Stored deployment configurations (client, color, channels, tags, length) for fast reuse.",
   "admin.card.import.desc":
-    "Bulk import campaigns from CSV (Excel migration).",
+    "Bulk import planned spots from CSV (Excel migration).",
   "admin.card.archive.desc":
-    "Archived campaigns. Restorable, or permanently deletable.",
+    "Archived spots. Restorable, or permanently deletable.",
   "admin.card.audit.desc":
     "Who did what when — full action history.",
 
@@ -1327,7 +1332,7 @@ const en: Record<keyof typeof cs, string> = {
   "share_button.copy": "Copy",
   "share_button.copied": "✓ Copied",
   "share_button.note":
-    "Anyone with the link can view the campaign without signing in. Manage links below.",
+    "Anyone with the link can view the spot without signing in. Manage links below.",
   "share_button.expires_30d": "Create link (30 days)",
   "share_button.revoke_confirm_inline": "Revoke this link?",
   "share_form.expiry_label": "Validity",
@@ -1342,7 +1347,7 @@ const en: Record<keyof typeof cs, string> = {
   "timeline_share.note":
     "Recipients see the full timeline at the same range and active filters, without signing in and without edit controls.",
   "share_links.section_title": "Share links",
-  "share_links.empty": "This campaign has no share links yet.",
+  "share_links.empty": "This spot has no share links yet.",
   "share_links.no_active":
     "No active link. Click “Share” to create one.",
   "share_links.show_inactive": "Show inactive ({n})",
@@ -1375,19 +1380,19 @@ const en: Record<keyof typeof cs, string> = {
   "editable_title.rename": "Rename",
 
   // Share view
-  "share.preview_campaign": "Public campaign preview",
+  "share.preview_campaign": "Public spot preview",
   "share.preview_timeline": "Public timeline preview",
   "share.expires": "This link is valid until {date}.",
   "share.open_app": "Open the app",
-  "share.plan_heading": "Campaign plan",
+  "share.plan_heading": "Planned spots",
 
   // Print
-  "print.subheading": "campaign brief",
-  "print.subheading_timeline": "campaign schedule",
+  "print.subheading": "spot brief",
+  "print.subheading_timeline": "spot schedule",
   "print.created": "Created {date}",
   "print.generated": "Generated {date}",
   "print.scan_video": "Open video",
-  "print.scan_campaign": "Open campaign",
+  "print.scan_campaign": "Open spot",
   "print.bg_tip":
     "Tip: in Chrome, tick \"Background graphics\" in the print dialog for full-color bars.",
 
@@ -1404,9 +1409,9 @@ const en: Record<keyof typeof cs, string> = {
   "unit.day_one": "day",
   "unit.day_few": "days",
   "unit.day_many": "days",
-  "unit.campaign_one": "campaign",
-  "unit.campaign_few": "campaigns",
-  "unit.campaign_many": "campaigns",
+  "unit.campaign_one": "spot",
+  "unit.campaign_few": "spots",
+  "unit.campaign_many": "spots",
   "unit.channel_one": "channel",
   "unit.channel_few": "channels",
   "unit.channel_many": "channels",
