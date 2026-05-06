@@ -18,6 +18,12 @@ import { isValidKind, DEFAULT_PRODUCT_KIND } from "@/lib/products";
 import { isValidCampaignColor, DEFAULT_CAMPAIGN_COLOR } from "@/lib/colors";
 import { isValidCommunicationType } from "@/lib/communication";
 import { requireEditor as requireUser } from "@/lib/auth-helpers";
+import {
+  autoTransitionForUrlChange,
+  canManuallyTransitionTo,
+  isProductionStatus,
+  type ProductionStatus,
+} from "@/lib/spot-status";
 
 // All spot mutations require editor+ (createSpot, update, archive, delete,
 // inline picker create, drag-onto-timeline campaign create). Viewers are
@@ -72,6 +78,14 @@ export async function createSpot(formData: FormData) {
     parsed.productKind
   );
 
+  // Initial productionStatus: a spot created with a videoUrl already has
+  // creative ready, so it goes straight to "ceka_na_schvaleni". Without a
+  // URL it sits in "bez_zadani" — but createSpot's schema requires URL,
+  // so this branch is mostly defensive.
+  const initialStatus: ProductionStatus = parsed.videoUrl?.trim()
+    ? "ceka_na_schvaleni"
+    : "bez_zadani";
+
   const [created] = await db
     .insert(spots)
     .values({
@@ -79,6 +93,7 @@ export async function createSpot(formData: FormData) {
       countryId: parsed.countryId,
       videoUrl: parsed.videoUrl,
       name: parsed.name || null,
+      productionStatus: initialStatus,
       createdById: userId,
     })
     .returning({ id: spots.id });
@@ -88,7 +103,11 @@ export async function createSpot(formData: FormData) {
     entity: "spot",
     entityId: created.id,
     userId,
-    changes: { name: parsed.name ?? null, videoUrl: parsed.videoUrl },
+    changes: {
+      name: parsed.name ?? null,
+      videoUrl: parsed.videoUrl,
+      productionStatus: initialStatus,
+    },
   });
 
   revalidatePath("/spots");
@@ -128,6 +147,11 @@ export async function createSpotForPicker(formData: FormData): Promise<{
     parsed.productKind
   );
 
+  // Same initial-status reasoning as createSpot (URL → ceka_na_schvaleni).
+  const initialStatus: ProductionStatus = parsed.videoUrl?.trim()
+    ? "ceka_na_schvaleni"
+    : "bez_zadani";
+
   const [created] = await db
     .insert(spots)
     .values({
@@ -135,6 +159,7 @@ export async function createSpotForPicker(formData: FormData): Promise<{
       countryId: parsed.countryId,
       videoUrl: parsed.videoUrl,
       name: parsed.name || null,
+      productionStatus: initialStatus,
       createdById: userId,
     })
     .returning({ id: spots.id });
@@ -147,6 +172,7 @@ export async function createSpotForPicker(formData: FormData): Promise<{
     changes: {
       name: parsed.name ?? null,
       videoUrl: parsed.videoUrl,
+      productionStatus: initialStatus,
       via: "campaign-form-inline",
     },
   });
@@ -186,22 +212,30 @@ export async function updateSpot(spotId: number, formData: FormData) {
     parsed.productKind
   );
 
-  // Snapshot the videoUrl + approval state pre-update so we can detect
-  // when a content change (URL swap) should auto-clear approval. The
-  // creative changed = previous client sign-off no longer applies.
+  // Snapshot the spot pre-update so we can detect a URL swap that should
+  // auto-transition productionStatus (and clear approval if relevant).
   const [before] = await db
     .select({
       videoUrl: spots.videoUrl,
       clientApprovedAt: spots.clientApprovedAt,
+      productionStatus: spots.productionStatus,
     })
     .from(spots)
     .where(eq(spots.id, spotId))
     .limit(1);
   if (!before) throw new Error("Spot neexistuje");
 
-  const urlChanged = before.videoUrl !== parsed.videoUrl;
-  const wasApproved = before.clientApprovedAt !== null;
-  const shouldInvalidateApproval = urlChanged && wasApproved;
+  const prevStatus = (before.productionStatus ?? "bez_zadani") as ProductionStatus;
+  const autoNextStatus = autoTransitionForUrlChange(
+    before.videoUrl,
+    parsed.videoUrl,
+    prevStatus
+  );
+  // Approval wipe rule: only when going FROM schvalen due to a URL change.
+  // (Other transitions like bez_zadani → ceka_na_schvaleni don't touch
+  // approval timestamps because there was nothing to wipe.)
+  const shouldInvalidateApproval =
+    prevStatus === "schvalen" && autoNextStatus === "ceka_na_schvaleni";
 
   const updateValues: Record<string, unknown> = {
     productId,
@@ -209,8 +243,13 @@ export async function updateSpot(spotId: number, formData: FormData) {
     videoUrl: parsed.videoUrl,
     name: parsed.name || null,
   };
+  if (autoNextStatus) {
+    updateValues.productionStatus = autoNextStatus;
+  }
   if (shouldInvalidateApproval) {
-    // Wipe approval state so the spot returns to "pending".
+    // Wipe approval state — different creative, prior sign-off no longer
+    // applies. ProductionStatus has already been set to ceka_na_schvaleni
+    // above by the auto-transition.
     updateValues.clientApprovedAt = null;
     updateValues.clientApprovedComment = null;
     updateValues.approvedById = null;
@@ -226,6 +265,9 @@ export async function updateSpot(spotId: number, formData: FormData) {
     changes: {
       name: parsed.name ?? null,
       videoUrl: parsed.videoUrl,
+      ...(autoNextStatus
+        ? { productionStatusFrom: prevStatus, productionStatusTo: autoNextStatus }
+        : {}),
       ...(shouldInvalidateApproval ? { approvalInvalidatedByEdit: true } : {}),
     },
   });
@@ -236,20 +278,22 @@ export async function updateSpot(spotId: number, formData: FormData) {
 }
 
 // ---------------------------------------------------------------------------
-// Approval workflow — mirrors campaigns.clientApprovedAt but applied to
-// the spot itself ("client signed off on this video creative"). Two
-// states only: approved or pending. Partner workflow is "spots must be
-// approved before deployment", so a third "rejected" state would be
-// dead weight — a not-yet-approved spot is "pending" until it gets
-// signed off; if the client wants changes, the team uploads a new URL
-// (which auto-clears any earlier approval via updateSpot).
+// Status workflow — manual transitions (zadan / ve_vyrobe / ceka_na_schvaleni
+// / bez_zadani) via setSpotProductionStatus, plus the dedicated approve /
+// unapprove pair that ALSO flips productionStatus (to/from "schvalen") and
+// records the timestamp + approver. The "schvalen" terminal state is reach-
+// able only through approveSpot — that's how we capture who signed off and
+// when, beyond just the current state. setSpotProductionStatus refuses
+// "schvalen" as a target.
 //
-// Editing the spot's videoUrl in updateSpot auto-clears approval —
-// different creative = previous client sign-off no longer applies.
+// Editing the spot's videoUrl in updateSpot auto-transitions production
+// Status (set URL → ceka_na_schvaleni; replace URL while schvalen → drop
+// back to ceka_na_schvaleni and wipe approval timestamps).
 // ---------------------------------------------------------------------------
 
 /** Mark a spot as client-approved. Optional comment captures intent
- *  (e.g. "approved via email 2026-05-12"). */
+ *  (e.g. "approved via email 2026-05-12"). Sets productionStatus to
+ *  "schvalen" as the canonical terminal state. */
 export async function approveSpot(spotId: number, comment?: string) {
   const userId = await requireUser();
 
@@ -259,6 +303,7 @@ export async function approveSpot(spotId: number, comment?: string) {
   await db
     .update(spots)
     .set({
+      productionStatus: "schvalen",
       clientApprovedAt: now,
       clientApprovedComment: trimmedComment || null,
       approvedById: userId,
@@ -270,7 +315,7 @@ export async function approveSpot(spotId: number, comment?: string) {
     entity: "spot",
     entityId: spotId,
     userId,
-    changes: { note: trimmedComment ?? null },
+    changes: { note: trimmedComment ?? null, productionStatus: "schvalen" },
   });
 
   revalidatePath("/spots");
@@ -281,13 +326,31 @@ export async function approveSpot(spotId: number, comment?: string) {
 /** Send a spot back to "pending approval" — clears the approval. Use
  *  when an earlier sign-off needs re-evaluation without touching the
  *  spot's content. (For URL/content changes, plain `updateSpot` already
- *  invalidates the approval automatically.) */
+ *  invalidates the approval automatically.)
+ *
+ *  Drops productionStatus back to "ceka_na_schvaleni" if the spot has a
+ *  videoUrl, otherwise to "bez_zadani". This keeps the binary "have URL =
+ *  awaiting approval, no URL = no brief" invariant after un-approval. */
 export async function unapproveSpot(spotId: number) {
   const userId = await requireUser();
+
+  // Need to know if a URL exists to pick the right rollback target.
+  const [before] = await db
+    .select({ videoUrl: spots.videoUrl })
+    .from(spots)
+    .where(eq(spots.id, spotId))
+    .limit(1);
+  if (!before) throw new Error("Spot neexistuje");
+
+  const rollbackStatus: ProductionStatus =
+    before.videoUrl && before.videoUrl.trim()
+      ? "ceka_na_schvaleni"
+      : "bez_zadani";
 
   await db
     .update(spots)
     .set({
+      productionStatus: rollbackStatus,
       clientApprovedAt: null,
       clientApprovedComment: null,
       approvedById: null,
@@ -299,7 +362,76 @@ export async function unapproveSpot(spotId: number) {
     entity: "spot",
     entityId: spotId,
     userId,
-    changes: { approvalCleared: true },
+    changes: { approvalCleared: true, productionStatus: rollbackStatus },
+  });
+
+  revalidatePath("/spots");
+  revalidatePath(`/spots/${spotId}`);
+  revalidatePath("/");
+}
+
+/** Manual status transition: editor toggles between bez_zadani / zadan /
+ *  ve_vyrobe / ceka_na_schvaleni. Refuses target = "schvalen" (use
+ *  approveSpot instead, which captures the approver + timestamp).
+ *
+ *  Idempotent: setting to the current status is a no-op (no audit row).
+ *  When transitioning AWAY from "schvalen" (e.g. Sony retracted approval
+ *  via email and we're rolling back to "ve_vyrobe"), this also clears
+ *  the approval timestamps — same semantics as unapproveSpot but with
+ *  an explicit status target. */
+export async function setSpotProductionStatus(
+  spotId: number,
+  status: string
+) {
+  const userId = await requireUser();
+
+  if (!isProductionStatus(status)) {
+    throw new Error(`Neplatný stav: ${status}`);
+  }
+  if (!canManuallyTransitionTo(status)) {
+    throw new Error(
+      "Stav 'Schválen' nelze nastavit ručně — použij Schválit (zaznamená kdo + kdy)."
+    );
+  }
+
+  const [before] = await db
+    .select({
+      productionStatus: spots.productionStatus,
+      clientApprovedAt: spots.clientApprovedAt,
+    })
+    .from(spots)
+    .where(eq(spots.id, spotId))
+    .limit(1);
+  if (!before) throw new Error("Spot neexistuje");
+
+  const prevStatus = (before.productionStatus ?? "bez_zadani") as ProductionStatus;
+  if (prevStatus === status) return; // idempotent no-op
+
+  // Rolling back from "schvalen" — wipe approval timestamps too. Same
+  // shape as unapproveSpot, just expressed as a status set.
+  const wasApproved = prevStatus === "schvalen";
+
+  const updateValues: Record<string, unknown> = {
+    productionStatus: status,
+  };
+  if (wasApproved) {
+    updateValues.clientApprovedAt = null;
+    updateValues.clientApprovedComment = null;
+    updateValues.approvedById = null;
+  }
+
+  await db.update(spots).set(updateValues).where(eq(spots.id, spotId));
+
+  await db.insert(auditLog).values({
+    action: "updated",
+    entity: "spot",
+    entityId: spotId,
+    userId,
+    changes: {
+      productionStatusFrom: prevStatus,
+      productionStatusTo: status,
+      ...(wasApproved ? { approvalCleared: true } : {}),
+    },
   });
 
   revalidatePath("/spots");
