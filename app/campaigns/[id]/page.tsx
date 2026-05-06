@@ -604,8 +604,8 @@ function humanizeAuditEntry(action: string, changes: unknown): React.ReactNode {
       : null;
 
   // Action-led summaries — these have no useful detail beyond the verb.
-  if (action === "cancelled") return "zrušil(a) kampaň";
-  if (action === "archived") return "archivoval(a) kampaň";
+  if (action === "cancelled") return "zrušil(a) spot";
+  if (action === "archived") return "archivoval(a) spot";
   if (action === "approved") {
     // approveCampaign writes { note: string | null }. If the user added a
     // note when approving, show it inline so the audit log captures intent.
@@ -615,30 +615,30 @@ function humanizeAuditEntry(action: string, changes: unknown): React.ReactNode {
         : null;
     return note ? (
       <>
-        schválil(a) kampaň{" "}
+        schválil(a) spot{" "}
         <span className="text-zinc-500">— „{note}"</span>
       </>
     ) : (
-      "schválil(a) kampaň"
+      "schválil(a) spot"
     );
   }
   if (action === "deleted") {
     const name = obj && typeof obj.name === "string" ? obj.name : null;
     return name ? (
-      <>smazal(a) kampaň „{name}"</>
+      <>smazal(a) spot „{name}"</>
     ) : (
-      "smazal(a) kampaň"
+      "smazal(a) spot"
     );
   }
 
   if (action === "created") {
     if (obj && typeof obj.clonedFrom === "number") {
-      return <>vytvořil(a) kampaň naklonováním z #{obj.clonedFrom}</>;
+      return <>vytvořil(a) spot naklonováním z #{obj.clonedFrom}</>;
     }
     if (obj && typeof obj.series === "string") {
-      return <>vytvořil(a) kampaň (série {String(obj.series)})</>;
+      return <>vytvořil(a) spot (série {String(obj.series)})</>;
     }
-    return "vytvořil(a) kampaň";
+    return "vytvořil(a) spot";
   }
 
   // Specific edit shapes
@@ -647,7 +647,7 @@ function humanizeAuditEntry(action: string, changes: unknown): React.ReactNode {
     const to = obj.to;
     return (
       <>
-        přesunul(a) kampaň na jiný kanál
+        přesunul(a) spot na jiný kanál
         {typeof from === "number" && typeof to === "number" && (
           <span className="text-xs text-zinc-500 ml-1">
             (#{from} → #{to})
@@ -657,7 +657,7 @@ function humanizeAuditEntry(action: string, changes: unknown): React.ReactNode {
     );
   }
   if (obj && obj.unarchived === true) return "obnovil(a) z archivu";
-  if (obj && obj.reactivated === true) return "obnovil(a) zrušenou kampaň";
+  if (obj && obj.reactivated === true) return "obnovil(a) zrušený spot";
   if (obj && obj.approvalCleared === true) return "zrušil(a) schválení";
   // Per-retailer override edits — channel-level, kept distinct from the
   // master campaign edits. The override action body lives in setChannelOverride
@@ -703,7 +703,7 @@ function humanizeAuditEntry(action: string, changes: unknown): React.ReactNode {
         );
       }
     }
-    if (parts.length === 0) return "upravil(a) kampaň";
+    if (parts.length === 0) return "upravil(a) spot";
     const joined: React.ReactNode[] = [];
     parts.forEach((p, i) => {
       if (i > 0) joined.push(<span key={`sep-${i}`}>, </span>);

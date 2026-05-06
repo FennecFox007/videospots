@@ -149,11 +149,11 @@ export default async function ProductEditPage({
 
       <section className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5">
         <h3 className="font-medium mb-3">
-          Kampaně k tomuto produktu ({linkedCampaigns.length})
+          Spoty k tomuto produktu ({linkedCampaigns.length})
         </h3>
         {linkedCampaigns.length === 0 ? (
           <p className="text-sm text-zinc-500">
-            Zatím žádná kampaň.{" "}
+            Zatím žádný spot.{" "}
             <Link
               href={`/campaigns/new?productName=${encodeURIComponent(p.name)}`}
               className="underline"

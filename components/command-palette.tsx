@@ -115,7 +115,7 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onInputKey}
-            placeholder="Hledat kampaně, spoty, produkty…"
+            placeholder="Hledat spoty, videa, produkty…"
             className="flex-1 bg-transparent text-sm focus:outline-none"
           />
           <kbd className="text-[10px] text-zinc-400 border border-zinc-200 dark:border-zinc-700 rounded px-1 py-0.5">
@@ -167,10 +167,14 @@ export function CommandPalette() {
                     )}
                   </div>
                   <span className="text-[10px] text-zinc-400 uppercase tracking-wide">
+                    {/* In the new vocabulary: r.type "campaign" is the
+                        planned spot (label "spot"), r.type "spot" is a
+                        video creative (label "video"). DB-side names
+                        stay; only UI labels change. */}
                     {r.type === "campaign"
-                      ? "kampaň"
+                      ? "spot"
                       : r.type === "spot"
-                        ? "spot"
+                        ? "video"
                         : "produkt"}
                   </span>
                 </button>

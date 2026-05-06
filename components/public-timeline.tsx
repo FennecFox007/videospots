@@ -521,7 +521,7 @@ export function PublicTimeline({
         )}
         {groups.length > 0 && campaigns.length === 0 && (
           <div className="px-4 py-12 text-center text-sm text-zinc-500 border-t border-zinc-100 dark:border-zinc-800">
-            V tomto rozsahu nejsou žádné kampaně.
+            V tomto rozsahu nejsou žádné spoty.
           </div>
         )}
       </div>

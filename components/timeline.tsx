@@ -953,7 +953,7 @@ export function Timeline({
                 {isCollapsed && aggCount > 0 && (
                   <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
                     {aggCount}{" "}
-                    {pluralCs(aggCount, "kampaň", "kampaně", "kampaní")}
+                    {pluralCs(aggCount, "spot", "spoty", "spotů")}
                     {" · "}
                     {g.channels.length}{" "}
                     {pluralCs(
@@ -1015,7 +1015,7 @@ export function Timeline({
                     className="flex-1 relative cursor-copy transition-[height] duration-150"
                     style={{ height: rowHeight, ...panStyle }}
                     data-channel-id={ch.id}
-                    title="Klikni pro vytvoření kampaně na tomto kanálu/datu"
+                    title="Klikni pro naplánování spotu na tomto kanálu/datu"
                     onClick={(e) => {
                       // Only handle clicks on the track itself (which carries
                       // the data-channel-id attribute) — clicks on bars use

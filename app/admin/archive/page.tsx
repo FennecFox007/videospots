@@ -63,7 +63,7 @@ export default async function ArchivePage() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        Archivované kampaně ({rows.length}) — z běžného přehledu skryté, ale
+        Archivované spoty ({rows.length}) — z běžného přehledu skryté, ale
         stále v DB. Můžeš je obnovit zpět, nebo definitivně smazat.
       </p>
 
@@ -72,7 +72,7 @@ export default async function ArchivePage() {
           <thead className="bg-zinc-50 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 text-left">
             <tr>
               <th className="px-3 py-2 w-6"></th>
-              <th className="px-3 py-2 font-medium">Kampaň</th>
+              <th className="px-3 py-2 font-medium">Spot</th>
               <th className="px-3 py-2 font-medium">Klient</th>
               <th className="px-3 py-2 font-medium">Hra</th>
               <th className="px-3 py-2 font-medium">Termín</th>
@@ -132,7 +132,7 @@ export default async function ArchivePage() {
                         <button
                           type="submit"
                           className="text-xs px-2 py-1 rounded border border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                          title="Vrátit kampaň zpět do běžného přehledu"
+                          title="Vrátit spot zpět do běžného přehledu"
                         >
                           Obnovit
                         </button>
@@ -162,7 +162,7 @@ export default async function ArchivePage() {
                   colSpan={8}
                   className="px-4 py-8 text-center text-zinc-500"
                 >
-                  Žádné archivované kampaně.
+                  Žádné archivované spoty.
                 </td>
               </tr>
             )}

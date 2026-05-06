@@ -192,7 +192,7 @@ export default async function AuditPage({
                         </Link>
                       ) : (
                         <span className="text-zinc-500">
-                          kampaň #{r.entityId} (smazaná)
+                          spot #{r.entityId} (smazaný)
                         </span>
                       )
                     ) : (

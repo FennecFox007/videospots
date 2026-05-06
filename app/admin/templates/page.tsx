@@ -26,8 +26,8 @@ export default async function TemplatesPage() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        Šablony se zakládají na detailu kampaně přes „Uložit jako šablonu".
-        Při tvorbě nové kampaně si pak můžeš šablonu vybrat a formulář se
+        Šablony se zakládají na detailu plánovaného spotu přes „Uložit jako šablonu".
+        Při plánování nového spotu si pak můžeš šablonu vybrat a formulář se
         předvyplní.
       </p>
 
@@ -107,7 +107,7 @@ export default async function TemplatesPage() {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
-                  Žádné šablony. Otevři detail libovolné kampaně a klikni
+                  Žádné šablony. Otevři detail libovolného plánovaného spotu a klikni
                   „Uložit jako šablonu".
                 </td>
               </tr>

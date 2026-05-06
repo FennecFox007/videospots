@@ -395,7 +395,7 @@ function humanizeSpotAuditAction(action: string, changes: unknown): string {
   if (action === "deleted") return "smazal(a)";
   if (action === "created") {
     if (obj && obj.via === "campaign-form-inline") {
-      return "vytvořil(a) (z formuláře kampaně)";
+      return "vytvořil(a) (z formuláře plánu spotu)";
     }
     return "vytvořil(a)";
   }

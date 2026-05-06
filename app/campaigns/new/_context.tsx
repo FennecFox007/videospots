@@ -17,7 +17,7 @@ export type NewCampaignSearchParams = {
   /** ISO YYYY-MM-DD pre-fill for the date inputs. */
   from?: string;
   to?: string;
-  /** Pre-fill product name (used by /releases "Launch kampaň" buttons). */
+  /** Pre-fill product name (used by /releases "Launch spot" buttons). */
   productName?: string;
   /** Pre-fill communication type (e.g. "launch", "preorder"). */
   communicationType?: string;

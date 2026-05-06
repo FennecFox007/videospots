@@ -14,7 +14,7 @@ const ACTIONS = [
 ];
 
 const ENTITIES = [
-  { value: "campaign", label: "kampaň" },
+  { value: "campaign", label: "spot" },
   { value: "country", label: "stát" },
   { value: "chain", label: "řetězec" },
   { value: "channel", label: "kanál" },

@@ -171,7 +171,7 @@ export default async function ProductsAdminPage({
               <th className="px-4 py-2 font-medium">Název</th>
               <th className="px-4 py-2 font-medium">Druh</th>
               <th className="px-4 py-2 font-medium">Vydání</th>
-              <th className="px-4 py-2 font-medium text-right">Kampaně</th>
+              <th className="px-4 py-2 font-medium text-right">Spoty</th>
               <th className="px-4 py-2 font-medium w-32">Akce</th>
             </tr>
           </thead>
@@ -266,7 +266,7 @@ export default async function ProductsAdminPage({
                   className="px-4 py-8 text-center text-zinc-500"
                 >
                   {all.length === 0
-                    ? "Žádné produkty. Přidej výše nebo se vytvoří automaticky při založení kampaně."
+                    ? "Žádné produkty. Přidej výše nebo se vytvoří automaticky při plánování spotu."
                     : "Žádné produkty neodpovídají filtru."}
                 </td>
               </tr>
