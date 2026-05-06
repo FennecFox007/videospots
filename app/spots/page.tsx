@@ -634,7 +634,7 @@ function SpotTable({
                   href={s.videoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                  className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                   aria-label={t("spots.play")}
                   title={t("spots.play")}
                 >
