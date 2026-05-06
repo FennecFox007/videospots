@@ -867,21 +867,35 @@ async function DashboardStats() {
         .from(auditLog)
         .where(gte(auditLog.createdAt, sevenDaysAgo)),
       // "Awaiting approval" = unapproved campaigns that haven't ended yet,
-      // split into running-now vs upcoming. count() FILTER lets Postgres
-      // do the partition in a single row of two ints, instead of pulling
-      // every row and bucketing in JS.
+      // Spots awaiting approval — productionStatus === 'ceka_na_schvaleni'
+      // (the explicit "creative is hotová, čeká na Sony" state). After
+      // Phase 2c approval is per-spot only; the campaign-level pending
+      // count this tile used to compute is gone with that workflow.
+      // Split into running/upcoming using whether ANY non-archived
+      // campaign deploys this spot with startsAt ≤ today vs in the future.
       db
         .select({
-          running: sql<number>`count(*) FILTER (WHERE ${campaigns.startsAt} <= ${now})::int`,
-          upcoming: sql<number>`count(*) FILTER (WHERE ${campaigns.startsAt} > ${now})::int`,
+          running: sql<number>`count(*) FILTER (WHERE EXISTS (
+            SELECT 1 FROM campaign_video cv
+            INNER JOIN campaign c ON c.id = cv.campaign_id
+            WHERE cv.spot_id = ${spots.id}
+              AND c.archived_at IS NULL
+              AND c.starts_at <= ${now}
+              AND c.ends_at >= ${now}
+          ))::int`,
+          upcoming: sql<number>`count(*) FILTER (WHERE EXISTS (
+            SELECT 1 FROM campaign_video cv
+            INNER JOIN campaign c ON c.id = cv.campaign_id
+            WHERE cv.spot_id = ${spots.id}
+              AND c.archived_at IS NULL
+              AND c.starts_at > ${now}
+          ))::int`,
         })
-        .from(campaigns)
+        .from(spots)
         .where(
           and(
-            eq(campaigns.status, "approved"),
-            isNull(campaigns.archivedAt),
-            isNull(campaigns.clientApprovedAt),
-            gte(campaigns.endsAt, now)
+            isNull(spots.archivedAt),
+            eq(spots.productionStatus, "ceka_na_schvaleni")
           )
         ),
       // Undeployed spots: not archived, and not currently referenced by
@@ -926,9 +940,10 @@ async function DashboardStats() {
                   upcoming: awaitingUpcoming,
                 })
         }
-        // Click → /campaigns with the approval=pending filter. Drops
-        // the user straight onto the rows that need attention.
-        href={awaitingTotal > 0 ? "/campaigns?approval=pending" : undefined}
+        // Click → /spots with the approval=pending filter (already supports
+        // it via the existing list filter). Approval is per-spot now, so
+        // /spots is the canonical home for "needs attention".
+        href={awaitingTotal > 0 ? "/spots?approval=pending" : undefined}
         icon={CheckCircle2}
         iconTone="blue"
       />

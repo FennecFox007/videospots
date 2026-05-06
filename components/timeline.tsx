@@ -11,8 +11,6 @@ import {
   cloneCampaign,
   archiveCampaign,
   createCampaignShareLink,
-  approveCampaign,
-  clearCampaignApproval,
 } from "@/app/campaigns/[id]/actions";
 import {
   addDays,
@@ -559,26 +557,11 @@ export function Timeline({
         onClick: () =>
           setOverrideTarget({ bar, channel, country }),
       },
-      // Approval is auth-gated. Anyone logged in can approve or unapprove
-      // via this menu — same effect as the button in the peek footer or on
-      // the detail page. The label flips depending on current state.
-      // router.refresh() afterwards forces this server-rendered timeline
-      // page to reload its data, so the bar's stripes (un)appear without
-      // the user having to navigate.
-      {
-        kind: "action",
-        label: bar.clientApprovedAt
-          ? t("ctx.unapprove")
-          : t("ctx.approve"),
-        onClick: async () => {
-          if (bar.clientApprovedAt) {
-            await clearCampaignApproval(bar.campaignId);
-          } else {
-            await approveCampaign(bar.campaignId);
-          }
-          router.refresh();
-        },
-      },
+      // Phase 2c: campaign-level "Schvaluji" / "Zrušit schválení" položky
+      // odstraněny — schvalování je teď per-spot, ne per-kampaň. Pokud
+      // user chce schválit konkrétní spot v kampani, klikne v peek panelu
+      // na video → otevře `/spots/[id]` s 5-step stepperem. Stripes na
+      // baru reflektují spot.productionStatus.
       {
         kind: "action",
         label: t("ctx.share_link"),
