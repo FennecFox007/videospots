@@ -18,7 +18,7 @@ Next.js 16 aplikace pro plánování video spotů v retail zobrazovačích PlayS
 - Spoty běží na in-store screens v retailu, multiplexují se za sebou — kampaně se **smí překrývat** (více kampaní současně na jednom kanálu, lane-stacking)
 - Spoty běží i o víkendech a svátcích. Weekend tinting = vizuální only.
 - **Jeden spot = jedna jazyková mutace per země** (campaign_video junction).
-- **NDA**: plánované kampaně + nevydané produkty + spoty před releasem nesmí opustit interní prostředí. Aktuální deploy strategy = **lokálně + Cloudflare Tunnel** pro občasné sdílení s klientem. Plný hosting (Vercel / VPS / NAS) odložený na po-podpis-smlouvy.
+- **NDA**: plánované kampaně + nevydané produkty + spoty před releasem nesmí opustit interní prostředí. Aktuální deploy strategy = **lokálně + Cloudflare Tunnel** pro občasné sdílení s klientem. Plný hosting (Railway / Vercel / VPS / NAS — viz "Hosting & deploy strategie") odložený na po-podpis-smlouvy. Default doporučení = **Railway** (single-vendor app + Postgres ve Frankfurtu).
 - Klient se s aplikací nemusí aktivně mazlit — typický flow je: agentura připraví kampaň, pošle share link, klient si projde, případně se přihlásí a klikne **Schvaluji**.
 
 ## Designové principy (canonical state)
@@ -200,12 +200,20 @@ Když přidáváš nový modal, drž tyto principy:
 
 **Důvod**: NDA + nevydané PlayStation tituly. Vercel/Neon = third-party USA. Než bude jasno o smlouvě, držet vše lokálně.
 
-**Až bude smlouva** (3 možnosti dle závažnosti NDA):
-- **A) Vercel EU + Neon EU** — nejjednodušší, ale třetí strana
-- **B) Hetzner VPS (€5/mo) + Coolify** — vlastní HW v EU, "git push → deploy"
-- **C) NAS / on-prem** — nejbezpečnější, nejvíc setup. Cloudflare Tunnel pro vnější přístup.
+**Až bude smlouva** (4 možnosti, seřazeno od nejjednoduššího po nejbezpečnější):
 
-Schema migrace = ručně `npm run db:push` proti prod URL po každé změně schema.ts.
+- **A) ⭐ Railway (Frankfurt)** — *default doporučení pro tenhle case*. **Jeden vendor pro app + Postgres** v jednom dashboardu, $5/měsíc base + usage. Container běží napořád (žádné cold starts, žádný Neon auto-suspend), DB sedí na stejné síti jako appka (menší latence než Vercel ↔ Neon přes internet). Git push → deploy out of the box, observability built-in. Legal entita US (jako Vercel) — pokud NDA snese USA + EU region, tahle volba má nejmenší ops overhead.
+- **B) Vercel EU + Neon EU** — klasický Next.js stack. Edge / globální CDN (irelevantní pro interní tool), ale separátní billing pro app a DB, network-level latence mezi nimi, Neon auto-suspend na free tier. Komplikovanější než musí být pro malý team. Pořád US legal entity.
+- **C) Hetzner VPS (€5/mo) + Coolify** — vlastní HW v EU, "git push → deploy" přes Coolify (self-hosted PaaS). Nejlepší kompromis pokud NDA chce **EU sovereignty** (DE legal entity, GDPR). Trochu víc ops než Railway (musíš updatovat Coolify, řešit backupy DB sám), ale žádný vendor lock-in.
+- **D) NAS / on-prem** — nejbezpečnější, nejvíc setup. Cloudflare Tunnel pro vnější přístup. Použít jen pokud NDA explicitně zakazuje data leave kanceláře.
+
+Schema migrace = ručně `npm run db:push` proti prod URL po každé změně schema.ts. Na Railway se DATABASE_URL získá ze service Variables, na ostatních variantách stejně.
+
+**Drobné Railway poznámky** (pro budoucnost, až dojde na deploy):
+- Ne `npm install` v build kroku — Railway by default. Pokud chceš deterministický build: `npm ci`.
+- `output: "standalone"` v `next.config.ts` snižuje image size (Railway runs containerized, menší = rychlejší cold rebuild).
+- Postgres service v Railway je oficiální Postgres image (ne PgBouncer); pokud bys někdy hit connection limity, jde přidat managed connection pooler service.
+- Cloudflare Tunnel přestává být potřeba (Railway dá veřejný `*.up.railway.app` URL přímo).
 
 ## i18n architektura
 
