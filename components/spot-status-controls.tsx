@@ -54,7 +54,10 @@ export function SpotStatusControls({
   const currentIdx = PRODUCTION_STATUSES.indexOf(productionStatus);
 
   return (
-    <div className="flex items-stretch gap-1.5 overflow-x-auto -mx-1 px-1">
+    // Wraps to multiple rows on narrow widths instead of horizontal-
+    // scrolling — the cramped containing card was hiding later steps
+    // behind a thin browser scrollbar.
+    <div className="flex items-stretch gap-1.5 flex-wrap">
       {PRODUCTION_STATUSES.map((status, i) => {
         const isCurrent = status === productionStatus;
         const isCompleted = i < currentIdx;
