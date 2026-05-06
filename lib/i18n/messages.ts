@@ -26,10 +26,10 @@ const cs = {
   // Nav
   "nav.timeline": "Timeline",
   "nav.releases": "Releasy",
-  "nav.list": "Seznam",
-  "nav.new": "+ Nová",
-  "nav.spots": "Spoty",
-  "nav.templates": "Šablony",
+  "nav.list": "Plánované spoty",
+  "nav.new": "+ Naplánovat",
+  "nav.spots": "Video knihovna",
+  "nav.templates": "Šablony nasazení",
   "nav.admin": "Admin",
   "nav.activity": "Aktivita",
   "nav.signout": "Odhlásit",
@@ -138,8 +138,8 @@ const cs = {
     "táhni za střed = posun, za okraj = délka, klik = otevřít detail, ▶ na baru = přehrát spot. Hlavičku s dny chytni a táhni pro posun v čase, shift+táhnout = snap na pondělí, dvojklik = skok na dnešek.",
   "timeline.share": "Sdílet",
   "timeline.print": "Tisk / PDF",
-  "timeline.list_link": "Seznam kampaní",
-  "timeline.new_campaign": "+ Nová kampaň",
+  "timeline.list_link": "Plánované spoty",
+  "timeline.new_campaign": "+ Naplánovat spot",
   "timeline.shift_back": "Posunout o týden zpět",
   "timeline.shift_forward": "Posunout o týden vpřed",
   "timeline.today": "Dnes",
@@ -154,7 +154,7 @@ const cs = {
   "timeline.channel_col": "Kanál",
   "timeline.no_channels": "Žádné kanály. Nastav matici v",
   "timeline.no_channels_link": "administraci",
-  "timeline.no_campaigns_in_range": "Zatím žádné kampaně v tomto rozsahu.",
+  "timeline.no_campaigns_in_range": "Zatím žádné spoty v tomto rozsahu.",
   "timeline.create_first": "Vytvoř první",
   "timeline.now_marker": "DNES",
   "timeline.bar_play": "Přehrát spot v novém panelu",
@@ -171,17 +171,17 @@ const cs = {
 
   // Dashboard widgets
   "dashboard.running.empty_title": "Právě teď nic neběží",
-  "dashboard.running.empty_desc": "Žádná aktivní kampaň se právě teď nepřehrává.",
+  "dashboard.running.empty_desc": "Žádný aktivní spot se právě teď nepřehrává.",
   "dashboard.running.title": "Právě běží",
   "dashboard.upcoming.empty_title": "Žádné naplánované",
   "dashboard.upcoming.empty_desc":
-    "V příštích {days} dnech není naplánovaná žádná schválená kampaň.",
+    "V příštích {days} dnech není naplánovaný žádný schválený spot.",
   "dashboard.upcoming.title": "Naplánováno na příštích {days} dní",
-  "dashboard.ending.empty_title": "Žádná kampaň brzy nekončí",
+  "dashboard.ending.empty_title": "Žádný spot brzy nekončí",
   "dashboard.ending.empty_desc":
-    "V příštích {days} dnech nekončí žádná aktivně běžící kampaň.",
+    "V příštích {days} dnech nekončí žádný běžící spot.",
   "dashboard.ending.title": "Konec do {days} dnů",
-  "dashboard.stats.total_campaigns": "Celkem kampaní",
+  "dashboard.stats.total_campaigns": "Celkem spotů",
   "dashboard.stats.this_month": "běží/poběží v {month}",
   "dashboard.stats.awaiting_approval": "Čeká na schválení",
   "dashboard.stats.awaiting_none": "Vše schváleno",
@@ -194,10 +194,11 @@ const cs = {
   "dashboard.today": "dnes",
   "dashboard.until": "do {date}",
 
-  // Campaigns list
-  "list.heading": "Seznam kampaní",
+  // Planned spots list (formerly "campaigns" — same data, renamed UI per
+  // STAV.md Priority #2)
+  "list.heading": "Plánované spoty",
   "list.export_csv": "Export CSV",
-  "list.col.campaign": "Kampaň",
+  "list.col.campaign": "Spot",
   "list.col.client": "Klient",
   "list.col.product": "Produkt",
   "list.col.start": "Začátek",
@@ -205,14 +206,14 @@ const cs = {
   "list.col.channels": "Kanály",
   "list.col.status": "Stav",
   "list.col.tags": "Štítky",
-  "list.empty.title": "Žádné kampaně neodpovídají filtrům.",
+  "list.empty.title": "Žádné spoty neodpovídají filtrům.",
   "list.empty.clear": "Vyčistit filtry",
   "list.bulk.cancel": "Zrušit (historicky)",
   "list.bulk.color": "Barva",
   "list.bulk.archive": "Archivovat",
   "list.bulk.selected": "vybráno",
   "list.tip":
-    "Vyber kampaně levým checkboxem; spodní lišta nabídne hromadné akce (smazat / zrušit / změnit barvu).",
+    "Vyber spoty levým checkboxem; spodní lišta nabídne hromadné akce (smazat / zrušit / změnit barvu).",
 
   // Filter bar
   "filter.search_placeholder": "Hledat (název, klient, hra)…",
@@ -244,7 +245,7 @@ const cs = {
   "detail.product_released": "Vyšlo {date}",
   "detail.videos_section": "Spoty podle země",
   "detail.spot_pending":
-    "Spot ještě nebyl přiřazen — kampaň je naplánována, spot doplníš později.",
+    "Video ještě nebylo přiřazeno — spot je naplánovaný, video doplníš později.",
   "detail.assign_spots": "Přiřadit spoty",
   "detail.channels_section": "Kanály",
   "detail.no_channels": "Žádné kanály.",
@@ -263,7 +264,7 @@ const cs = {
   "releases.empty": "Žádné nadcházející releasy.",
   "releases.empty_link": "Přidej produkt s datem vydání",
   "releases.released_on": "Vydání {date}",
-  "releases.launch_campaign": "+ Launch kampaň",
+  "releases.launch_campaign": "+ Launch spot",
   "releases.launch_campaign_tooltip":
     "Předvyplní formulář s tímhle produktem a launch oknem ±7 dní",
   "releases.status.released_days_ago": "Vyšlo před {n} {unit}",
@@ -271,9 +272,9 @@ const cs = {
   "releases.status.in_days": "Za {n} {unit}",
 
   // Timeline context menu (right-click on bars / channels / country headers)
-  "ctx.create_here": "+ Vytvořit kampaň zde ({chain}, od {date})",
-  "ctx.create_for_country": "+ Kampaň pro celé {country}",
-  "ctx.create_for_chain": "+ Nová kampaň pro {chain}",
+  "ctx.create_here": "+ Naplánovat spot zde ({chain}, od {date})",
+  "ctx.create_for_country": "+ Spot pro celé {country}",
+  "ctx.create_for_chain": "+ Nový spot pro {chain}",
   "ctx.filter_chain": "Filtrovat na {chain}",
   "ctx.filter_country": "Filtrovat na {country}",
   "ctx.open_detail": "Otevřít detail",
@@ -296,15 +297,15 @@ const cs = {
   // Per-channel override dialog
   "override.title": "Upravit jen tento řetězec",
   "override.scope_note":
-    "Tato změna se týká POUZE tohoto řetězce. Ostatní řetězce v kampani zůstanou beze změny.",
-  "override.cancel_in_channel": "Vypnout kampaň v tomto řetězci",
-  "override.master_dates": "Termín kampaně jako celku",
+    "Tato změna se týká POUZE tohoto řetězce. Ostatní řetězce v plánu zůstanou beze změny.",
+  "override.cancel_in_channel": "Vypnout spot v tomto řetězci",
+  "override.master_dates": "Termín spotu jako celku",
   "override.clear": "Smazat přepsání",
   "override.saved": "Uloženo.",
   "override.cleared": "Přepsání zrušeno.",
   "override.error_end_before_start": "Konec nemůže být před začátkem.",
   "override.indicator_title":
-    "Tento řetězec má vlastní termín odlišný od kampaně.",
+    "Tento řetězec má vlastní termín odlišný od ostatních.",
 
   // Approval (auth-gated; share view is read-only)
   "approval.waiting": "Čeká na schválení",
@@ -314,11 +315,13 @@ const cs = {
   "approval.unapprove": "Zrušit schválení",
   "approval.approved_by": "Schválil(a) {who}",
 
-  // Spots
-  "spots.heading": "Spoty",
+  // Video library (formerly /spots renamed in UI per Phase 3 — DB still
+  // calls them "spots" but in UI we say "Video knihovna" to disambiguate
+  // from the planned-spot list)
+  "spots.heading": "Video knihovna",
   "spots.subhead":
-    "Knihovna všech video spotů. Spoty bez aktivní kampaně mají žluté upozornění.",
-  "spots.new": "Nový spot",
+    "Knihovna všech video kreativ. Videa bez aktivního nasazení mají žluté upozornění.",
+  "spots.new": "Nové video",
   "spots.tab.undeployed": "Nenasazené",
   "spots.tab.deployed": "Nasazené",
   "spots.tab.all": "Všechny",
@@ -385,28 +388,28 @@ const cs = {
 
   // Spot detail richer view
   "spots.deployment_history.title": "Historie nasazení",
-  "spots.deployment_history.empty": "Spot zatím nikdy nebyl nasazen.",
+  "spots.deployment_history.empty": "Video zatím nikdy nebylo nasazeno.",
   "spots.audit.title": "Aktivita",
   "spots.audit.empty": "Žádná zaznamenaná aktivita.",
 
-  // Campaign form spot-picker warnings
+  // Spot picker warnings (in spot/plan create form)
   "spot_picker.warning.pending":
-    "⚠️ Tento spot ještě nebyl klientem schválen.",
-  "spots.undeployed_label": "Nenasazený",
+    "⚠️ Tato kreativa ještě nebyla klientem schválena.",
+  "spots.undeployed_label": "Nenasazené",
   "spots.archived_at": "Archivováno {date}",
   "spots.play": "Přehrát",
   "spots.back_to_list": "Zpět na seznam",
   "spots.section.preview": "Náhled",
-  "spots.section.deployments": "Aktivní kampaně",
+  "spots.section.deployments": "Aktivní nasazení",
   "spots.deployments.empty":
-    "Tento spot zatím není v žádné aktivní kampani.",
+    "Tato kreativa zatím není v žádném aktivním nasazení.",
   "spots.action.archive": "Archivovat",
   "spots.action.archive_tooltip":
-    "Skryje spot z výchozího seznamu. Historie kampaní zůstane.",
+    "Skryje kreativu z výchozího seznamu. Historie nasazení zůstane.",
   "spots.action.unarchive": "Obnovit z archivu",
   "spots.action.delete": "Smazat trvale",
   "spots.action.delete_tooltip":
-    "Funguje jen pokud spot není v žádné kampani.",
+    "Funguje jen pokud kreativa není v žádném nasazení.",
   "spots.form.heading_new": "Nový spot",
   "spots.form.subhead_new":
     "Zaregistrovat video creative pro pozdější použití v kampaních.",
@@ -434,78 +437,79 @@ const cs = {
   "spots.form.modal.error_url_invalid":
     "URL nevypadá správně. Zkus to znovu.",
 
-  // Dashboard: undeployed spots tile
-  "dashboard.stats.undeployed_spots": "Nenasazené spoty",
+  // Dashboard: undeployed creatives tile
+  "dashboard.stats.undeployed_spots": "Video bez nasazení",
   "dashboard.stats.undeployed_none": "Vše nasazené",
   "dashboard.stats.undeployed_sub": "vyrobených, ale nezařazených",
   "filter.approval.all": "Schválení",
   "filter.approval.pending": "Čeká na schválení",
   "filter.approval.approved": "Schváleno",
-  "filter.missing_spot.label": "Bez spotu",
+  "filter.missing_spot.label": "Bez videa",
   "filter.missing_spot.tooltip":
-    "Kampaně, kde alespoň jedna země ještě nemá přiřazený spot.",
+    "Plánované spoty, kde alespoň jedna země ještě nemá přiřazenou kreativu.",
 
-  // Spots drawer (toolbar button on /, slide-out panel).
-  // Label is "Knihovna" / "Library" — distinct from the top-nav "Spoty" link
-  // which goes to the full /spots admin page. The drawer is the quick
-  // drag-onto-timeline surface; the page is the manage-edit-archive surface.
+  // Video library drawer (toolbar button on /, slide-out panel).
+  // Quick drag-onto-timeline surface, distinct from the full /spots admin
+  // page. Both surface the same DB rows, just different layout/affordances.
   "spots_drawer.button": "Knihovna",
   "spots_drawer.button_tooltip":
-    "Otevřít knihovnu spotů. Můžeš spot přetáhnout na timeline a vytvořit z něj kampaň.",
-  "spots_drawer.aria_label": "Knihovna spotů",
-  "spots_drawer.heading": "Knihovna spotů",
-  "spots_drawer.hint": "Přetáhni spot na timeline pro vytvoření kampaně.",
-  "spots_drawer.search_placeholder": "Hledat spot…",
+    "Otevřít video knihovnu. Můžeš video přetáhnout na timeline a naplánovat z něj spot.",
+  "spots_drawer.aria_label": "Video knihovna",
+  "spots_drawer.heading": "Video knihovna",
+  "spots_drawer.hint": "Přetáhni video na timeline pro naplánování spotu.",
+  "spots_drawer.search_placeholder": "Hledat…",
   "spots_drawer.tab.undeployed": "Nenasazené",
   "spots_drawer.tab.all": "Všechny",
-  "spots_drawer.empty.undeployed": "Žádné nenasazené spoty.",
-  "spots_drawer.empty.all": "Žádné spoty v knihovně.",
-  "spots_drawer.undeployed": "Nenasazený",
+  "spots_drawer.empty.undeployed": "Žádná nenasazená videa.",
+  "spots_drawer.empty.all": "Knihovna je prázdná.",
+  "spots_drawer.undeployed": "Nenasazené",
   "spots_drawer.undeployed_count": "{count} nenasazených",
   "spots_drawer.card_drag_hint": "Přetáhni na timeline",
-  "spots_drawer.footer_hint": "Přetáhni spot na řádek kanálu",
-  "spots_drawer.new_link": "+ Nový spot",
+  "spots_drawer.footer_hint": "Přetáhni video na řádek kanálu",
+  "spots_drawer.new_link": "+ Nové video",
   "spots_drawer.action.play": "Přehrát",
   "spots_drawer.action.edit": "Upravit",
 
-  // Spot drop modal — opens after dragging a spot onto a channel row
-  "spot_drop.title": "Vytvořit kampaň ze spotu",
-  "spot_drop.field.name": "Název kampaně",
+  // Spot drop modal — opens after dragging a video onto a channel row.
+  // (Creates a planned spot with this video already attached for the
+  // matching country.)
+  "spot_drop.title": "Naplánovat spot z videa",
+  "spot_drop.field.name": "Název spotu",
   "spot_drop.field.channels": "Kanály",
   "spot_drop.field.channels_hint":
     "Přetáhnutý kanál je vybraný. Můžeš přidat další kanály ve stejné zemi.",
   "spot_drop.dropped_here": "drop",
   "spot_drop.approve_now": "Schválit hned",
-  "spot_drop.submit": "Vytvořit kampaň",
-  "spot_drop.created": "Kampaň vytvořena.",
+  "spot_drop.submit": "Naplánovat spot",
+  "spot_drop.created": "Spot naplánovaný.",
   "spot_drop.country_mismatch":
-    "Spot je pro {spot}, drop byl na {target}. Spot je pro jednu zemi.",
-  "spot_drop.error_name": "Vyplň název kampaně.",
+    "Video je pro {spot}, drop byl na {target}. Každé video patří jedné zemi.",
+  "spot_drop.error_name": "Vyplň název spotu.",
   "spot_drop.error_no_channels": "Vyber alespoň jeden kanál.",
   "spot_drop.error_end_before_start": "Konec nemůže být před začátkem.",
 
-  // Campaign form body (new + edit)
+  // Planned spot form (new + edit) — formerly the "campaign form"
   "form.section.basic": "Základní údaje",
   "form.section.product": "Produkt",
-  "form.section.video": "Spoty (jeden per země)",
+  "form.section.video": "Videa (jedno per země)",
   "form.section.video_hint":
-    "Vyber spot z knihovny pro každou zemi. Pokud potřebný spot ještě nemáš, klikni na „+ Nový spot“ — otevře se ve vedlejší záložce, po vytvoření obnov tuto stránku.",
+    "Vyber video z knihovny pro každou zemi. Pokud potřebné video ještě nemáš, klikni na „+ Nové video“ — otevře se ve vedlejší záložce, po vytvoření obnov tuto stránku.",
   "form.section.term": "Termín",
   "form.section.channels": "Kanály",
   "form.section.channels_hint":
-    "Vyber kombinace stát × řetězec, kde má kampaň běžet. Hromadný výběr přes tlačítka, jednotlivé pak jen klikni.",
+    "Vyber kombinace stát × řetězec, kde má spot běžet. Hromadný výběr přes tlačítka, jednotlivé pak jen klikni.",
   "form.section.notes": "Poznámky",
   "form.section.recurring": "Opakovat (volitelné)",
   "form.section.recurring_hint":
-    "Vytvoří víc kampaní najednou s posunutými termíny. Vhodné pro pravidelné spoty.",
+    "Vytvoří víc plánovaných spotů najednou s posunutými termíny. Vhodné pro pravidelné nasazení.",
   "form.section.product_hint":
-    "Co kampaň propaguje — hra, konzole, ovladač, příslušenství… Volitelné, ale pomáhá při třídění.",
-  "form.field.name": "Název kampaně",
+    "Co spot propaguje — hra, konzole, ovladač, příslušenství… Volitelné, ale pomáhá při třídění.",
+  "form.field.name": "Název spotu",
   "form.field.name_placeholder": "např. Saros — launch trailer",
   "form.field.client": "Klient",
   "form.field.comm_type": "Typ komunikace",
   "form.field.comm_type_hint":
-    "Co přesně tahle kampaň dělá vůči vydání produktu",
+    "Co přesně tenhle spot dělá vůči vydání produktu",
   "form.field.tags": "Štítky",
   "form.field.tags_hint": "Odděl čárkou: „priorita, jaro, …“",
   "form.field.tags_placeholder": "priorita, sezóna, …",
@@ -524,27 +528,27 @@ const cs = {
   "form.field.ends_at": "Konec",
   "form.field.notes_placeholder":
     "cokoli užitečného (interní info, briefing…)",
-  "form.recurring.toggle": "Vytvořit sérii kampaní",
+  "form.recurring.toggle": "Vytvořit sérii spotů",
   "form.recurring.frequency": "Frekvence",
   "form.recurring.freq_daily": "každý den",
   "form.recurring.freq_weekly": "každý týden",
   "form.recurring.freq_biweekly": "každé 2 týdny",
   "form.recurring.freq_monthly": "každé 4 týdny",
-  "form.recurring.count": "Počet kampaní",
+  "form.recurring.count": "Počet spotů",
   "form.recurring.note":
-    "Každá další kampaň bude pojmenovaná „Název (n/N)“. Výběr kanálů a hra se zachovají u všech.",
+    "Každý další spot bude pojmenovaný „Název (n/N)“. Výběr kanálů a produkt se zachovají u všech.",
   "form.video.placeholder": "YouTube / Vimeo / přímý mp4 odkaz",
-  "form.video.no_spot": "— žádný spot —",
-  "form.video.new_spot": "+ Nový spot",
+  "form.video.no_spot": "— žádné video —",
+  "form.video.new_spot": "+ Nové video",
   "form.video.new_spot_tooltip":
-    "Otevře knihovnu spotů v nové záložce. Po vytvoření obnov tuto stránku.",
-  "form.submit_create": "Vytvořit kampaň",
+    "Otevře video knihovnu v nové záložce. Po vytvoření obnov tuto stránku.",
+  "form.submit_create": "Naplánovat spot",
   "form.submit_save": "Uložit změny",
   "form.cancel": "Zrušit",
-  "form.new_campaign_title": "Nová kampaň",
-  "form.edit_campaign_title": "Upravit kampaň",
+  "form.new_campaign_title": "Naplánovat spot",
+  "form.edit_campaign_title": "Upravit spot",
   "form.hint_default":
-    "Naplánuj video spot na vybrané kanály v zadaném období.",
+    "Naplánuj video na vybrané kanály v zadaném období.",
   "form.hint_template": "Předvyplněno ze šablony „{name}“.",
   "form.hint_release": "Předvyplněno z release kalendáře pro produkt „{name}“.",
   "form.hint_timeline": "Předvyplněno z timeline (kanály a termín).",
@@ -559,8 +563,8 @@ const cs = {
   // Find-slot
   "findslot.heading": "Najít volný termín",
   "findslot.subtitle":
-    "Vyber kanály a požadovanou délku — najdu nejbližší volné období, kde se na žádném vybraném kanálu nepřekrývá schválená kampaň. Hledá se {days} dní dopředu.",
-  "findslot.field.duration": "Délka kampaně (dní)",
+    "Vyber kanály a požadovanou délku — najdu nejbližší volné období, kde se na žádném vybraném kanálu nepřekrývá schválený spot. Hledá se {days} dní dopředu.",
+  "findslot.field.duration": "Délka spotu (dní)",
   "findslot.field.from": "Hledat od",
   "findslot.field.channels": "Kanály",
   "findslot.find": "Najít volný termín",
@@ -600,24 +604,24 @@ const cs = {
   "admin.share_links.col.expires": "Platnost",
   "admin.share_links.col.actions": "Akce",
   "admin.share_links.target_timeline": "Timeline",
-  "admin.share_links.campaign_unnamed": "Kampaň #{id}",
-  "admin.share_links.campaign_deleted": "(kampaň odstraněna)",
+  "admin.share_links.campaign_unnamed": "Spot #{id}",
+  "admin.share_links.campaign_deleted": "(spot odstraněn)",
   "admin.card.countries.desc":
-    "Trhy, kde provozujeme kampaně. CZ, SK, HU, PL — přidat lze libovolný.",
+    "Trhy, kde nasazujeme spoty. CZ, SK, HU, PL — přidat lze libovolný.",
   "admin.card.chains.desc":
     "Maloobchodní brandy s našimi zobrazovači — Datart, Alza, MediaMarkt…",
   "admin.card.channels.desc":
     "Matice Stát × Řetězec. Označ které kombinace skutečně existují.",
   "admin.card.products.desc":
-    "Hry, konzole, ovladače, příslušenství… s daty vydání a covery. Kampaně se na ně mapují.",
+    "Hry, konzole, ovladače, příslušenství… s daty vydání a covery. Spoty se na ně mapují.",
   "admin.card.users.desc":
     "Přidávej, mažeš, nastavuješ hesla členům týmu.",
   "admin.card.templates.desc":
-    "Uložené konfigurace kampaní (klient, barva, kanály, štítky, délka) pro rychlé opakování.",
+    "Uložené konfigurace nasazení (klient, barva, kanály, štítky, délka) pro rychlé opakování.",
   "admin.card.import.desc":
-    "Hromadný import kampaní z CSV (migrace z Excelu).",
+    "Hromadný import plánovaných spotů z CSV (migrace z Excelu).",
   "admin.card.archive.desc":
-    "Archivované kampaně. Lze obnovit zpět, nebo definitivně smazat.",
+    "Archivované spoty. Lze obnovit zpět, nebo definitivně smazat.",
   "admin.card.audit.desc":
     "Co kdo kdy udělal — kompletní historie akcí.",
 
@@ -627,7 +631,7 @@ const cs = {
   "share_button.copy": "Kopírovat",
   "share_button.copied": "✓ Zkopírováno",
   "share_button.note":
-    "Kdokoli s odkazem uvidí kampaň bez přihlášení. Spravovat odkazy můžeš níže.",
+    "Kdokoli s odkazem uvidí spot bez přihlášení. Spravovat odkazy můžeš níže.",
   "share_button.expires_30d": "Vytvořit odkaz (30 dní)",
   "share_button.revoke_confirm_inline": "Opravdu deaktivovat tento odkaz?",
   "share_form.expiry_label": "Platnost",
@@ -642,7 +646,7 @@ const cs = {
   "timeline_share.note":
     "Klient uvidí celou timeline ve stejném rozsahu a s aplikovanými filtry, bez přihlášení a bez editačních tlačítek.",
   "share_links.section_title": "Sdílené odkazy",
-  "share_links.empty": "Tato kampaň zatím nemá žádný sdílený odkaz.",
+  "share_links.empty": "Tento spot zatím nemá žádný sdílený odkaz.",
   "share_links.no_active":
     "Žádný aktivní odkaz. Klikni na „Sdílet“ pro vytvoření.",
   "share_links.show_inactive": "Zobrazit neaktivní ({n})",
@@ -675,19 +679,19 @@ const cs = {
   "editable_title.rename": "Přejmenovat",
 
   // Share view
-  "share.preview_campaign": "Veřejný náhled kampaně",
+  "share.preview_campaign": "Veřejný náhled spotu",
   "share.preview_timeline": "Veřejný náhled timeline",
   "share.expires": "Tento odkaz je platný do {date}.",
   "share.open_app": "Otevřít aplikaci",
-  "share.plan_heading": "Plán kampaní",
+  "share.plan_heading": "Plánované spoty",
 
   // Print
-  "print.subheading": "rozpis kampaně",
-  "print.subheading_timeline": "rozpis kampaní",
+  "print.subheading": "rozpis spotu",
+  "print.subheading_timeline": "rozpis spotů",
   "print.created": "Vytvořeno {date}",
   "print.generated": "Generováno {date}",
   "print.scan_video": "Otevřít video",
-  "print.scan_campaign": "Otevřít kampaň",
+  "print.scan_campaign": "Otevřít spot",
   "print.bg_tip":
     "Tip: pro plné barvy v PDF v Chrome zatrhni „Background graphics“ v print dialogu.",
 
@@ -707,9 +711,9 @@ const cs = {
   "unit.day_one": "den",
   "unit.day_few": "dny",
   "unit.day_many": "dní",
-  "unit.campaign_one": "kampaň",
-  "unit.campaign_few": "kampaně",
-  "unit.campaign_many": "kampaní",
+  "unit.campaign_one": "spot",
+  "unit.campaign_few": "spoty",
+  "unit.campaign_many": "spotů",
   "unit.channel_one": "kanál",
   "unit.channel_few": "kanály",
   "unit.channel_many": "kanálů",
@@ -725,10 +729,10 @@ const en: Record<keyof typeof cs, string> = {
   // Nav
   "nav.timeline": "Timeline",
   "nav.releases": "Releases",
-  "nav.list": "Campaigns",
-  "nav.new": "+ New",
-  "nav.spots": "Spots",
-  "nav.templates": "Templates",
+  "nav.list": "Planned spots",
+  "nav.new": "+ Plan",
+  "nav.spots": "Video library",
+  "nav.templates": "Deployment templates",
   "nav.admin": "Admin",
   "nav.activity": "Activity",
   "nav.signout": "Sign out",
@@ -837,8 +841,8 @@ const en: Record<keyof typeof cs, string> = {
     "drag the middle = move, drag the edge = resize, click = open detail, ▶ on bar = play the spot. Grab the days header to scrub through time, shift+drag = snap to Monday, double-click = jump to today.",
   "timeline.share": "Share",
   "timeline.print": "Print / PDF",
-  "timeline.list_link": "Campaign list",
-  "timeline.new_campaign": "+ New campaign",
+  "timeline.list_link": "Planned spots",
+  "timeline.new_campaign": "+ Plan a spot",
   "timeline.shift_back": "Shift one week back",
   "timeline.shift_forward": "Shift one week forward",
   "timeline.today": "Today",
