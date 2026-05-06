@@ -49,12 +49,16 @@ type Props = {
   spotId: number;
   productionStatus: ProductionStatus;
   archived: boolean;
+  /** Pill size — "sm" for table rows (default), "md" for detail-page
+   *  surfaces where the picker is the primary control on the card. */
+  size?: "sm" | "md";
 };
 
 export function SpotStatusQuickPicker({
   spotId,
   productionStatus,
   archived,
+  size = "sm",
 }: Props) {
   const t = useT();
   const router = useRouter();
@@ -108,7 +112,7 @@ export function SpotStatusQuickPicker({
 
   if (archived) {
     return (
-      <Pill size="sm" tone={productionStatusTone(productionStatus)}>
+      <Pill size={size} tone={productionStatusTone(productionStatus)}>
         {t(productionStatusLabelKey(productionStatus))}
       </Pill>
     );
@@ -185,11 +189,14 @@ export function SpotStatusQuickPicker({
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <Pill size="sm" tone={productionStatusTone(productionStatus)}>
+        <Pill size={size} tone={productionStatusTone(productionStatus)}>
           <span className="inline-flex items-center gap-1">
             {t(productionStatusLabelKey(productionStatus))}
             <ChevronDown
-              className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity"
+              className={
+                "opacity-60 group-hover:opacity-100 transition-opacity " +
+                (size === "md" ? "w-3.5 h-3.5" : "w-3 h-3")
+              }
               strokeWidth={2.5}
             />
           </span>

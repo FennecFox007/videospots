@@ -25,7 +25,7 @@ import { formatDate } from "@/lib/utils";
 import { Pill } from "@/components/ui/pill";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CountryBadge } from "@/components/country-badge";
-import { SpotStatusControls } from "@/components/spot-status-controls";
+import { SpotStatusQuickPicker } from "@/components/spot-status-quick-picker";
 import { SpotApprovalControls } from "@/components/spot-approval-controls";
 import {
   productionStatusTone,
@@ -183,18 +183,20 @@ export default async function SpotDetailPage({
           ledgment (e.g. they got an email confirming) and is NOT
           coupled to Schválení = Sony actually clicked in app. They can
           differ — that's a feature. */}
-      <div className="grid gap-3 md:grid-cols-3">
-        {/* Status owns 2/3 of the row — 5 buttons need the breathing
-            room. Schválení (1 button + occasional approver metadata)
-            sits comfortably in the remaining third. */}
-        <div className="md:col-span-2 rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-3">
+      <div className="grid gap-3 md:grid-cols-2">
+        {/* Status uses the same Pill-trigger dropdown as the /spots
+            list (just at size="md") — kept consistent so the editor has
+            one mental model for changing status. The earlier 5-button
+            stepper kept wrapping/scrolling in cramped widths. */}
+        <div className="rounded-lg bg-white dark:bg-zinc-900 ring-1 ring-zinc-200/60 dark:ring-zinc-800/60 shadow-sm p-5 space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
             {t("spots.status.section.title")}
           </h2>
-          <SpotStatusControls
+          <SpotStatusQuickPicker
             spotId={spotId}
             productionStatus={productionStatus}
             archived={isArchived}
+            size="md"
           />
         </div>
 
